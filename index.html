@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ben's Card Counting Trainer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ===== LANDING ===== -->
+  <div id="landing">
+
+    <!-- NAV BAR -->
+    <nav class="hero-nav" id="hero-nav">
+      <div class="nav-brand">
+        <span class="nav-logo">♠</span>
+        <span class="nav-brand-name">Ben's Card Counting Trainer</span>
+      </div>
+      <div class="nav-links">
+        <button class="nav-info-btn" id="nav-open-bj-modal">What is Blackjack?</button>
+        <button class="nav-info-btn" id="nav-open-cc-modal">What is Card Counting?</button>
+      </div>
+      <div class="nav-right">
+        <button class="nav-cta" id="nav-cta">Start Training</button>
+      </div>
+    </nav>
+
+    <!-- STICKY HERO -->
+    <div class="hero-sticky">
+
+      <!-- Floating background cards -->
+      <div class="bg-card bc-1 card suit-spades"><span class="rank tl">A</span><span class="suit-sym">♠</span><span class="rank br">A</span></div>
+      <div class="bg-card bc-2 card suit-hearts"><span class="rank tl">K</span><span class="suit-sym">♥</span><span class="rank br">K</span></div>
+      <div class="bg-card bc-3 card suit-diamonds"><span class="rank tl">7</span><span class="suit-sym">♦</span><span class="rank br">7</span></div>
+      <div class="bg-card bc-4 card suit-clubs"><span class="rank tl">Q</span><span class="suit-sym">♣</span><span class="rank br">Q</span></div>
+      <div class="bg-card bc-5 card suit-hearts"><span class="rank tl">3</span><span class="suit-sym">♥</span><span class="rank br">3</span></div>
+      <div class="bg-card bc-6 card suit-spades"><span class="rank tl">J</span><span class="suit-sym">♠</span><span class="rank br">J</span></div>
+      <div class="bg-card bc-7 card suit-diamonds"><span class="rank tl">9</span><span class="suit-sym">♦</span><span class="rank br">9</span></div>
+
+      <div class="hero-body">
+        <h1 class="hero-headline">
+          Count cards.<br>
+          <em>Play with an edge.</em>
+        </h1>
+        <button class="hero-main-cta" id="hero-cta">Start Training</button>
+      </div>
+
+      <div class="hero-explore">
+        <span class="hero-explore-label">Explore</span>
+        <svg class="hero-explore-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+
+    </div><!-- end .hero-sticky -->
+
+    <!-- FEATURES SECTION — slides over hero -->
+    <div class="features-slide">
+
+      <!-- Section header -->
+      <div class="feat-header">
+        <span class="feat-eyebrow">Training System</span>
+        <h2 class="feat-title">Six skills.<br><em>One edge.</em></h2>
+        <p class="feat-sub">Everything you need to count cards at a professional level — built into one structured trainer.</p>
+      </div>
+
+      <div class="feat-rows">
+
+        <!-- Row 1: Basic Strategy -->
+        <div class="feat-row">
+          <div class="feat-info">
+            <span class="feat-num">01</span>
+            <h3 class="feat-name">Basic Strategy</h3>
+            <p class="feat-desc">The optimal play for every hand — hit, stand, double, split. Drill it until it's instinct. Flash card drills across all hand types until decisions become automatic.</p>
+            <span class="feat-tag">Card Play · Flash Drills</span>
+          </div>
+          <div class="feat-mockup sp-mockup-chart">
+            <div class="spm-label">Basic Strategy — 6 Decks · Dealer Stands Soft 17</div>
+            <div class="bs-legend"><span class="bsl H">H Hit</span><span class="bsl S">S Stand</span><span class="bsl D">D Double</span><span class="bsl P">P Split</span></div>
+            <div class="bs-scroll">
+              <table class="bs-chart">
+                <thead><tr><th></th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>T</th><th>A</th></tr></thead>
+                <tbody>
+                  <tr class="bs-section"><td colspan="11">HARD</td></tr>
+                  <tr><td class="bs-h">8</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td></tr>
+                  <tr><td class="bs-h">9</td><td class="H">H</td><td class="D">D</td><td class="D">D</td><td class="D">D</td><td class="D">D</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td></tr>
+                  <tr><td class="bs-h">10</td><td class="D">D</td><td class="D">D</td><td class="D">D</td><td class="D">D</td><td class="D">D</td><td class="D">D</td><td class="D">D</td><td class="D">D</td><td class="H">H</td><td class="H">H</td></tr>
+                  <tr><td class="bs-h">11</td><td class="D">D</td><td class="D">D</td><td class="D">D</td><td class="D">D</td><td class="D">D</td><td class="D">D</td><td class="D">D</td><td class="D">D</td><td class="D">D</td><td class="H">H</td></tr>
+                  <tr><td class="bs-h">12</td><td class="H">H</td><td class="H">H</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td></tr>
+                  <tr><td class="bs-h">13</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td></tr>
+                  <tr><td class="bs-h">14</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td></tr>
+                  <tr><td class="bs-h">15</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td></tr>
+                  <tr><td class="bs-h">16</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td></tr>
+                  <tr><td class="bs-h">17+</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td></tr>
+                  <tr class="bs-section"><td colspan="11">SOFT</td></tr>
+                  <tr><td class="bs-h">A–2</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="D">D</td><td class="D">D</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td></tr>
+                  <tr><td class="bs-h">A–3</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="D">D</td><td class="D">D</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td></tr>
+                  <tr><td class="bs-h">A–4</td><td class="H">H</td><td class="H">H</td><td class="D">D</td><td class="D">D</td><td class="D">D</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td></tr>
+                  <tr><td class="bs-h">A–5</td><td class="H">H</td><td class="H">H</td><td class="D">D</td><td class="D">D</td><td class="D">D</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td></tr>
+                  <tr><td class="bs-h">A–6</td><td class="H">H</td><td class="D">D</td><td class="D">D</td><td class="D">D</td><td class="D">D</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td></tr>
+                  <tr><td class="bs-h">A–7</td><td class="S">S</td><td class="D">D</td><td class="D">D</td><td class="D">D</td><td class="D">D</td><td class="S">S</td><td class="S">S</td><td class="H">H</td><td class="H">H</td><td class="H">H</td></tr>
+                  <tr><td class="bs-h">A–8</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td></tr>
+                  <tr class="bs-section"><td colspan="11">PAIRS</td></tr>
+                  <tr><td class="bs-h">A–A</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="P">P</td></tr>
+                  <tr><td class="bs-h">2–2</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td></tr>
+                  <tr><td class="bs-h">3–3</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td></tr>
+                  <tr><td class="bs-h">4–4</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="P">P</td><td class="P">P</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td></tr>
+                  <tr><td class="bs-h">6–6</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td></tr>
+                  <tr><td class="bs-h">7–7</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="H">H</td><td class="H">H</td><td class="H">H</td><td class="H">H</td></tr>
+                  <tr><td class="bs-h">8–8</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="P">P</td></tr>
+                  <tr><td class="bs-h">9–9</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="P">P</td><td class="S">S</td><td class="P">P</td><td class="P">P</td><td class="S">S</td><td class="S">S</td></tr>
+                  <tr><td class="bs-h">T–T</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td><td class="S">S</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 2: Running Count -->
+        <div class="feat-row">
+          <div class="feat-info">
+            <span class="feat-num">02</span>
+            <h3 class="feat-name">Running Count</h3>
+            <p class="feat-desc">Maintain an accurate Hi-Lo count as cards are dealt. Five difficulty levels — from single-card drills to 5-card speed rounds with countdown timers. The core skill of card counting.</p>
+            <span class="feat-tag">Hi-Lo · Speed Rounds</span>
+          </div>
+          <div class="feat-mockup">
+            <div class="spm-label">What is the running count?</div>
+            <div style="display:flex;justify-content:center;gap:.75rem;margin:1.5rem 0">
+              <div class="card suit-hearts"><span class="rank tl">A</span><span class="suit-sym">♥</span><span class="rank br">A</span></div>
+              <div class="card suit-clubs"><span class="rank tl">5</span><span class="suit-sym">♣</span><span class="rank br">5</span></div>
+              <div class="card suit-spades"><span class="rank tl">K</span><span class="suit-sym">♠</span><span class="rank br">K</span></div>
+            </div>
+            <div class="spm-count-display">
+              <div class="spm-stepper">−</div>
+              <div class="spm-count spm-neg">−1</div>
+              <div class="spm-stepper">+</div>
+            </div>
+            <div class="spm-strip">A(−1) + 5(+1) + K(−1) = −1</div>
+          </div>
+        </div>
+
+        <!-- Row 3: Deviations -->
+        <div class="feat-row">
+          <div class="feat-info">
+            <span class="feat-num">03</span>
+            <h3 class="feat-name">Deviations</h3>
+            <p class="feat-desc">The Illustrious 18 — situations where the true count tells you to override basic strategy. Learn exactly when the count changes your play. The difference between a good counter and a great one.</p>
+            <span class="feat-tag">Illustrious 18</span>
+          </div>
+          <div class="feat-mockup sp-mockup-chart">
+            <div class="spm-label">Illustrious 18 — Count-Based Deviations</div>
+            <div class="bs-scroll">
+              <table class="dev-chart">
+                <thead><tr><th>Hand</th><th>Dealer</th><th>Basic</th><th>Deviate</th><th>At TC</th></tr></thead>
+                <tbody>
+                  <tr><td>16</td><td>10</td><td class="dev-basic">Hit</td><td class="dev-S">Stand</td><td class="dev-tc">≥ 0</td></tr>
+                  <tr><td>15</td><td>10</td><td class="dev-basic">Hit</td><td class="dev-S">Stand</td><td class="dev-tc">≥ +4</td></tr>
+                  <tr><td>10,10</td><td>5</td><td class="dev-basic">Stand</td><td class="dev-P">Split</td><td class="dev-tc">≥ +5</td></tr>
+                  <tr><td>10,10</td><td>6</td><td class="dev-basic">Stand</td><td class="dev-P">Split</td><td class="dev-tc">≥ +4</td></tr>
+                  <tr><td>12</td><td>3</td><td class="dev-basic">Hit</td><td class="dev-S">Stand</td><td class="dev-tc">≥ +2</td></tr>
+                  <tr><td>12</td><td>2</td><td class="dev-basic">Hit</td><td class="dev-S">Stand</td><td class="dev-tc">≥ +3</td></tr>
+                  <tr><td>11</td><td>A</td><td class="dev-basic">Hit</td><td class="dev-D">Double</td><td class="dev-tc">≥ +1</td></tr>
+                  <tr><td>9</td><td>2</td><td class="dev-basic">Hit</td><td class="dev-D">Double</td><td class="dev-tc">≥ +1</td></tr>
+                  <tr><td>10</td><td>A</td><td class="dev-basic">Hit</td><td class="dev-D">Double</td><td class="dev-tc">≥ +4</td></tr>
+                  <tr><td>9</td><td>7</td><td class="dev-basic">Hit</td><td class="dev-D">Double</td><td class="dev-tc">≥ +3</td></tr>
+                  <tr><td>16</td><td>9</td><td class="dev-basic">Hit</td><td class="dev-S">Stand</td><td class="dev-tc">≥ +5</td></tr>
+                  <tr><td>A8</td><td>6</td><td class="dev-basic">Stand</td><td class="dev-D">Double</td><td class="dev-tc">≥ 0</td></tr>
+                  <tr><td>A8</td><td>5</td><td class="dev-basic">Stand</td><td class="dev-D">Double</td><td class="dev-tc">≥ +1</td></tr>
+                  <tr><td>13</td><td>2</td><td class="dev-basic">Stand</td><td class="dev-H">Hit</td><td class="dev-tc">≤ −1</td></tr>
+                  <tr><td>12</td><td>4</td><td class="dev-basic">Stand</td><td class="dev-H">Hit</td><td class="dev-tc">≤ −1</td></tr>
+                  <tr><td>12</td><td>5</td><td class="dev-basic">Stand</td><td class="dev-H">Hit</td><td class="dev-tc">≤ −2</td></tr>
+                  <tr><td>12</td><td>6</td><td class="dev-basic">Stand</td><td class="dev-H">Hit</td><td class="dev-tc">≤ −1</td></tr>
+                  <tr><td>A8</td><td>4</td><td class="dev-basic">Stand</td><td class="dev-D">Double</td><td class="dev-tc">≥ +3</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 4: Deck Estimation -->
+        <div class="feat-row">
+          <div class="feat-info">
+            <span class="feat-num">04</span>
+            <h3 class="feat-name">Deck Estimation</h3>
+            <p class="feat-desc">Estimate how many decks remain in the shoe by eye. Essential for converting your running count to a true count — the number that tells you your actual edge at any point in the shoe.</p>
+            <span class="feat-tag">Visual Training</span>
+          </div>
+          <div class="feat-mockup">
+            <div class="spm-label">Cards dealt from a 6-deck shoe</div>
+            <div class="spm-big-num">156</div>
+            <div style="font-size:.75rem;color:#4a5a4a;text-align:center;margin-bottom:1.25rem">out of 312 cards</div>
+            <div class="spm-slider-val">3.0 decks remaining</div>
+            <input type="range" class="sp-slider" min="0.5" max="6" step="0.5" value="3" disabled>
+            <div style="font-size:.68rem;color:#4a5a4a;display:flex;justify-content:space-between;margin-top:.35rem">
+              <span>½ deck</span><span>3 decks</span><span>6 decks</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 5: True Count -->
+        <div class="feat-row">
+          <div class="feat-info">
+            <span class="feat-num">05</span>
+            <h3 class="feat-name">True Count</h3>
+            <p class="feat-desc">Running count divided by decks remaining. This single calculation normalizes your edge so it's accurate regardless of shoe depth. Master this and you know your precise edge at any moment.</p>
+            <span class="feat-tag">RC ÷ Decks</span>
+          </div>
+          <div class="feat-mockup">
+            <div class="spm-label">Running Count ÷ Decks Remaining</div>
+            <div class="spm-tc-calc">
+              <div class="spm-tc-box">
+                <div class="spm-tc-lbl">Running Count</div>
+                <div class="spm-tc-val spm-pos">+8</div>
+              </div>
+              <div class="spm-tc-op">÷</div>
+              <div class="spm-tc-box">
+                <div class="spm-tc-lbl">Decks Left</div>
+                <div class="spm-tc-val">2</div>
+              </div>
+              <div class="spm-tc-op">=</div>
+              <div class="spm-tc-box spm-tc-result">
+                <div class="spm-tc-lbl">True Count</div>
+                <div class="spm-tc-val spm-pos">+4</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 6: Bet Spread -->
+        <div class="feat-row">
+          <div class="feat-info">
+            <span class="feat-num">06</span>
+            <h3 class="feat-name">Bet Spread</h3>
+            <p class="feat-desc">Build a betting system based on your bankroll and risk tolerance. Know exactly how much to bet at every true count level before you sit down. Size your bets like a professional.</p>
+            <span class="feat-tag">Bankroll Management</span>
+          </div>
+          <div class="feat-mockup">
+            <div class="spm-label">Bet Spread · Moderate Risk · $3,000 Bankroll</div>
+            <table class="spm-table">
+              <tr><th>True Count</th><th>Bet</th><th>Edge</th></tr>
+              <tr><td>≤ 0</td><td class="spm-bet">$10</td><td style="color:#4a5a4a">House edge</td></tr>
+              <tr><td>+1</td><td class="spm-bet">$20</td><td style="color:#4ade80">+0.5%</td></tr>
+              <tr><td>+2</td><td class="spm-bet">$40</td><td style="color:#4ade80">+1.0%</td></tr>
+              <tr><td>+3</td><td class="spm-bet">$80</td><td style="color:#4ade80">+1.5%</td></tr>
+              <tr><td>+4+</td><td class="spm-bet" style="color:#4ade80">$120</td><td style="color:#4ade80">+2.0%</td></tr>
+            </table>
+          </div>
+        </div>
+
+      </div><!-- end .feat-rows -->
+
+      <!-- Bottom CTA -->
+      <div class="feat-cta">
+        <button class="hero-main-cta" id="features-cta">Start Training</button>
+      </div>
+
+    </div><!-- end .features-slide -->
+
+    <!-- WHAT IS BLACKJACK -->
+    <!-- BLACKJACK INFO POPUP -->
+    <div class="info-modal-overlay hidden" id="bj-modal">
+      <div class="info-modal-box">
+        <button class="info-modal-close" id="close-bj-modal">✕</button>
+        <span class="info-modal-eyebrow">First things first</span>
+        <h2 class="info-modal-title">What is Blackjack?</h2>
+        <div class="info-modal-body">
+          <p>Blackjack (also called "21") is the most popular casino card game in the world — and one of the few where <strong>your decisions actually change the odds</strong>.</p>
+          <p>The goal is simple: get a hand value closer to 21 than the dealer without going over. Cards 2–10 are worth face value. Face cards (J, Q, K) are worth 10. Aces are worth 1 or 11.</p>
+          <p>Hit 21 on your first two cards and that's a <strong>Blackjack</strong> — an automatic win paying 3:2. With perfect strategy, the house edge drops to just 0.5%.</p>
+          <div class="hand-examples" style="margin-top:1.5rem">
+            <div class="hand-example">
+              <span class="hand-label good">Blackjack — 21</span>
+              <div class="card-row">
+                <div class="card suit-spades"><span class="rank tl">A</span><span class="suit-sym">♠</span><span class="rank br">A</span></div>
+                <div class="card suit-hearts"><span class="rank tl">K</span><span class="suit-sym">♥</span><span class="rank br">K</span></div>
+              </div>
+            </div>
+            <div class="hand-example">
+              <span class="hand-label bad">Bust — over 21</span>
+              <div class="card-row">
+                <div class="card suit-clubs"><span class="rank tl">9</span><span class="suit-sym">♣</span><span class="rank br">9</span></div>
+                <div class="card suit-diamonds"><span class="rank tl">7</span><span class="suit-sym">♦</span><span class="rank br">7</span></div>
+                <div class="card suit-spades"><span class="rank tl">K</span><span class="suit-sym">♠</span><span class="rank br">K</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD COUNTING INFO POPUP -->
+    <div class="info-modal-overlay hidden" id="cc-modal">
+      <div class="info-modal-box info-modal-box-wide">
+        <button class="info-modal-close" id="close-cc-modal">✕</button>
+        <span class="info-modal-eyebrow">The skill</span>
+        <h2 class="info-modal-title">What is Card Counting?</h2>
+        <div class="info-modal-body">
+          <p>Card counting tracks the <strong>ratio of high cards to low cards</strong> remaining in the shoe. The more high cards, the higher your edge. It's a simple running number — not memorization.</p>
+          <div class="myth-card" style="margin:1.25rem 0">
+            <h3>Common myths</h3>
+            <ul class="myth-list">
+              <li><span class="myth-label">❌ "It's illegal"</span><span class="myth-body">Perfectly legal. Casinos can ask you to leave, but no law is broken.</span></li>
+              <li><span class="myth-label">❌ "You need to be a genius"</span><span class="myth-body">The math is trivial. Discipline and preparation is the real skill.</span></li>
+              <li><span class="myth-label">❌ "It only works in movies"</span><span class="myth-body">The MIT Blackjack Team won millions. Real people, real money.</span></li>
+            </ul>
+          </div>
+          <p class="info-modal-sub">Every card changes your count by +1, 0, or −1. That's the whole Hi-Lo system.</p>
+          <div class="hilo-chart hilo-chart-compact">
+            <div class="hilo-group">
+              <div class="hilo-cards">
+                <div class="card card-sm suit-hearts"><span class="rank tl">2</span><span class="suit-sym">♥</span><span class="rank br">2</span></div>
+                <div class="card card-sm suit-clubs"><span class="rank tl">5</span><span class="suit-sym">♣</span><span class="rank br">5</span></div>
+                <div class="card card-sm suit-diamonds"><span class="rank tl">6</span><span class="suit-sym">♦</span><span class="rank br">6</span></div>
+              </div>
+              <div class="hilo-value c-green">+1</div>
+              <div class="hilo-label">Low cards (2–6)</div>
+            </div>
+            <div class="hilo-group">
+              <div class="hilo-cards">
+                <div class="card card-sm suit-clubs"><span class="rank tl">7</span><span class="suit-sym">♣</span><span class="rank br">7</span></div>
+                <div class="card card-sm suit-diamonds"><span class="rank tl">8</span><span class="suit-sym">♦</span><span class="rank br">8</span></div>
+                <div class="card card-sm suit-spades"><span class="rank tl">9</span><span class="suit-sym">♠</span><span class="rank br">9</span></div>
+              </div>
+              <div class="hilo-value c-muted">0</div>
+              <div class="hilo-label">Mid cards (7–9)</div>
+            </div>
+            <div class="hilo-group">
+              <div class="hilo-cards">
+                <div class="card card-sm suit-hearts"><span class="rank tl">10</span><span class="suit-sym">♥</span><span class="rank br">10</span></div>
+                <div class="card card-sm suit-clubs"><span class="rank tl">J</span><span class="suit-sym">♣</span><span class="rank br">J</span></div>
+                <div class="card card-sm suit-hearts"><span class="rank tl">A</span><span class="suit-sym">♥</span><span class="rank br">A</span></div>
+              </div>
+              <div class="hilo-value c-red">−1</div>
+              <div class="hilo-label">High cards (10–A)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end #landing -->
+
+
+  <!-- ===== PIPELINE VIEW ===== -->
+  <div id="pipeline" class="hidden">
+    <nav class="dark-nav">
+      <button class="dark-nav-back" id="pipeline-back">← Back</button>
+      <span class="dark-nav-title">Training Pipeline</span>
+      <button class="dark-nav-account" id="pipe-nav-account">Sign In</button>
+    </nav>
+    <div class="pipeline-scroll">
+      <div class="pipeline-intro">
+        <h2>Choose a skill to train</h2>
+        <p>Work through each module individually, or jump straight to full training.</p>
+      </div>
+      <div class="pipe-track">
+        <div class="pipe-node" data-skill="basic-strategy">
+          <div class="pipe-left">
+            <div class="pipe-circle" id="circle-basic-strategy">01</div>
+            <div class="pipe-line"></div>
+          </div>
+          <div class="pipe-right">
+            <div class="pipe-node-top">
+              <div class="pipe-node-info">
+                <h3>Basic Strategy</h3>
+                <p>The mathematically optimal play for every hand. Hit, stand, double, split — always make the correct call.</p>
+              </div>
+              <div class="pipe-node-actions">
+                <span class="pipe-badge" id="badge-basic-strategy">Ready</span>
+                <button class="pipe-btn" data-skill="basic-strategy">Train →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="pipe-node" data-skill="keep-counting">
+          <div class="pipe-left">
+            <div class="pipe-circle" id="circle-keep-counting">02</div>
+            <div class="pipe-line"></div>
+          </div>
+          <div class="pipe-right">
+            <div class="pipe-node-top">
+              <div class="pipe-node-info">
+                <h3>Running Count</h3>
+                <p>Track the Hi-Lo running count as cards are dealt. Five levels — from single cards to 5-card speed drills.</p>
+              </div>
+              <div class="pipe-node-actions">
+                <span class="pipe-badge" id="badge-keep-counting">Ready</span>
+                <button class="pipe-btn" data-skill="keep-counting">Train →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="pipe-node" data-skill="deviations">
+          <div class="pipe-left">
+            <div class="pipe-circle" id="circle-deviations">03</div>
+            <div class="pipe-line"></div>
+          </div>
+          <div class="pipe-right">
+            <div class="pipe-node-top">
+              <div class="pipe-node-info">
+                <h3>Deviations</h3>
+                <p>Learn the Illustrious 18 — the count-based situations where you override basic strategy for maximum edge.</p>
+              </div>
+              <div class="pipe-node-actions">
+                <span class="pipe-badge" id="badge-deviations">Ready</span>
+                <button class="pipe-btn" data-skill="deviations">Train →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="pipe-node" data-skill="deck-estimation">
+          <div class="pipe-left">
+            <div class="pipe-circle" id="circle-deck-estimation">04</div>
+            <div class="pipe-line"></div>
+          </div>
+          <div class="pipe-right">
+            <div class="pipe-node-top">
+              <div class="pipe-node-info">
+                <h3>Deck Estimation</h3>
+                <p>Estimate how many decks remain in the shoe. Required to convert your running count to a true count.</p>
+              </div>
+              <div class="pipe-node-actions">
+                <span class="pipe-badge" id="badge-deck-estimation">Ready</span>
+                <button class="pipe-btn" data-skill="deck-estimation">Train →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="pipe-node" data-skill="true-count">
+          <div class="pipe-left">
+            <div class="pipe-circle" id="circle-true-count">05</div>
+            <div class="pipe-line"></div>
+          </div>
+          <div class="pipe-right">
+            <div class="pipe-node-top">
+              <div class="pipe-node-info">
+                <h3>True Count</h3>
+                <p>Divide running count by decks remaining. This normalizes the count and tells you your real edge.</p>
+              </div>
+              <div class="pipe-node-actions">
+                <span class="pipe-badge" id="badge-true-count">Ready</span>
+                <button class="pipe-btn" data-skill="true-count">Train →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="pipe-node" data-skill="bet-spread">
+          <div class="pipe-left">
+            <div class="pipe-circle" id="circle-bet-spread">06</div>
+            <div class="pipe-line"></div>
+          </div>
+          <div class="pipe-right">
+            <div class="pipe-node-top">
+              <div class="pipe-node-info">
+                <h3>Custom Bet Spread</h3>
+                <p>Build a betting strategy based on your bankroll and risk tolerance. Know your exact bet at every true count.</p>
+              </div>
+              <div class="pipe-node-actions">
+                <span class="pipe-badge" id="badge-bet-spread">Ready</span>
+                <button class="pipe-btn" data-skill="bet-spread">Configure →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="pipe-node pipe-final" data-skill="full-training">
+          <div class="pipe-left">
+            <div class="pipe-circle pipe-circle-final">★</div>
+          </div>
+          <div class="pipe-right">
+            <div class="pipe-node-top">
+              <div class="pipe-node-info">
+                <h3>Put it All Together</h3>
+                <p>Count cards, make correct plays, and size your bets — all at once. Casino conditions.</p>
+              </div>
+              <div class="pipe-node-actions">
+                <span class="pipe-badge pipe-badge-final" id="badge-full-training">Capstone</span>
+                <button class="pipe-btn pipe-btn-final" data-skill="full-training">Train →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div><!-- end #pipeline -->
+
+
+  <!-- ===== SKILL TRAINER ===== -->
+  <div id="skill-trainer" class="hidden">
+    <nav class="dark-nav">
+      <button class="dark-nav-back" id="skill-back">← Pipeline</button>
+      <span class="dark-nav-title" id="skill-nav-title">Basic Strategy</span>
+      <div class="skill-nav-score" id="skill-nav-score"></div>
+    </nav>
+    <div id="skill-body" class="skill-body"></div>
+  </div><!-- end #skill-trainer -->
+
+
+  <!-- ===== DASHBOARD ===== -->
+  <div id="dashboard" class="hidden">
+    <nav class="dark-nav">
+      <button class="dark-nav-back" id="dashboard-back">← Back</button>
+      <span class="dark-nav-title">My Stats</span>
+      <span></span>
+    </nav>
+    <div id="dashboard-body" class="dash-body"></div>
+  </div>
+
+
+  <!-- ===== AUTH MODAL ===== -->
+  <div class="modal-overlay hidden" id="auth-modal">
+    <div class="auth-box">
+      <button class="auth-close" id="auth-close">✕</button>
+
+      <!-- SIGN UP PANEL (default) -->
+      <div id="auth-signup">
+        <div class="auth-brand">
+          <span class="auth-brand-icon">♠</span>
+        </div>
+        <h2 class="auth-heading">Create your account</h2>
+        <p class="auth-sub">Track your weaknesses and train smarter.</p>
+
+        <div class="auth-fields">
+          <div class="auth-field">
+            <label>Username</label>
+            <input class="auth-input" type="text" id="signup-username" placeholder="Choose a username" autocomplete="username">
+          </div>
+          <div class="auth-field">
+            <label>PIN <span class="auth-label-hint">(4 digits)</span></label>
+            <input class="auth-input" type="password" id="signup-pin" placeholder="••••" maxlength="4" inputmode="numeric">
+          </div>
+          <div class="auth-field">
+            <label>Confirm PIN</label>
+            <input class="auth-input" type="password" id="signup-pin2" placeholder="••••" maxlength="4" inputmode="numeric">
+          </div>
+        </div>
+        <div class="auth-error hidden" id="signup-error"></div>
+        <button class="auth-submit-btn" id="signup-btn">Create Account</button>
+
+        <div class="auth-divider"><span>or</span></div>
+
+        <button class="auth-guest-btn" id="guest-btn">Continue as Guest</button>
+
+        <p class="auth-footer-text">
+          Already have an account?
+          <button class="auth-switch-link" id="show-signin">Sign in</button>
+        </p>
+      </div>
+
+      <!-- SIGN IN PANEL (hidden by default) -->
+      <div id="auth-signin" class="hidden">
+        <div class="auth-brand">
+          <span class="auth-brand-icon">♠</span>
+        </div>
+        <h2 class="auth-heading">Welcome back</h2>
+        <p class="auth-sub">Sign in to pick up where you left off.</p>
+
+        <div class="auth-fields">
+          <div class="auth-field">
+            <label>Username</label>
+            <input class="auth-input" type="text" id="signin-username" placeholder="Your username" autocomplete="username">
+          </div>
+          <div class="auth-field">
+            <label>PIN</label>
+            <input class="auth-input" type="password" id="signin-pin" placeholder="••••" maxlength="4" inputmode="numeric">
+          </div>
+        </div>
+        <div class="auth-error hidden" id="signin-error"></div>
+        <button class="auth-submit-btn" id="signin-btn">Sign In</button>
+
+        <div class="auth-divider"><span>or</span></div>
+
+        <button class="auth-guest-btn" id="guest-btn-2">Continue as Guest</button>
+
+        <p class="auth-footer-text">
+          No account?
+          <button class="auth-switch-link" id="show-signup">Create one</button>
+        </p>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Level-up Modal (Running Count) -->
+  <div class="modal-overlay hidden" id="level-up-modal">
+    <div class="modal-box">
+      <div class="modal-badge">↑</div>
+      <h2 class="modal-title">Level Up!</h2>
+      <p class="modal-level-name" id="modal-level-name">Apprentice</p>
+      <p class="modal-desc" id="modal-description">Now dealing 2 cards per round.</p>
+      <button class="btn-primary" id="modal-continue">Keep Going →</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

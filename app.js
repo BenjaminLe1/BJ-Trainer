@@ -15,40 +15,40 @@ const revealObserver = new IntersectionObserver((entries) => {
 document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
 
 // ============================================================
-// HERO FADE ON SCROLL
+// HERO FADE ON SNAP SCROLL
 // ============================================================
-const heroBody    = document.querySelector('.hero-body');
-const heroBgCards = document.querySelectorAll('.bg-card');
-const heroExplore = document.querySelector('.hero-explore');
+const heroBody     = document.querySelector('.hero-body');
+const heroBgCards  = document.querySelectorAll('.bg-card');
+const heroExplore  = document.querySelector('.hero-explore');
+const heroCardRing = document.querySelector('.hero-card-ring-wrap');
+const heroNav      = document.querySelector('.hero-nav');
 
-window.addEventListener('scroll', () => {
-  const vh = window.innerHeight;
-  const progress = Math.min(window.scrollY / (vh * 0.45), 1);
-  if (heroBody) {
-    heroBody.style.opacity  = 1 - progress;
-    heroBody.style.transform = `translate(-50%, calc(-50% - ${progress * 28}px))`;
-  }
-  heroBgCards.forEach(card => {
-    card.style.opacity = 0.5 * (1 - progress);
-  });
-  if (heroExplore) {
-    heroExplore.style.opacity = Math.max(0, 1 - progress * 3);
-  }
-}, { passive: true });
+const landingSnap = document.getElementById('landing-snap');
+if (landingSnap) {
+  landingSnap.addEventListener('scroll', () => {
+    const progress = Math.min(landingSnap.scrollTop / (window.innerHeight * 0.45), 1);
+    const fade = 1 - progress;
 
-// ============================================================
-// FEAT-ROW REVEAL ON SCROLL
-// ============================================================
-const featRowObserver = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      entry.target.classList.add('feat-visible');
-      featRowObserver.unobserve(entry.target);
+    if (heroBody) {
+      heroBody.style.opacity  = fade;
+      heroBody.style.transform = `translateY(calc(-50% - ${progress * 40}px))`;
     }
-  });
-}, { threshold: 0.12, rootMargin: '0px 0px -48px 0px' });
-
-document.querySelectorAll('.feat-row').forEach(el => featRowObserver.observe(el));
+    if (heroCardRing) {
+      heroCardRing.style.opacity  = fade;
+      heroCardRing.style.transform = `translateY(calc(-50% - ${progress * 40}px))`;
+    }
+    if (heroNav) {
+      heroNav.style.opacity  = Math.max(0, 1 - progress * 2);
+      heroNav.style.transform = `translateY(${-progress * 20}px)`;
+    }
+    if (heroExplore) {
+      heroExplore.style.opacity = Math.max(0, 1 - progress * 3);
+    }
+    heroBgCards.forEach(card => {
+      card.style.opacity = 0.5 * fade;
+    });
+  }, { passive: true });
+}
 
 // ============================================================
 // LANDING — CYCLING WORD
@@ -77,7 +77,6 @@ const AppState = {
     'basic-strategy':  { done: false, correct: 0, total: 0 },
     'keep-counting':   { done: false },
     'deviations':      { done: false, correct: 0, total: 0 },
-    'deck-estimation': { done: false, correct: 0, total: 0 },
     'true-count':      { done: false, correct: 0, total: 0 },
     'bet-spread':      { done: false },
     'full-training':   { done: false, correct: 0, total: 0 },
@@ -87,12 +86,11 @@ const AppState = {
 // ============================================================
 // ACCOUNT SYSTEM (localStorage)
 // ============================================================
-const SKILL_IDS = ['basic-strategy','keep-counting','deviations','deck-estimation','true-count','bet-spread'];
+const SKILL_IDS = ['basic-strategy','keep-counting','deviations','true-count','bet-spread'];
 const SKILL_NAMES = {
   'basic-strategy': 'Basic Strategy',
   'keep-counting': 'Running Count',
   'deviations': 'Deviations',
-  'deck-estimation': 'Deck Estimation',
   'true-count': 'True Count',
   'bet-spread': 'Bet Spread',
 };
@@ -165,7 +163,20 @@ function showView(id) {
 }
 
 function goLanding()  { showView('landing'); }
-function goPipeline() { showView('pipeline'); renderPipelineStatus(); }
+function goPipeline() {
+  showView('pipeline');
+  renderPipelineStatus();
+  const data = Account.getStats();
+  window.dispatchEvent(new CustomEvent('colin:event', { detail: {
+    event: 'view_change',
+    payload: {
+      view: 'pipeline',
+      user: Account.currentUser(),
+      stats: data ? data.stats : null,
+      sessions: data ? (data.sessions || 0) : 0
+    }
+  }}));
+}
 function goSkill(id)  { showView('skill-trainer'); launchSkill(id); }
 function goDashboard() { showView('dashboard'); renderDashboard(); }
 
@@ -230,14 +241,50 @@ function renderDashboard() {
             <div class="dash-skill-pct">${s.total > 0 ? pct+'%' : '—'}</div>
           </div>
           <div class="dash-skill-detail">${s.correct}/${s.total} correct</div>
-          <div class="dash-bar-track" style="margin-top:0.4rem"><div class="dash-bar-fill ${cls}" style="width:${pct}%"></div></div>
+          <div class="dash-bar-track" style="margin-top:0.4rem"><div class="dash-bar-fill ${cls}" style="width:0%" data-target-width="${pct}%"></div></div>
         </div>`;
       }).join('')}
     </div>
-    <div style="text-align:center;margin-top:2rem">
+    <div style="text-align:center;margin-top:2rem;display:flex;justify-content:center;gap:.75rem;flex-wrap:wrap">
+      <button class="btn-primary" id="dash-reset" style="background:#5c1a1a;font-size:.85rem;padding:.5rem 1.2rem">Reset Data</button>
       <button class="btn-primary" id="dash-signout" style="background:#333;font-size:.85rem;padding:.5rem 1.2rem">Sign Out</button>
     </div>
   </div>`;
+
+  // Animate skill bars from 0 to target width
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      document.querySelectorAll('.dash-bar-fill[data-target-width]').forEach(bar => {
+        bar.style.width = bar.dataset.targetWidth;
+      });
+    }, 80);
+  });
+
+  window.dispatchEvent(new CustomEvent('colin:event', { detail: {
+    event: 'dashboard_load',
+    payload: {
+      user,
+      stats,
+      sessions: data.sessions || 0,
+      globalPct,
+      weaknesses,
+      strengths
+    }
+  }}));
+
+  document.getElementById('dash-reset').addEventListener('click', () => {
+    if (!confirm('Reset all your stats? This cannot be undone.')) return;
+    const user = Account.currentUser();
+    if (!user) return;
+    const accounts = Account._load();
+    if (accounts[user]) {
+      accounts[user].stats = {};
+      SKILL_IDS.forEach(id => { accounts[user].stats[id] = { correct: 0, total: 0 }; });
+      accounts[user].sessions = 0;
+      Account._save(accounts);
+    }
+    renderDashboard();
+  });
 
   document.getElementById('dash-signout').addEventListener('click', () => {
     Account.signOut();
@@ -264,7 +311,7 @@ function renderPipelineStatus() {
   });
 }
 
-document.querySelectorAll('.pipe-btn').forEach(btn => {
+document.querySelectorAll('.pipe-card-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const skill = btn.dataset.skill;
     if (skill) goSkill(skill);
@@ -287,7 +334,6 @@ function launchSkill(skillId) {
     'basic-strategy':  BasicStrategy,
     'keep-counting':   KeepCounting,
     'deviations':      Deviations,
-    'deck-estimation': DeckEstimation,
     'true-count':      TrueCount,
     'bet-spread':      BetSpread,
     'full-training':   FullTraining,
@@ -301,7 +347,333 @@ function launchSkill(skillId) {
   bodyEl.innerHTML = '';
 
   Account.markSession();
-  activeSkillCleanup = skill.start(bodyEl, scoreEl, skillId);
+  showSkillIntro(skillId, bodyEl, scoreEl, skill);
+}
+
+// ============================================================
+// SKILL INTRO SCREENS
+// ============================================================
+const SKILL_INTROS = {
+  'basic-strategy': {
+    icon: '♠',
+    headline: 'Basic Strategy',
+    sub: 'The optimal play for every hand — no guessing.',
+    bullets: [
+      'You\'ll see dealer upcard + your hand',
+      'Choose Hit, Stand, Double, or Split',
+      'Correct answer is shown after each play',
+      'Build muscle memory until decisions are instant',
+    ],
+    howto: {
+      overview: 'Basic strategy is a mathematically proven set of rules for every possible hand in blackjack. It tells you the exact right move — Hit, Stand, Double, or Split — based on your cards and the dealer\'s upcard. Playing perfect basic strategy reduces the house edge to around 0.5%, the lowest of any casino game.',
+      sections: [
+        {
+          title: 'How the drill works',
+          items: [
+            'You are dealt two cards and shown the dealer\'s upcard.',
+            'Select Hit, Stand, Double Down, or Split.',
+            'The correct play is revealed immediately after you choose.',
+            'A wrong answer resets your streak — keep going until decisions feel automatic.',
+          ],
+        },
+        {
+          title: 'Key rules to remember',
+          items: [
+            'Always split Aces and 8s — no exceptions.',
+            'Never split 10s or 5s.',
+            'Double down on 11 against any dealer card except an Ace.',
+            'Always hit a hard 16 against a dealer 10 or Ace.',
+            'Stand on 17 or higher against any dealer card.',
+          ],
+        },
+        {
+          title: 'Why it matters',
+          items: [
+            'Without basic strategy, the average player gives up 2–3% to the house.',
+            'With perfect basic strategy, that drops to 0.5%.',
+            'Card counting only works on top of perfect basic strategy — this is the non-negotiable foundation.',
+          ],
+        },
+      ],
+    },
+  },
+  'keep-counting': {
+    icon: '♣',
+    headline: 'Running Count',
+    sub: 'Five cards dealt one at a time — keep the count.',
+    bullets: [
+      '5 cards are revealed at your chosen speed',
+      'Each card adds +1, 0, or −1 to the count',
+      'Submit the running total when all cards are shown',
+      'Speed up as your accuracy improves',
+    ],
+    howto: {
+      overview: 'The Hi-Lo running count is the core of card counting. Every card dealt is assigned a value: low cards (2–6) add +1, neutral cards (7–9) add 0, and high cards (10–A) subtract −1. You keep a mental running total of these values as each card comes out.',
+      sections: [
+        {
+          title: 'The Hi-Lo values',
+          items: [
+            '2, 3, 4, 5, 6 → +1 (low cards favour the dealer, so their exit helps you)',
+            '7, 8, 9 → 0 (neutral, ignore these)',
+            '10, J, Q, K, A → −1 (high cards favour the player)',
+            'A positive count means more high cards remain — good for you.',
+          ],
+        },
+        {
+          title: 'How the drill works',
+          items: [
+            'Cards are dealt one at a time at your chosen speed.',
+            'Add or subtract each card\'s value to your running total.',
+            'When all cards are shown, submit your running count.',
+            'Five speed levels: start slow, work up to casino pace.',
+          ],
+        },
+        {
+          title: 'Tips for accuracy',
+          items: [
+            'Don\'t try to memorize individual cards — just update the total.',
+            'Practice cancellation: a 5 and a King cancel out to 0.',
+            'At the casino, count every card on the table after each hand.',
+            'Accuracy first, speed second — a wrong count is worse than a slow one.',
+          ],
+        },
+      ],
+    },
+  },
+  'deviations': {
+    icon: '♦',
+    headline: 'Deviations',
+    sub: 'When the count tells you to override basic strategy.',
+    bullets: [
+      'A true count and hand scenario are shown',
+      'Decide whether the count changes your play',
+      'Basic strategy is shown as a reference',
+      'Mastering these adds significant edge',
+    ],
+    howto: {
+      overview: 'Basic strategy is calculated assuming a neutral deck. But when the true count rises or falls significantly, the mathematically correct play changes. These departures from basic strategy are called deviations, and the most important ones are known as the Illustrious 18.',
+      sections: [
+        {
+          title: 'What is a deviation?',
+          items: [
+            'A deviation is any situation where the true count changes the correct play.',
+            'Example: basic strategy says Stand on 16 vs 10 — but at TC −1 or lower, you Hit.',
+            'Example: basic strategy says Hit on 12 vs 2 — but at TC +3 or higher, you Stand.',
+            'Deviations are based on index numbers — the true count threshold at which you switch.',
+          ],
+        },
+        {
+          title: 'How the drill works',
+          items: [
+            'You are shown a hand, dealer upcard, and the current true count.',
+            'Decide whether to play basic strategy or deviate based on the count.',
+            'The correct answer and reasoning are shown after each round.',
+            'Focus on the Illustrious 18 first — they cover the highest-impact scenarios.',
+          ],
+        },
+        {
+          title: 'The most important deviations',
+          items: [
+            'Insurance: take it at TC +3 or higher.',
+            '16 vs 10: Stand at TC 0 or higher.',
+            '15 vs 10: Stand at TC +4 or higher.',
+            '10,10 vs 5: Split at TC +5 or higher.',
+            '10,10 vs 6: Split at TC +4 or higher.',
+          ],
+        },
+      ],
+    },
+  },
+  'true-count': {
+    icon: '÷',
+    headline: 'True Count',
+    sub: 'Normalize the running count by decks remaining.',
+    bullets: [
+      'A shoe and running count are shown',
+      'Estimate decks remaining from the shoe depth',
+      'Divide running count by decks remaining',
+      'Round your answer to the nearest 0.5',
+    ],
+    howto: {
+      overview: 'The running count tells you how many more high cards than low cards have been seen, but it doesn\'t account for how many decks are left. A running count of +10 means very different things in a 6-deck shoe vs. a 1-deck game. The true count normalizes this by dividing the running count by the number of decks remaining.',
+      sections: [
+        {
+          title: 'The formula',
+          items: [
+            'True Count = Running Count ÷ Decks Remaining',
+            'Round to the nearest 0.5 (e.g. +7 ÷ 2.5 decks = +2.8 → TC +3)',
+            'Decks remaining is estimated visually from the discard tray.',
+            'A 6-deck shoe is about 21cm thick — each deck is roughly 3.5cm.',
+          ],
+        },
+        {
+          title: 'How the drill works',
+          items: [
+            'You are shown a shoe with a visual indicator of how many decks remain.',
+            'The current running count is displayed.',
+            'Calculate and enter the true count to the nearest 0.5.',
+            'Immediate feedback shows the correct answer and calculation.',
+          ],
+        },
+        {
+          title: 'Why this matters',
+          items: [
+            'All betting and deviation decisions are based on the true count, not the running count.',
+            'At TC +1, you have roughly a 0.5% edge over the house.',
+            'Each additional true count point adds approximately 0.5% to your edge.',
+            'At TC +4 or above, you have a significant edge — this is when to bet big.',
+          ],
+        },
+      ],
+    },
+  },
+  'bet-spread': {
+    icon: '$',
+    headline: 'Bet Spread',
+    sub: 'Size your bets based on your edge.',
+    bullets: [
+      'Enter your bankroll and risk tolerance',
+      'Get a recommended bet for each true count',
+      'See your hourly EV and standard deviation',
+      'Know exactly what to bet before you sit down',
+    ],
+    startLabel: 'Configure →',
+    howto: {
+      overview: 'Knowing when you have an edge is only half the battle — you also need to know how much to bet. Bet too little and you leave money on the table. Bet too much and you risk ruin before the long run plays out. The bet spread trainer helps you build a mathematically sound betting ramp based on your bankroll.',
+      sections: [
+        {
+          title: 'How bet sizing works',
+          items: [
+            'At a negative or neutral true count, bet the minimum (the "cover" bet).',
+            'As the true count rises above +1, increase your bet proportionally.',
+            'A common spread is 1–12 units (e.g. $10 minimum, $120 maximum).',
+            'The Kelly Criterion tells you the mathematically optimal bet for each edge level.',
+          ],
+        },
+        {
+          title: 'What you\'ll configure',
+          items: [
+            'Your total bankroll — the amount you\'re willing to risk.',
+            'Your minimum and maximum bet.',
+            'Your betting ramp — how aggressively you scale up with the count.',
+            'Risk of ruin tolerance — how often you\'re willing to bust your bankroll.',
+          ],
+        },
+        {
+          title: 'What you\'ll see',
+          items: [
+            'Recommended bet at each true count level (+1 through +6 and above).',
+            'Hourly expected value (EV) — your average profit per hour at your bet sizes.',
+            'Standard deviation — how much your results will swing in any given session.',
+            'N0 — the number of hands needed to reach long-term expectation.',
+          ],
+        },
+      ],
+    },
+  },
+  'full-training': {
+    icon: '★',
+    headline: 'Full Training',
+    sub: 'Count, play correctly, and size bets — simultaneously.',
+    bullets: [
+      'Cards are dealt across multiple rounds',
+      'Maintain a running count through the shoe',
+      'Make correct basic strategy plays on each hand',
+      'Submit your count at the end of each round',
+    ],
+    howto: {
+      overview: 'Full Training puts everything together in a simulated casino environment. You play real blackjack hands while simultaneously maintaining the running count and sizing bets based on your true count. This is the closest thing to sitting at a real table.',
+      sections: [
+        {
+          title: 'What happens each round',
+          items: [
+            'You are dealt a hand against the dealer.',
+            'Make the correct basic strategy play (or deviation if the count warrants it).',
+            'Track every card that is dealt — yours, the dealer\'s, and any others.',
+            'At the end of the round, submit your running count.',
+          ],
+        },
+        {
+          title: 'Bet sizing in full training',
+          items: [
+            'Your bankroll is tracked throughout the session.',
+            'Bet sizes are based on the true count from the previous round.',
+            'Correct bet sizing is part of your score.',
+            'The goal is to grow your bankroll while keeping count accurately.',
+          ],
+        },
+        {
+          title: 'How to succeed',
+          items: [
+            'Don\'t attempt full training until basic strategy is automatic.',
+            'Running count accuracy should be above 90% before combining skills.',
+            'Start at the slowest speed — speed up as accuracy stabilizes.',
+            'This is the final test. Casino-ready means consistently performing well here.',
+          ],
+        },
+      ],
+    },
+  },
+};
+
+function showSkillIntro(skillId, bodyEl, scoreEl, skill) {
+  const intro = SKILL_INTROS[skillId];
+  if (!intro) {
+    activeSkillCleanup = skill.start(bodyEl, scoreEl, skillId);
+    return;
+  }
+
+  bodyEl.innerHTML = `
+    <div class="skill-intro-wrap">
+      <div class="skill-intro-icon">${intro.icon}</div>
+      <h2 class="skill-intro-headline">${intro.headline}</h2>
+      <p class="skill-intro-sub">${intro.sub}</p>
+      <button class="skill-intro-howto" id="skill-intro-howto-btn">How does this work?</button>
+      <button class="skill-intro-start" id="skill-intro-start-btn">${intro.startLabel || 'Start Training →'}</button>
+    </div>
+  `;
+
+  const data = Account.getStats();
+  const skillStats = data ? (data.stats[skillId] || { correct: 0, total: 0 }) : { correct: 0, total: 0 };
+  window.dispatchEvent(new CustomEvent('colin:event', { detail: {
+    event: 'trainer_enter',
+    payload: { skillId, skillName: skill.name, stats: skillStats }
+  }}));
+
+  bodyEl.querySelector('#skill-intro-start-btn').addEventListener('click', () => {
+    bodyEl.innerHTML = '';
+    activeSkillCleanup = skill.start(bodyEl, scoreEl, skillId);
+  });
+
+  bodyEl.querySelector('#skill-intro-howto-btn').addEventListener('click', () => {
+    const hw = intro.howto || { overview: '', sections: [] };
+    const sectionsHTML = hw.sections.map(s => `
+      <div class="skill-howto-section">
+        <div class="skill-howto-section-title">${s.title}</div>
+        <ul class="skill-howto-list">
+          ${s.items.map(item => `<li>${item}</li>`).join('')}
+        </ul>
+      </div>
+    `).join('');
+
+    const overlay = document.createElement('div');
+    overlay.className = 'skill-howto-overlay';
+    overlay.innerHTML = `
+      <div class="skill-howto-modal">
+        <div class="skill-howto-header">
+          <span class="skill-howto-title">${intro.headline} — How it works</span>
+          <button class="skill-howto-close" aria-label="Close">✕</button>
+        </div>
+        <div class="skill-howto-body">
+          ${hw.overview ? `<p class="skill-howto-overview">${hw.overview}</p>` : ''}
+          ${sectionsHTML}
+        </div>
+      </div>
+    `;
+    document.getElementById('skill-trainer').appendChild(overlay);
+    overlay.querySelector('.skill-howto-close').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  });
 }
 
 // ============================================================
@@ -430,20 +802,21 @@ function randomHand() {
 const BasicStrategy = {
   name: 'Basic Strategy',
   start(body, scoreEl, skillId) {
-    let correct=0, total=0, phase='question', hand, dealerIdx, correctAction;
+    let correct=0, total=0, streak=0, phase='question', hand, dealerIdx, correctAction;
 
     const wrap = document.createElement('div');
     wrap.className = 'kc-wrapper';
-    wrap.style.maxWidth = '520px';
+    wrap.style.maxWidth = '420px';
     wrap.style.width = '100%';
 
     wrap.innerHTML = `
-      <div class="sk-score-bar" id="bs-score-bar">
-        <div class="sk-score-item"><div class="sk-score-num" id="bs-correct">0</div><div>Correct</div></div>
-        <div class="sk-score-item"><div class="sk-score-num" id="bs-total">0</div><div>Total</div></div>
+      <div style="display:flex;align-items:center;gap:.5rem;font-size:.82rem;color:var(--tr-muted)">
+        <span>Streak</span>
+        <span class="sk-score-num" id="bs-streak" style="font-size:1.5rem;font-family:var(--font-serif);color:var(--accent);line-height:1">0</span>
+        <span id="bs-fire" style="font-size:1rem;opacity:0;transition:opacity .2s">🔥</span>
       </div>
 
-      <div class="felt-table">
+      <div class="felt-table" style="width:100%">
         <div class="felt-dealer-zone">
           <span class="felt-zone-label">Dealer</span>
           <div class="felt-hand" id="bs-dealer-hand"></div>
@@ -455,22 +828,17 @@ const BasicStrategy = {
         </div>
       </div>
 
-      <div class="sk-actions" id="bs-actions"></div>
-      <div class="sk-feedback hidden" id="bs-feedback">
-        <span class="sk-feedback-icon" id="bs-icon"></span>
-        <span id="bs-msg"></span>
-      </div>
+      <div class="sk-actions sk-actions-vertical" id="bs-actions"></div>
       <button class="btn-primary sk-next-btn" id="bs-next">Next Hand →</button>
     `;
     body.appendChild(wrap);
 
     const dealerHandEl = wrap.querySelector('#bs-dealer-hand');
     const playerHandEl = wrap.querySelector('#bs-player-hand');
-    const actionsEl = wrap.querySelector('#bs-actions');
-    const feedbackEl= wrap.querySelector('#bs-feedback');
-    const nextEl    = wrap.querySelector('#bs-next');
-    const correctEl = wrap.querySelector('#bs-correct');
-    const totalEl   = wrap.querySelector('#bs-total');
+    const actionsEl    = wrap.querySelector('#bs-actions');
+    const nextEl       = wrap.querySelector('#bs-next');
+    const streakEl     = wrap.querySelector('#bs-streak');
+    const fireEl       = wrap.querySelector('#bs-fire');
 
     function cardBackEl() {
       const el = document.createElement('div');
@@ -504,11 +872,14 @@ const BasicStrategy = {
         playerHandEl.appendChild(cardEl({rank:'A',suit:suits[0].name,sym:suits[0].sym}));
         playerHandEl.appendChild(cardEl({rank:String(x),suit:suits[1].name,sym:suits[1].sym}));
       } else {
-        const a = Math.min(Math.floor(Math.random()*(hand.total-3))+2, 9);
+        const lo = Math.max(2, hand.total - 10);
+        const hi = Math.min(10, hand.total - 2);
+        const a = lo + Math.floor(Math.random() * (hi - lo + 1));
         const b = hand.total - a;
-        const bRank = b===10?'10':String(b);
+        const aRank = a === 10 ? '10' : String(a);
+        const bRank = b === 10 ? '10' : String(b);
         const suits = shuffle([...SUITS]);
-        playerHandEl.appendChild(cardEl({rank:String(a),suit:suits[0].name,sym:suits[0].sym}));
+        playerHandEl.appendChild(cardEl({rank:aRank,suit:suits[0].name,sym:suits[0].sym}));
         playerHandEl.appendChild(cardEl({rank:bRank,suit:suits[1].name,sym:suits[1].sym}));
       }
 
@@ -524,7 +895,6 @@ const BasicStrategy = {
         actionsEl.appendChild(b);
       });
 
-      feedbackEl.classList.add('hidden');
       nextEl.classList.remove('visible');
     }
 
@@ -533,7 +903,10 @@ const BasicStrategy = {
       phase = 'feedback';
       total++;
       const isCorrect = chosen === correctAction;
-      if (isCorrect) correct++;
+      if (isCorrect) { correct++; streak++; } else { streak = 0; }
+
+      streakEl.textContent = streak;
+      fireEl.style.opacity = streak >= 3 ? '1' : '0';
 
       // Mark buttons
       actionsEl.querySelectorAll('.sk-action-btn').forEach(b => {
@@ -542,20 +915,24 @@ const BasicStrategy = {
         if (b.dataset.action === chosen && !isCorrect) b.classList.add('wrong');
       });
 
-      feedbackEl.classList.remove('hidden','correct','wrong');
-      feedbackEl.classList.add(isCorrect?'correct':'wrong');
-      feedbackEl.querySelector('#bs-icon').textContent = isCorrect ? '✓' : '✗';
-      const actionName = ACTION_LABELS[correctAction] || correctAction;
-      feedbackEl.querySelector('#bs-msg').textContent = isCorrect
-        ? `Correct! ${actionName} is the right play here.`
-        : `The correct play is ${actionName}. ${hand.label} vs ${DEALER_LABELS[dealerIdx]} — remember it.`;
-
-      correctEl.textContent = correct;
-      totalEl.textContent   = total;
       markScore(scoreEl, correct, total);
 
       Account.addResult(skillId, isCorrect);
       if (total >= 5) AppState.skillStatus[skillId].done = true;
+      window.dispatchEvent(new CustomEvent('colin:event', { detail: {
+        event: 'trainer_answer',
+        payload: {
+          skillId: 'basic-strategy',
+          isCorrect,
+          chosen,
+          correctAction,
+          handLabel: hand.label,
+          dealerLabel: DEALER_LABELS[dealerIdx],
+          streak,
+          correct,
+          total
+        }
+      }}));
       nextEl.classList.add('visible');
     }
 
@@ -585,21 +962,16 @@ const KeepCounting = {
 
     body.innerHTML = `
       <div class="kc-wrapper">
-        <div class="kc-header">
-          <div class="kc-stat">
-            <div class="kc-stat-val" id="kc-score">0</div>
-            <div class="kc-stat-label">Correct</div>
-          </div>
-          <div class="kc-stat">
-            <div class="kc-stat-val" id="kc-streak">0</div>
-            <div class="kc-stat-label">Streak</div>
-          </div>
+        <div style="display:flex;align-items:center;gap:.5rem;font-size:.82rem;color:var(--tr-muted)">
+          <span>Streak</span>
+          <span id="kc-streak" style="font-size:1.5rem;font-family:var(--font-serif);color:var(--accent);line-height:1">0</span>
+          <span id="kc-fire" style="font-size:1rem;opacity:0;transition:opacity .2s">🔥</span>
         </div>
 
         <div class="kc-speed-wrap">
-          <span class="kc-speed-label">Speed</span>
-          <input type="range" id="kc-speed" min="400" max="3000" step="200" value="1200">
-          <span class="kc-speed-val" id="kc-speed-val">1.2s</span>
+          <span class="kc-speed-label">Slow</span>
+          <input type="range" id="kc-speed" min="400" max="3000" step="200" value="1800">
+          <span class="kc-speed-label">Fast</span>
         </div>
 
         <div class="sk-card-stage" id="kc-stage" style="min-height:130px">
@@ -619,40 +991,24 @@ const KeepCounting = {
           <p class="keyboard-hint" style="margin-top:.5rem">or press <kbd>Enter</kbd> · <kbd>↑</kbd><kbd>↓</kbd> to adjust</p>
         </div>
 
-        <div class="sk-feedback hidden" id="kc-feedback">
-          <span class="sk-feedback-icon" id="kc-icon"></span>
-          <span id="kc-msg"></span>
-          <div id="kc-breakdown" style="font-size:.8rem;color:var(--tr-muted);font-family:monospace;white-space:pre-line;margin-top:.5rem"></div>
-        </div>
         <button class="btn-primary sk-next-btn" id="kc-next">Next Round →</button>
 
-        <div class="hilo-ref-strip">
-          <div class="ref-group"><span class="ref-cards">2–6</span><span class="ref-val c-green">+1</span></div>
-          <span class="ref-sep">·</span>
-          <div class="ref-group"><span class="ref-cards">7–9</span><span class="ref-val" style="color:var(--tr-muted)">0</span></div>
-          <span class="ref-sep">·</span>
-          <div class="ref-group"><span class="ref-cards">10 J Q K A</span><span class="ref-val c-red">−1</span></div>
-        </div>
       </div>
     `;
 
-    const scoreEl2 = body.querySelector('#kc-score');
     const strkEl   = body.querySelector('#kc-streak');
+    const fireEl   = body.querySelector('#kc-fire');
     const stageEl  = body.querySelector('#kc-stage');
     const inputSec = body.querySelector('#kc-input-section');
     const displayEl= body.querySelector('#kc-display');
-    const feedbackEl= body.querySelector('#kc-feedback');
     const nextEl   = body.querySelector('#kc-next');
     const minusBtn = body.querySelector('#kc-minus');
     const plusBtn  = body.querySelector('#kc-plus');
     const submitBtn= body.querySelector('#kc-submit');
     const speedSlider = body.querySelector('#kc-speed');
-    const speedValEl  = body.querySelector('#kc-speed-val');
 
-    function getSpeedMs() { return parseInt(speedSlider.value); }
-    speedSlider.addEventListener('input', () => {
-      speedValEl.textContent = (getSpeedMs()/1000).toFixed(1) + 's';
-    });
+    // Slider left = slow (large delay), right = fast (small delay)
+    function getSpeedMs() { return 3400 - parseInt(speedSlider.value); }
 
     function initDeck() {
       deck = shuffle(buildDeck());
@@ -687,7 +1043,6 @@ const KeepCounting = {
 
       stageEl.innerHTML = '';
       inputSec.classList.add('hidden');
-      feedbackEl.classList.add('hidden');
       nextEl.classList.remove('visible');
 
       const ms = getSpeedMs();
@@ -716,42 +1071,31 @@ const KeepCounting = {
       if (isCorrect) { score++; streak++; }
       else { streak = 0; }
 
-      scoreEl2.textContent = score;
-      strkEl.textContent   = streak;
+      strkEl.textContent = streak;
+      fireEl.style.opacity = streak >= 3 ? '1' : '0';
       markScore(scoreEl, score, score + (AppState.skillStatus[skillId].total||0));
       Account.addResult(skillId, isCorrect);
       if (isCorrect) AppState.skillStatus[skillId].done = true;
+      window.dispatchEvent(new CustomEvent('colin:event', { detail: {
+        event: 'trainer_answer',
+        payload: {
+          skillId: 'keep-counting',
+          isCorrect,
+          playerCount,
+          correctCount: runningCount,
+          cardBreakdown: currentCards.map(c => ({ rank: c.rank, value: c.value })),
+          streak
+        }
+      }}));
 
       inputSec.classList.add('hidden');
-      feedbackEl.classList.remove('hidden','correct','wrong');
-      feedbackEl.classList.add(isCorrect?'correct':'wrong');
-
-      const iconEl = feedbackEl.querySelector('#kc-icon');
-      const msgEl  = feedbackEl.querySelector('#kc-msg');
-      const brkEl  = feedbackEl.querySelector('#kc-breakdown');
-
-      if (isCorrect) {
-        iconEl.textContent = '✓';
-        msgEl.textContent = `Correct! Running count is ${runningCount >= 0 ? '+' : ''}${runningCount}.`;
-        brkEl.textContent = '';
-      } else {
-        iconEl.textContent = '✗';
-        const pStr = playerCount>0?`+${playerCount}`:String(playerCount);
-        const rStr = runningCount>0?`+${runningCount}`:String(runningCount);
-        msgEl.textContent = `You said ${pStr}, answer is ${rStr}.`;
-        const roundDelta = currentCards.reduce((s,c)=>s+c.value,0);
-        const lines = currentCards.map(c=>{ const v=c.value; return `${c.rank}${c.sym}  →  ${v>0?'+':''}${v}`; });
-        lines.push(`Net: ${roundDelta>0?'+':''}${roundDelta}`);
-        brkEl.textContent = lines.join('\n');
-      }
-
       nextEl.classList.add('visible');
     }
 
     minusBtn.addEventListener('click', ()=>{ if(phase==='awaiting'){playerCount--;updateDisplay();} });
     plusBtn.addEventListener('click',  ()=>{ if(phase==='awaiting'){playerCount++;updateDisplay();} });
     submitBtn.addEventListener('click', submitCount);
-    nextEl.addEventListener('click', ()=>{ feedbackEl.classList.remove('correct','wrong'); dealRound(); });
+    nextEl.addEventListener('click', ()=>{ dealRound(); });
 
     const keyHandler = (e) => {
       if (document.getElementById('skill-trainer').classList.contains('hidden')) return;
@@ -760,7 +1104,7 @@ const KeepCounting = {
         if (e.key==='ArrowDown'||e.key==='ArrowLeft'){e.preventDefault();playerCount--;updateDisplay();}
         if (e.key==='Enter') submitCount();
       } else if (phase==='feedback') {
-        if (e.key==='Enter'||e.key===' '){e.preventDefault();feedbackEl.classList.remove('correct','wrong');dealRound();}
+        if (e.key==='Enter'||e.key===' '){e.preventDefault();dealRound();}
       }
     };
     document.addEventListener('keydown', keyHandler);
@@ -797,55 +1141,54 @@ const DEVIATIONS_LIST = [
 const Deviations = {
   name: 'Deviations',
   start(body, scoreEl, skillId) {
-    let correct=0, total=0, phase='question', currentDev, givenTC, shouldDeviate;
+    let correct=0, total=0, streak=0, phase='question', currentDev, givenTC, shouldDeviate;
 
-    body.innerHTML = `
-      <div class="kc-wrapper" style="max-width:520px;width:100%">
-        <div class="sk-score-bar">
-          <div class="sk-score-item"><div class="sk-score-num" id="dev-correct">0</div><div>Correct</div></div>
-          <div class="sk-score-item"><div class="sk-score-num" id="dev-total">0</div><div>Total</div></div>
-        </div>
+    const wrap = document.createElement('div');
+    wrap.className = 'kc-wrapper';
+    wrap.style.maxWidth = '420px';
+    wrap.style.width = '100%';
 
-        <div class="felt-table">
-          <div class="felt-tc-badge">
-            <span class="felt-tc-badge-label">True Count</span>
-            <div class="felt-tc-badge-val" id="dev-tc">+2</div>
-          </div>
-          <div class="felt-dealer-zone">
-            <span class="felt-zone-label">Dealer</span>
-            <div class="felt-hand" id="dev-dealer-hand"></div>
-          </div>
-          <hr class="felt-divider">
-          <div class="felt-player-zone">
-            <span class="felt-zone-label">You · <span id="dev-hand-label">16</span></span>
-            <div class="felt-hand" id="dev-player-hand"></div>
-          </div>
-          <div class="felt-basic-note">Basic strategy: <strong id="dev-basic">Hit</strong></div>
-        </div>
-
-        <div class="sk-actions" id="dev-actions"></div>
-        <div class="sk-feedback hidden" id="dev-feedback">
-          <span class="sk-feedback-icon" id="dev-icon"></span>
-          <span id="dev-msg"></span>
-        </div>
-        <button class="btn-primary sk-next-btn" id="dev-next">Next →</button>
+    wrap.innerHTML = `
+      <div style="display:flex;align-items:center;gap:.5rem;font-size:.82rem;color:var(--tr-muted)">
+        <span>Streak</span>
+        <span id="dev-streak" style="font-size:1.5rem;font-family:var(--font-serif);color:var(--accent);line-height:1">0</span>
+        <span id="dev-fire" style="font-size:1rem;opacity:0;transition:opacity .2s">🔥</span>
       </div>
-    `;
 
-    const tcEl         = body.querySelector('#dev-tc');
-    const handLabelEl  = body.querySelector('#dev-hand-label');
-    const basicEl      = body.querySelector('#dev-basic');
-    const dealerHandEl = body.querySelector('#dev-dealer-hand');
-    const playerHandEl = body.querySelector('#dev-player-hand');
-    const actionsEl    = body.querySelector('#dev-actions');
-    const feedbackEl   = body.querySelector('#dev-feedback');
-    const nextEl       = body.querySelector('#dev-next');
-    const correctEl    = body.querySelector('#dev-correct');
-    const totalEl      = body.querySelector('#dev-total');
+      <div class="felt-table" style="width:100%">
+        <div style="position:absolute;top:.75rem;right:.85rem;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:.3rem .75rem;text-align:center">
+          <div style="font-size:.5rem;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,0.3);margin-bottom:.1rem;font-weight:700">True Count</div>
+          <div id="dev-tc" style="font-size:1.5rem;font-family:var(--font-serif);line-height:1">+2</div>
+        </div>
+        <div class="felt-dealer-zone">
+          <span class="felt-zone-label">Dealer</span>
+          <div class="felt-hand" id="dev-dealer-hand"></div>
+        </div>
+        <hr class="felt-divider">
+        <div class="felt-player-zone">
+          <span class="felt-zone-label">You</span>
+          <div class="felt-hand" id="dev-player-hand"></div>
+        </div>
+        <div class="felt-basic-note">Basic strategy: <strong id="dev-basic">Hit</strong></div>
+      </div>
+
+      <div class="sk-actions sk-actions-vertical" id="dev-actions"></div>
+      <button class="btn-primary sk-next-btn" id="dev-next">Next Hand →</button>
+    `;
+    body.appendChild(wrap);
+
+    const tcEl         = wrap.querySelector('#dev-tc');
+    const basicEl      = wrap.querySelector('#dev-basic');
+    const dealerHandEl = wrap.querySelector('#dev-dealer-hand');
+    const playerHandEl = wrap.querySelector('#dev-player-hand');
+    const actionsEl    = wrap.querySelector('#dev-actions');
+    const nextEl       = wrap.querySelector('#dev-next');
+    const streakEl     = wrap.querySelector('#dev-streak');
+    const fireEl       = wrap.querySelector('#dev-fire');
 
     const ACTION_FULL = { H:'Hit', S:'Stand', D:'Double', P:'Split' };
 
-    function devCardBackEl() {
+    function cardBackEl() {
       const el = document.createElement('div');
       el.className = 'card card-back';
       return el;
@@ -870,60 +1213,46 @@ const Deviations = {
 
       tcEl.textContent = givenTC >= 0 ? `+${givenTC}` : String(givenTC);
       tcEl.style.color = givenTC > 0 ? '#4ade80' : givenTC < 0 ? '#f87171' : 'var(--tr-text)';
-      handLabelEl.textContent = currentDev.hand;
       basicEl.textContent = ACTION_FULL[currentDev.basic] || currentDev.basic;
 
-      // Dealer hand: back card + upcard
+      // Dealer: back + upcard
       dealerHandEl.innerHTML = '';
-      dealerHandEl.appendChild(devCardBackEl());
-      const upcardRank = currentDev.upcard === 'A' ? 'A' : currentDev.upcard;
+      dealerHandEl.appendChild(cardBackEl());
       const ds = SUITS[Math.floor(Math.random()*4)];
-      dealerHandEl.appendChild(cardEl({rank: upcardRank, suit: ds.name, sym: ds.sym}));
+      dealerHandEl.appendChild(cardEl({rank: currentDev.upcard, suit: ds.name, sym: ds.sym}));
 
-      // Player hand: generate cards that match the hand description
+      // Player hand
       playerHandEl.innerHTML = '';
       const handStr = currentDev.hand;
       let cards = [];
       if (handStr.startsWith('A')) {
-        // Soft hand e.g. "A8"
         const x = parseInt(handStr.slice(1));
-        const suits2 = shuffle([...SUITS]);
-        cards = [{rank:'A', suit:suits2[0].name, sym:suits2[0].sym},
-                 {rank:String(x), suit:suits2[1].name, sym:suits2[1].sym}];
+        const s = shuffle([...SUITS]);
+        cards = [{rank:'A', suit:s[0].name, sym:s[0].sym}, {rank:String(x), suit:s[1].name, sym:s[1].sym}];
       } else if (handStr.includes(',')) {
-        // Pair e.g. "10,10"
         const r = handStr.split(',')[0];
-        const suits2 = shuffle([...SUITS]);
-        cards = [{rank:r, suit:suits2[0].name, sym:suits2[0].sym},
-                 {rank:r, suit:suits2[1].name, sym:suits2[1].sym}];
+        const s = shuffle([...SUITS]);
+        cards = [{rank:r, suit:s[0].name, sym:s[0].sym}, {rank:r, suit:s[1].name, sym:s[1].sym}];
       } else {
-        // Hard total
-        const total = parseInt(handStr);
-        const a = Math.min(Math.max(2, Math.floor(Math.random()*(total-3))+2), total-2);
-        const b = total - a;
-        const suits2 = shuffle([...SUITS]);
-        cards = [{rank:String(a), suit:suits2[0].name, sym:suits2[0].sym},
-                 {rank:b===10?'10':String(b), suit:suits2[1].name, sym:suits2[1].sym}];
+        const tot = parseInt(handStr);
+        const lo = Math.max(2, tot - 10);
+        const hi = Math.min(10, tot - 2);
+        const a = lo + Math.floor(Math.random() * (hi - lo + 1));
+        const b = tot - a;
+        const s = shuffle([...SUITS]);
+        cards = [{rank: a===10?'10':String(a), suit:s[0].name, sym:s[0].sym}, {rank: b===10?'10':String(b), suit:s[1].name, sym:s[1].sym}];
       }
       cards.forEach(c => playerHandEl.appendChild(cardEl(c)));
 
       actionsEl.innerHTML = '';
-      // Buttons: "Follow Basic Strategy" or "Deviate"
-      const followBtn = document.createElement('button');
-      followBtn.className = 'sk-action-btn';
-      followBtn.textContent = `Follow (${ACTION_FULL[currentDev.basic]})`;
-      followBtn.dataset.choice = 'follow';
-      followBtn.addEventListener('click', ()=>answer('follow'));
-
-      const deviateBtn = document.createElement('button');
-      deviateBtn.className = 'sk-action-btn';
-      deviateBtn.textContent = `Deviate (${ACTION_FULL[currentDev.deviate]})`;
-      deviateBtn.dataset.choice = 'deviate';
-      deviateBtn.addEventListener('click', ()=>answer('deviate'));
-
-      actionsEl.appendChild(followBtn);
-      actionsEl.appendChild(deviateBtn);
-      feedbackEl.classList.add('hidden');
+      ['H','S','D'].forEach(a => {
+        const btn = document.createElement('button');
+        btn.className = 'sk-action-btn';
+        btn.textContent = ACTION_FULL[a];
+        btn.dataset.action = a;
+        btn.addEventListener('click', () => answer(a));
+        actionsEl.appendChild(btn);
+      });
       nextEl.classList.remove('visible');
     }
 
@@ -931,28 +1260,36 @@ const Deviations = {
       if (phase !== 'question') return;
       phase = 'feedback';
       total++;
-      const isCorrect = (chosen === 'deviate') === shouldDeviate;
-      if (isCorrect) correct++;
+      const correctAction = shouldDeviate ? currentDev.deviate : currentDev.basic;
+      const isCorrect = chosen === correctAction;
+      if (isCorrect) { correct++; streak++; } else { streak = 0; }
+
+      streakEl.textContent = streak;
+      fireEl.style.opacity = streak >= 3 ? '1' : '0';
 
       actionsEl.querySelectorAll('.sk-action-btn').forEach(b => {
         b.disabled = true;
-        const correctChoice = shouldDeviate ? 'deviate' : 'follow';
-        if (b.dataset.choice === correctChoice) b.classList.add('correct');
-        if (b.dataset.choice === chosen && !isCorrect) b.classList.add('wrong');
+        if (b.dataset.action === correctAction) b.classList.add('correct');
+        if (b.dataset.action === chosen && !isCorrect) b.classList.add('wrong');
       });
 
-      feedbackEl.classList.remove('hidden','correct','wrong');
-      feedbackEl.classList.add(isCorrect?'correct':'wrong');
-      feedbackEl.querySelector('#dev-icon').textContent = isCorrect ? '✓' : '✗';
-      feedbackEl.querySelector('#dev-msg').textContent = isCorrect
-        ? (shouldDeviate ? `Correct! Deviate here. ${currentDev.explain}` : `Correct! Stick to basic strategy at TC ${givenTC}.`)
-        : (shouldDeviate ? `Wrong — you should deviate. ${currentDev.explain}` : `Wrong — basic strategy is correct at TC ${givenTC}. ${currentDev.explain}`);
-
-      correctEl.textContent = correct;
-      totalEl.textContent   = total;
       markScore(scoreEl, correct, total);
       Account.addResult(skillId, isCorrect);
       if (correct >= 5) AppState.skillStatus[skillId].done = true;
+      window.dispatchEvent(new CustomEvent('colin:event', { detail: {
+        event: 'trainer_answer',
+        payload: {
+          skillId: 'deviations',
+          isCorrect,
+          chosen,
+          correctAction,
+          hand: currentDev.hand,
+          upcard: currentDev.upcard,
+          trueCount: givenTC,
+          shouldDeviate,
+          streak
+        }
+      }}));
       nextEl.classList.add('visible');
     }
 
@@ -963,234 +1300,122 @@ const Deviations = {
 };
 
 // ============================================================
-// SKILL 4 — DECK ESTIMATION
-// ============================================================
-const DeckEstimation = {
-  name: 'Deck Estimation',
-  start(body, scoreEl, skillId) {
-    let correct=0, total=0, phase='question', answer;
-    const TOTAL_CARDS = 312; // 6 decks
-
-    body.innerHTML = `
-      <div class="kc-wrapper" style="max-width:480px;width:100%">
-        <div class="sk-score-bar">
-          <div class="sk-score-item"><div class="sk-score-num" id="de-correct">0</div><div>Correct</div></div>
-          <div class="sk-score-item"><div class="sk-score-num" id="de-total">0</div><div>Total</div></div>
-        </div>
-        <div class="sk-question">
-          <span class="sk-label">How many decks remain in the shoe?</span>
-          <div class="shoe-visual-wrap" style="margin-top:1.25rem">
-            <div class="shoe-box">
-              <div class="shoe-fill" id="de-shoe-fill" style="width:50%"></div>
-              <span class="shoe-empty-label">empty</span>
-            </div>
-            <div class="shoe-stats">
-              <span>Dealt: <strong id="de-dealt">156</strong></span>
-              <span>Remaining: <strong id="de-remaining">156</strong></span>
-            </div>
-          </div>
-        </div>
-        <div style="width:100%;max-width:380px">
-          <div class="sk-slider-value" id="de-slider-val">3.0 decks</div>
-          <input type="range" class="sk-slider" id="de-slider" min="0.5" max="6" step="0.5" value="3">
-          <div class="sk-slider-labels"><span>½ deck</span><span>3 decks</span><span>6 decks</span></div>
-        </div>
-        <button class="btn-primary" id="de-submit" style="margin-top:.5rem">Submit Estimate</button>
-        <div class="sk-feedback hidden" id="de-feedback">
-          <span class="sk-feedback-icon" id="de-icon"></span>
-          <span id="de-msg"></span>
-        </div>
-        <button class="btn-primary sk-next-btn" id="de-next">Next →</button>
-      </div>
-    `;
-
-    const dealtEl     = body.querySelector('#de-dealt');
-    const remainingEl = body.querySelector('#de-remaining');
-    const shoeFillEl  = body.querySelector('#de-shoe-fill');
-    const sliderEl    = body.querySelector('#de-slider');
-    const sliderVal   = body.querySelector('#de-slider-val');
-    const submitEl    = body.querySelector('#de-submit');
-    const feedbackEl  = body.querySelector('#de-feedback');
-    const nextEl      = body.querySelector('#de-next');
-    const correctEl   = body.querySelector('#de-correct');
-    const totalEl     = body.querySelector('#de-total');
-
-    sliderEl.addEventListener('input', ()=>{
-      sliderVal.textContent = parseFloat(sliderEl.value).toFixed(1) + ' decks';
-    });
-
-    function renderQuestion() {
-      phase = 'question';
-      const dealt = Math.floor(Math.random() * 260) + 20;
-      const remaining = TOTAL_CARDS - dealt;
-      answer = parseFloat((remaining / 52).toFixed(1));
-      answer = Math.round(answer * 2) / 2;
-
-      dealtEl.textContent = dealt;
-      remainingEl.textContent = remaining;
-      // Shoe fill = percentage of cards remaining
-      shoeFillEl.style.width = Math.max(4, (remaining / TOTAL_CARDS) * 100) + '%';
-
-      sliderEl.value = 3;
-      sliderVal.textContent = '3.0 decks';
-      feedbackEl.classList.add('hidden');
-      nextEl.classList.remove('visible');
-      submitEl.disabled = false;
-    }
-
-    function submitAnswer() {
-      if (phase !== 'question') return;
-      phase = 'feedback';
-      total++;
-      const guess = parseFloat(sliderEl.value);
-      const isCorrect = Math.abs(guess - answer) <= 0.5;
-      if (isCorrect) correct++;
-
-      feedbackEl.classList.remove('hidden','correct','wrong');
-      feedbackEl.classList.add(isCorrect?'correct':'wrong');
-      feedbackEl.querySelector('#de-icon').textContent = isCorrect ? '✓' : '✗';
-      feedbackEl.querySelector('#de-msg').textContent = isCorrect
-        ? `Correct! About ${answer} decks remain.`
-        : `Not quite. There are ${answer} decks remaining (${Math.round(answer*52)} cards). You guessed ${guess}.`;
-
-      correctEl.textContent = correct;
-      totalEl.textContent   = total;
-      markScore(scoreEl, correct, total);
-      Account.addResult(skillId, isCorrect);
-      if (correct >= 5) AppState.skillStatus[skillId].done = true;
-      submitEl.disabled = true;
-      nextEl.classList.add('visible');
-    }
-
-    submitEl.addEventListener('click', submitAnswer);
-    nextEl.addEventListener('click', renderQuestion);
-    renderQuestion();
-    return ()=>{};
-  }
-};
-
-// ============================================================
-// SKILL 5 — TRUE COUNT CONVERSION
+// SKILL 4 — TRUE COUNT CONVERSION
 // ============================================================
 const TrueCount = {
   name: 'True Count',
   start(body, scoreEl, skillId) {
-    let correct=0, total=0, phase='question', trueCount, playerTC=0;
+    let correct=0, total=0, streak=0, phase='question', trueCount;
+    const SHOE_HEIGHT = 180;
+    const CARD_EDGE_PX = 3;
 
     body.innerHTML = `
-      <div class="kc-wrapper" style="max-width:480px;width:100%">
-        <div class="sk-score-bar">
-          <div class="sk-score-item"><div class="sk-score-num" id="tc-correct">0</div><div>Correct</div></div>
-          <div class="sk-score-item"><div class="sk-score-num" id="tc-total">0</div><div>Total</div></div>
+      <div class="kc-wrapper" style="max-width:400px;width:100%">
+        <div style="display:flex;align-items:center;gap:.5rem;font-size:.82rem;color:var(--tr-muted)">
+          <span>Streak</span>
+          <span id="tc-streak" style="font-size:1.5rem;font-family:var(--font-serif);color:var(--accent);line-height:1">0</span>
+          <span id="tc-fire" style="font-size:1rem;opacity:0;transition:opacity .2s">🔥</span>
         </div>
-        <div class="sk-question">
-          <span class="sk-label">Running Count ÷ Decks Remaining = True Count</span>
 
-          <div class="shoe-visual-wrap" style="margin-top:1rem">
-            <div class="shoe-box">
-              <div class="shoe-fill" id="tc-shoe-fill" style="width:50%"></div>
-              <span class="shoe-empty-label">empty</span>
+        <div class="shoe-visual-wrap">
+          <div class="shoe-outer">
+            <div class="shoe-body">
+              <div class="shoe-slot"></div>
+              <div class="shoe-cards-stack" id="tc-stack"></div>
             </div>
-            <div class="shoe-stats">
-              <span>Remaining: <strong id="tc-decks-cards">156</strong> cards</span>
-              <span><strong id="tc-decks">3</strong> decks</span>
-            </div>
+            <div class="shoe-base"></div>
           </div>
+          <div style="text-align:center;margin-top:.5rem;font-size:.78rem;color:var(--tr-muted)">
+            <strong id="tc-decks-label" style="color:var(--tr-text);font-size:1rem">3</strong> decks remaining
+          </div>
+        </div>
 
-          <div style="display:flex;gap:1rem;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:1rem">
-            <div style="background:var(--tr-panel);border:1px solid var(--tr-border);border-radius:10px;padding:0.9rem 1.25rem;text-align:center;min-width:110px">
-              <div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--tr-dim);margin-bottom:.3rem">Running Count</div>
-              <div style="font-size:2.5rem;font-family:var(--font-serif)" id="tc-rc">+8</div>
-            </div>
-            <div style="font-size:1.75rem;color:var(--tr-dim)">÷</div>
-            <div style="background:var(--tr-panel);border:1px solid var(--tr-border);border-radius:10px;padding:0.9rem 1.25rem;text-align:center;min-width:110px">
-              <div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--tr-dim);margin-bottom:.3rem">Decks Left</div>
-              <div style="font-size:2.5rem;font-family:var(--font-serif)" id="tc-decks-num">3</div>
-            </div>
-          </div>
-          <p style="text-align:center;font-size:.82rem;color:var(--tr-muted);margin-top:.65rem">What is the true count? (Round to nearest whole number)</p>
+        <div style="background:var(--tr-panel);border:1px solid var(--tr-border);border-radius:12px;padding:1rem 1.5rem;text-align:center;width:100%">
+          <div style="font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--tr-dim);margin-bottom:.3rem">Running Count</div>
+          <div style="font-size:3rem;font-family:var(--font-serif);line-height:1" id="tc-rc">+8</div>
         </div>
-        <div class="count-controls">
-          <button class="stepper-btn" id="tc-minus">−</button>
-          <div class="count-display" id="tc-display">0</div>
-          <button class="stepper-btn" id="tc-plus">+</button>
-        </div>
-        <div style="display:flex;justify-content:center;margin-top:1rem">
+
+        <p style="text-align:center;font-size:.82rem;color:var(--tr-muted);margin:0">RC ÷ decks remaining = true count (round to nearest 0.5)</p>
+
+        <div style="display:flex;flex-direction:column;align-items:center;gap:.75rem;width:100%">
+          <input type="number" id="tc-input" step="0.5" inputmode="decimal"
+            style="width:130px;text-align:center;font-size:2rem;font-family:var(--font-serif);background:var(--tr-panel);border:2px solid var(--tr-border);border-radius:10px;color:var(--tr-text);padding:.4rem .6rem;outline:none"
+            placeholder="0">
           <button class="btn-primary" id="tc-submit">Submit</button>
-        </div>
-        <div class="sk-feedback hidden" id="tc-feedback">
-          <span class="sk-feedback-icon" id="tc-icon"></span>
-          <span id="tc-msg"></span>
         </div>
         <button class="btn-primary sk-next-btn" id="tc-next">Next →</button>
       </div>
     `;
 
-    const rcEl          = body.querySelector('#tc-rc');
-    const decksNumEl    = body.querySelector('#tc-decks-num');
-    const decksCardsEl  = body.querySelector('#tc-decks-cards');
-    const decksLabelEl  = body.querySelector('#tc-decks');
-    const shoeFillEl    = body.querySelector('#tc-shoe-fill');
-    const displayEl    = body.querySelector('#tc-display');
-    const feedbackEl   = body.querySelector('#tc-feedback');
-    const nextEl       = body.querySelector('#tc-next');
-    const correctEl    = body.querySelector('#tc-correct');
-    const totalEl      = body.querySelector('#tc-total');
+    const rcEl      = body.querySelector('#tc-rc');
+    const stackEl   = body.querySelector('#tc-stack');
+    const decksLbl  = body.querySelector('#tc-decks-label');
+    const inputEl   = body.querySelector('#tc-input');
+    const nextEl    = body.querySelector('#tc-next');
+    const streakEl  = body.querySelector('#tc-streak');
+    const fireEl    = body.querySelector('#tc-fire');
 
-    function updateDisplay() {
-      displayEl.textContent = playerTC > 0 ? `+${playerTC}` : String(playerTC);
-      displayEl.classList.toggle('positive', playerTC > 0);
-      displayEl.classList.toggle('negative', playerTC < 0);
+    function buildCardEdges(remaining) {
+      stackEl.innerHTML = '';
+      const maxVisible = Math.min(remaining, SHOE_HEIGHT / CARD_EDGE_PX);
+      for (let i = 0; i < maxVisible; i++) {
+        const edge = document.createElement('div');
+        edge.className = 'shoe-card-edge';
+        stackEl.appendChild(edge);
+      }
+      stackEl.style.height = Math.min(SHOE_HEIGHT, maxVisible * CARD_EDGE_PX) + 'px';
     }
 
     function renderQuestion() {
       phase = 'question';
-      playerTC = 0;
-      updateDisplay();
+      inputEl.value = '';
+      inputEl.disabled = false;
 
       const rc = Math.floor(Math.random()*25) - 12;
       const decksOpts = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
       const decks = decksOpts[Math.floor(Math.random()*decksOpts.length)];
-      trueCount = Math.round(rc / decks);
+      trueCount = Math.round(rc / decks * 2) / 2;
 
       rcEl.textContent = rc >= 0 ? `+${rc}` : String(rc);
       rcEl.style.color = rc > 0 ? '#4ade80' : rc < 0 ? '#f87171' : 'var(--tr-text)';
-      const decksStr = decks % 1 === 0 ? String(decks) : decks.toFixed(1);
-      decksNumEl.textContent = decksStr;
-      if (decksLabelEl) decksLabelEl.textContent = decksStr;
-      const cardsLeft = Math.round(decks * 52);
-      decksCardsEl.textContent = cardsLeft;
-      shoeFillEl.style.width = Math.max(4, (decks / 6) * 100) + '%';
+      decksLbl.textContent = decks % 1 === 0 ? String(decks) : decks.toFixed(1);
+      buildCardEdges(Math.round(decks * 52));
 
-      feedbackEl.classList.add('hidden');
       nextEl.classList.remove('visible');
+      inputEl.focus();
     }
 
     function submitAnswer() {
       if (phase !== 'question') return;
+      const val = parseFloat(inputEl.value);
+      if (isNaN(val)) return;
       phase = 'feedback';
+      inputEl.disabled = true;
       total++;
-      const isCorrect = Math.abs(playerTC - trueCount) <= 1;
-      if (isCorrect) correct++;
+      const playerTC = Math.round(val * 2) / 2;
+      const isCorrect = playerTC === trueCount;
+      if (isCorrect) { correct++; streak++; } else { streak = 0; }
 
-      feedbackEl.classList.remove('hidden','correct','wrong');
-      feedbackEl.classList.add(isCorrect?'correct':'wrong');
-      feedbackEl.querySelector('#tc-icon').textContent = isCorrect ? '✓' : '✗';
-      const tcStr = trueCount >= 0 ? `+${trueCount}` : String(trueCount);
-      feedbackEl.querySelector('#tc-msg').textContent = isCorrect
-        ? `Correct! True Count is ${tcStr}.`
-        : `The True Count is ${tcStr}. Remember: divide running count by decks remaining and round.`;
+      streakEl.textContent = streak;
+      fireEl.style.opacity = streak >= 3 ? '1' : '0';
 
-      correctEl.textContent = correct;
-      totalEl.textContent   = total;
       markScore(scoreEl, correct, total);
       Account.addResult(skillId, isCorrect);
       if (correct >= 5) AppState.skillStatus[skillId].done = true;
+      window.dispatchEvent(new CustomEvent('colin:event', { detail: {
+        event: 'trainer_answer',
+        payload: {
+          skillId: 'true-count',
+          isCorrect,
+          playerAnswer: playerTC,
+          correctAnswer: trueCount,
+          streak
+        }
+      }}));
       nextEl.classList.add('visible');
     }
 
-    body.querySelector('#tc-minus').addEventListener('click', ()=>{ if(phase==='question'){playerTC--;updateDisplay();} });
-    body.querySelector('#tc-plus').addEventListener('click',  ()=>{ if(phase==='question'){playerTC++;updateDisplay();} });
+    inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') submitAnswer(); });
     body.querySelector('#tc-submit').addEventListener('click', submitAnswer);
     nextEl.addEventListener('click', renderQuestion);
     renderQuestion();
@@ -1329,225 +1554,443 @@ const BetSpread = {
 const FullTraining = {
   name: 'Full Training',
   start(body, scoreEl, skillId) {
-    let deck=shuffle(buildDeck()), deckIdx=0;
-    let runningCount=0, playerCount=0;
-    let countCorrect=0, playCorrect=0, total=0;
-    let phase='question', currentCards=[], correctPlay;
+    // Session state
+    let deck = shuffle(buildDeck()), deckIdx = 0;
+    let runningCount = 0, playerCount = 0;
+    let streak = 0;
+    let bankroll = 1000, currentBet = 0;
+    let phase = 'bet'; // 'bet' | 'play' | 'count' | 'feedback'
+    let correctPlay, playWasCorrect;
+    let visibleCards = []; // all cards shown this round (for count tracking)
+
+    // Activate full-table layout on the skill-trainer wrapper
+    const trainerEl = document.getElementById('skill-trainer');
+    if (trainerEl) trainerEl.classList.add('ft-active');
 
     body.innerHTML = `
-      <div class="kc-wrapper" style="max-width:560px;width:100%">
-        <div style="font-size:.8rem;color:var(--tr-muted);text-align:center;margin-bottom:.25rem">Track the count AND make the correct play</div>
-        <div class="sk-score-bar" style="margin-bottom:1.25rem">
-          <div class="sk-score-item"><div class="sk-score-num" id="ft-count-correct">0</div><div>Count ✓</div></div>
-          <div class="sk-score-item"><div class="sk-score-num" id="ft-play-correct">0</div><div>Play ✓</div></div>
-          <div class="sk-score-item"><div class="sk-score-num" id="ft-total">0</div><div>Rounds</div></div>
-        </div>
+      <div class="ft-table">
 
-        <div style="display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;margin-bottom:1.25rem">
-          <div class="sk-hand-group">
-            <span class="sk-hand-group-label">Dealer Up Card</span>
-            <div class="sk-card-stage" id="ft-dealer" style="min-height:auto"></div>
-          </div>
-          <div class="sk-hand-group">
-            <span class="sk-hand-group-label">Your Hand</span>
-            <div class="sk-card-stage" id="ft-player" style="min-height:auto"></div>
-          </div>
-          <div class="sk-hand-group">
-            <span class="sk-hand-group-label">Burn Cards (Count these too)</span>
-            <div class="sk-card-stage" id="ft-burn" style="min-height:auto"></div>
+        <!-- Top bar: bankroll + streak -->
+        <div class="ft-topbar">
+          <div class="ft-bankroll">$<span id="ft-bankroll">1,000</span></div>
+          <div class="ft-streak-bar">
+            <span class="ft-streak-label">Streak</span>
+            <span id="ft-streak" class="ft-streak-num">0</span>
+            <span id="ft-fire" class="ft-streak-fire">🔥</span>
           </div>
         </div>
 
-        <div id="ft-step1">
-          <div style="font-size:.82rem;color:var(--tr-muted);text-align:center;margin-bottom:.5rem">Step 1: What's your play?</div>
-          <div class="sk-actions" id="ft-play-actions"></div>
+        <!-- Dealer zone -->
+        <div class="ft-dealer-zone">
+          <span class="ft-zone-lbl">Dealer</span>
+          <div class="ft-dealer-cards" id="ft-dealer-cards"></div>
         </div>
 
-        <div id="ft-step2" style="display:none">
-          <div style="font-size:.82rem;color:var(--tr-muted);text-align:center;margin-bottom:.5rem">Step 2: What is the running count of all visible cards?</div>
-          <div class="count-controls">
-            <button class="stepper-btn" id="ft-minus">−</button>
-            <div class="count-display" id="ft-display">0</div>
-            <button class="stepper-btn" id="ft-plus">+</button>
+        <!-- Player zone -->
+        <div class="ft-player-zone">
+          <div class="ft-player-cards" id="ft-player-cards"></div>
+        </div>
+
+        <!-- Bottom panel — swaps between phases -->
+        <div class="ft-bottom-panel">
+
+          <!-- BET PHASE -->
+          <div id="ft-phase-bet" class="ft-phase">
+            <div class="ft-bet-row">
+              <span class="ft-bet-lbl">Place your bet</span>
+              <span class="ft-bet-amount">$<span id="ft-bet-amount">0</span></span>
+            </div>
+            <div class="ft-chips" id="ft-chips">
+              <button class="ft-chip ft-chip-10"  data-val="10">$10</button>
+              <button class="ft-chip ft-chip-25"  data-val="25">$25</button>
+              <button class="ft-chip ft-chip-50"  data-val="50">$50</button>
+              <button class="ft-chip ft-chip-100" data-val="100">$100</button>
+            </div>
+            <div class="ft-bet-btns">
+              <button class="ft-ghost-btn" id="ft-clear-bet">Clear</button>
+              <button class="ft-deal-btn" id="ft-deal-btn" disabled>Deal →</button>
+            </div>
           </div>
-          <div style="display:flex;justify-content:center;margin-top:.75rem">
-            <button class="btn-primary" id="ft-count-submit">Submit Count</button>
+
+          <!-- PLAY PHASE -->
+          <div id="ft-phase-play" class="ft-phase hidden">
+            <div class="ft-phase-label">What's your play?</div>
+            <div class="ft-play-actions" id="ft-play-actions"></div>
           </div>
-        </div>
 
-        <div class="sk-feedback hidden" id="ft-feedback">
-          <span class="sk-feedback-icon" id="ft-icon"></span>
-          <span id="ft-msg"></span>
-        </div>
-        <button class="btn-primary sk-next-btn" id="ft-next">Next Round →</button>
+          <!-- COUNT PHASE -->
+          <div id="ft-phase-count" class="ft-phase hidden">
+            <div class="ft-phase-label">Running count of all visible cards?</div>
+            <div class="count-controls">
+              <button class="stepper-btn" id="ft-minus">−</button>
+              <div class="count-display" id="ft-display">0</div>
+              <button class="stepper-btn" id="ft-plus">+</button>
+            </div>
+            <div style="display:flex;justify-content:center;margin-top:.85rem">
+              <button class="btn-primary" id="ft-count-submit">Submit Count</button>
+            </div>
+          </div>
 
-        <div class="hilo-ref-strip" style="margin-top:auto">
-          <div class="ref-group"><span class="ref-cards">2–6</span><span class="ref-val c-green">+1</span></div>
-          <span class="ref-sep">·</span>
-          <div class="ref-group"><span class="ref-cards">7–9</span><span class="ref-val" style="color:var(--tr-muted)">0</span></div>
-          <span class="ref-sep">·</span>
-          <div class="ref-group"><span class="ref-cards">10 J Q K A</span><span class="ref-val c-red">−1</span></div>
-        </div>
-      </div>
+          <!-- FEEDBACK PHASE -->
+          <div id="ft-phase-feedback" class="ft-phase hidden">
+            <div class="ft-result-row" id="ft-result-row"></div>
+            <button class="ft-deal-btn" id="ft-next-btn">Next Hand →</button>
+          </div>
+
+        </div><!-- end ft-bottom-panel -->
+      </div><!-- end ft-table -->
     `;
 
-    const dealerEl   = body.querySelector('#ft-dealer');
-    const playerEl   = body.querySelector('#ft-player');
-    const burnEl     = body.querySelector('#ft-burn');
-    const step1El    = body.querySelector('#ft-step1');
-    const step2El    = body.querySelector('#ft-step2');
-    const actionsEl  = body.querySelector('#ft-play-actions');
-    const displayEl  = body.querySelector('#ft-display');
-    const feedbackEl = body.querySelector('#ft-feedback');
-    const nextEl     = body.querySelector('#ft-next');
-    const ccEl       = body.querySelector('#ft-count-correct');
-    const pcEl       = body.querySelector('#ft-play-correct');
-    const totEl      = body.querySelector('#ft-total');
+    // Element refs
+    const bankrollEl  = body.querySelector('#ft-bankroll');
+    const streakEl    = body.querySelector('#ft-streak');
+    const fireEl      = body.querySelector('#ft-fire');
+    const dealerCards = body.querySelector('#ft-dealer-cards');
+    const playerCards = body.querySelector('#ft-player-cards');
+    const betAmountEl = body.querySelector('#ft-bet-amount');
+    const dealBtn     = body.querySelector('#ft-deal-btn');
+    const clearBtn    = body.querySelector('#ft-clear-bet');
+    const actionsEl   = body.querySelector('#ft-play-actions');
+    const displayEl   = body.querySelector('#ft-display');
+    const nextBtn     = body.querySelector('#ft-next-btn');
+    const resultRow   = body.querySelector('#ft-result-row');
 
-    let playWasCorrect;
+    const phaseBet      = body.querySelector('#ft-phase-bet');
+    const phasePlay     = body.querySelector('#ft-phase-play');
+    const phaseCount    = body.querySelector('#ft-phase-count');
+    const phaseFeedback = body.querySelector('#ft-phase-feedback');
 
-    function draw(n=1) {
-      if (deckIdx+n*4>=deck.length){deck=shuffle(buildDeck());deckIdx=0;}
-      return deck.slice(deckIdx, deckIdx+=n);
+    function fmtMoney(n) { return n.toLocaleString(); }
+
+    function showPhase(name) {
+      [phaseBet, phasePlay, phaseCount, phaseFeedback].forEach(el => el.classList.add('hidden'));
+      ({ bet: phaseBet, play: phasePlay, count: phaseCount, feedback: phaseFeedback })[name].classList.remove('hidden');
+      phase = name;
     }
 
-    function updateDisplay() {
-      displayEl.textContent = playerCount>0?`+${playerCount}`:String(playerCount);
-      displayEl.classList.toggle('positive', playerCount>0);
-      displayEl.classList.toggle('negative', playerCount<0);
+    function draw(n = 1) {
+      if (deckIdx + n + 4 >= deck.length) { deck = shuffle(buildDeck()); deckIdx = 0; }
+      return deck.slice(deckIdx, deckIdx += n);
     }
 
-    function renderRound() {
-      phase='question';
-      playerCount=0;
-      updateDisplay();
+    function cardBackEl() {
+      const el = document.createElement('div');
+      el.className = 'card card-back';
+      return el;
+    }
 
-      // Deal: 1 dealer card, 2 player cards, 0-2 burn cards
-      const dealerCards = draw(1);
-      const playerCards = draw(2);
-      const burnCards   = draw(Math.floor(Math.random()*3));
-      currentCards      = [...dealerCards,...playerCards,...burnCards];
+    function updateCountDisplay() {
+      displayEl.textContent = playerCount > 0 ? `+${playerCount}` : String(playerCount);
+      displayEl.classList.toggle('positive', playerCount > 0);
+      displayEl.classList.toggle('negative', playerCount < 0);
+    }
 
-      // Update running count with all visible cards
-      const delta = currentCards.reduce((s,c)=>s+c.value,0);
+    function updateBankrollDisplay() {
+      bankrollEl.textContent = fmtMoney(bankroll);
+    }
+
+    // ── BET PHASE ──
+    body.querySelectorAll('.ft-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const val = parseInt(chip.dataset.val);
+        if (currentBet + val > bankroll) return;
+        currentBet += val;
+        betAmountEl.textContent = fmtMoney(currentBet);
+        dealBtn.disabled = false;
+      });
+    });
+    clearBtn.addEventListener('click', () => {
+      currentBet = 0;
+      betAmountEl.textContent = '0';
+      dealBtn.disabled = true;
+    });
+
+    dealBtn.addEventListener('click', dealHand);
+
+    function dealHand() {
+      visibleCards = [];
+      playerCount = 0;
+      updateCountDisplay();
+
+      // Deal: dealer back + upcard; player 2 cards
+      const dealerUp = draw(1)[0];
+      const p1 = draw(1)[0];
+      const p2 = draw(1)[0];
+
+      visibleCards = [dealerUp, p1, p2]; // hole card hidden — not counted
+      const delta = visibleCards.reduce((s, c) => s + c.value, 0);
       runningCount += delta;
 
-      // Render
-      dealerEl.innerHTML='';
-      const dc=cardEl(dealerCards[0]);
-      dc.style.animationDelay='0ms';
-      dc.classList.add('dealing');
-      dealerEl.appendChild(dc);
+      // Render dealer
+      dealerCards.innerHTML = '';
+      const backEl = cardBackEl();
+      backEl.classList.add('dealing');
+      dealerCards.appendChild(backEl);
+      const upEl = cardEl(dealerUp);
+      upEl.style.animationDelay = '80ms';
+      upEl.classList.add('dealing');
+      dealerCards.appendChild(upEl);
 
-      playerEl.innerHTML='';
-      playerCards.forEach((c,i)=>{
-        const el=cardEl(c);
-        el.style.animationDelay=(80+i*80)+'ms';
+      // Render player (overlapping)
+      playerCards.innerHTML = '';
+      [p1, p2].forEach((c, i) => {
+        const el = cardEl(c);
+        el.style.animationDelay = (160 + i * 100) + 'ms';
         el.classList.add('dealing');
-        playerEl.appendChild(el);
+        playerCards.appendChild(el);
       });
 
-      burnEl.innerHTML='';
-      burnCards.forEach((c,i)=>{
-        const el=cardEl(c,'card-sm');
-        el.style.animationDelay=(200+i*80)+'ms';
-        el.classList.add('dealing');
-        burnEl.appendChild(el);
-      });
+      // Determine correct BS play
+      correctPlay = calcCorrectPlay([p1, p2], dealerUp);
 
-      // Determine correct basic strategy play
-      const pTotal = playerCards.reduce((s,c)=>{
-        const v=c.rank==='A'?11:c.rank==='10'||c.rank==='J'||c.rank==='Q'||c.rank==='K'?10:parseInt(c.rank)||10;
-        return s+v;
-      },0);
-      const isAce = playerCards.some(c=>c.rank==='A');
-      const isPair= playerCards[0].rank===playerCards[1].rank;
-      const dIdx  = DEALER_LABELS.indexOf(dealerCards[0].rank==='10'||dealerCards[0].rank==='J'||dealerCards[0].rank==='Q'||dealerCards[0].rank==='K'?'10':dealerCards[0].rank);
-      const dI    = Math.max(0, dIdx);
-
-      if (isPair) {
-        const r=playerCards[0].rank;
-        const key=(r==='10'||r==='J'||r==='Q'||r==='K')?'TT':(r+r);
-        correctPlay=(BS_PAIRS[key]||'SSSSSSSSSS')[dI]||'S';
-      } else if (isAce && pTotal<=21) {
-        const softTot=pTotal>21?pTotal-10:pTotal;
-        correctPlay=(BS_SOFT[Math.min(20,Math.max(13,softTot))]||'SSSSSSSSSS')[dI]||'S';
-      } else {
-        const hard=pTotal>21?pTotal-10:pTotal;
-        if (hard>=17) correctPlay='S';
-        else correctPlay=(BS_HARD[Math.min(16,Math.max(8,hard))]||'SSSSSSSSSS')[dI]||'H';
-      }
-
-      // Render action buttons
-      actionsEl.innerHTML='';
-      const actions=isPair?['H','S','D','P']:['H','S','D'];
-      actions.forEach(a=>{
-        const b=document.createElement('button');
-        b.className='sk-action-btn';
-        b.textContent=ACTION_LABELS[a];
-        b.dataset.action=a;
-        b.addEventListener('click',()=>choosePlay(a,b));
+      // Build play buttons
+      actionsEl.innerHTML = '';
+      const isPair = p1.rank === p2.rank;
+      (isPair ? ['H','S','D','P'] : ['H','S','D']).forEach(a => {
+        const b = document.createElement('button');
+        b.className = 'sk-action-btn';
+        b.textContent = ACTION_LABELS[a];
+        b.dataset.action = a;
+        b.addEventListener('click', () => choosePlay(a));
         actionsEl.appendChild(b);
       });
 
-      step1El.style.display='block';
-      step2El.style.display='none';
-      feedbackEl.classList.add('hidden');
-      nextEl.classList.remove('visible');
+      showPhase('play');
+    }
+
+    function calcCorrectPlay(pCards, dCard) {
+      const pTotal = pCards.reduce((s, c) => {
+        const v = c.rank==='A' ? 11 : (c.rank==='10'||c.rank==='J'||c.rank==='Q'||c.rank==='K') ? 10 : parseInt(c.rank)||10;
+        return s + v;
+      }, 0);
+      const isAce = pCards.some(c => c.rank === 'A');
+      const isPair = pCards[0].rank === pCards[1].rank;
+      const dLabel = (dCard.rank==='10'||dCard.rank==='J'||dCard.rank==='Q'||dCard.rank==='K') ? '10' : dCard.rank;
+      const dI = Math.max(0, DEALER_LABELS.indexOf(dLabel));
+      if (isPair) {
+        const r = pCards[0].rank;
+        const key = (r==='10'||r==='J'||r==='Q'||r==='K') ? 'TT' : (r+r);
+        return (BS_PAIRS[key]||'SSSSSSSSSS')[dI] || 'S';
+      }
+      if (isAce && pTotal <= 21) {
+        const soft = pTotal > 21 ? pTotal - 10 : pTotal;
+        return (BS_SOFT[Math.min(20, Math.max(13, soft))]||'SSSSSSSSSS')[dI] || 'S';
+      }
+      const hard = pTotal > 21 ? pTotal - 10 : pTotal;
+      if (hard >= 17) return 'S';
+      return (BS_HARD[Math.min(16, Math.max(8, hard))]||'SSSSSSSSSS')[dI] || 'H';
     }
 
     function choosePlay(action) {
-      playWasCorrect=(action===correctPlay);
-
-      actionsEl.querySelectorAll('.sk-action-btn').forEach(b=>{
-        b.disabled=true;
-        if(b.dataset.action===correctPlay)b.classList.add('correct');
-        if(b.dataset.action===action&&!playWasCorrect)b.classList.add('wrong');
+      playWasCorrect = (action === correctPlay);
+      actionsEl.querySelectorAll('.sk-action-btn').forEach(b => {
+        b.disabled = true;
+        if (b.dataset.action === correctPlay) b.classList.add('correct');
+        if (b.dataset.action === action && !playWasCorrect) b.classList.add('wrong');
       });
-
-      step1El.style.display='none';
-      step2El.style.display='block';
-      phase='count';
+      showPhase('count');
     }
 
     function submitCount() {
-      if(phase!=='count')return;
-      phase='feedback';
-      total++;
-      const countIsCorrect=playerCount===runningCount;
-      if(playWasCorrect)playCorrect++;
-      if(countIsCorrect)countCorrect++;
+      if (phase !== 'count') return;
+      const countIsCorrect = playerCount === runningCount;
+      const bothCorrect = playWasCorrect && countIsCorrect;
 
-      ccEl.textContent=countCorrect;
-      pcEl.textContent=playCorrect;
-      totEl.textContent=total;
-      markScore(scoreEl, countCorrect+playCorrect, total*2);
-      if(total>=5)AppState.skillStatus[skillId].done=true;
+      // Update streak
+      if (bothCorrect) { streak++; } else { streak = 0; }
+      streakEl.textContent = streak;
+      fireEl.style.opacity = streak >= 3 ? '1' : '0';
 
-      step2El.style.display='none';
-      feedbackEl.classList.remove('hidden','correct','wrong');
-      const bothCorrect=playWasCorrect&&countIsCorrect;
-      feedbackEl.classList.add(bothCorrect?'correct':'wrong');
-      const rcStr=runningCount>=0?`+${runningCount}`:String(runningCount);
-      const pStr=playerCount>=0?`+${playerCount}`:String(playerCount);
-      feedbackEl.querySelector('#ft-icon').textContent=bothCorrect?'✓':(playWasCorrect||countIsCorrect)?'~':'✗';
-      feedbackEl.querySelector('#ft-msg').textContent=[
-        playWasCorrect?`Play: ✓ ${ACTION_LABELS[correctPlay]}`:`Play: ✗ Should be ${ACTION_LABELS[correctPlay]}`,
-        countIsCorrect?`Count: ✓ ${rcStr}`:`Count: ✗ Answer is ${rcStr}, you said ${pStr}`,
-      ].join('  ·  ');
+      // Update bankroll
+      if (playWasCorrect) { bankroll += currentBet; }
+      else                { bankroll -= currentBet; }
+      if (bankroll < 0) bankroll = 0;
+      updateBankrollDisplay();
 
-      nextEl.classList.add('visible');
+      // Build result row
+      const rcStr = runningCount >= 0 ? `+${runningCount}` : String(runningCount);
+      const guessStr = playerCount >= 0 ? `+${playerCount}` : String(playerCount);
+      const betChange = playWasCorrect ? `+$${fmtMoney(currentBet)}` : `-$${fmtMoney(currentBet)}`;
+      const betColor  = playWasCorrect ? '#4ade80' : '#f87171';
+      resultRow.innerHTML = `
+        <div class="ft-result-item ${playWasCorrect?'ft-result-good':'ft-result-bad'}">
+          <span class="ft-result-icon">${playWasCorrect?'✓':'✗'}</span>
+          <span>${playWasCorrect ? 'Correct play' : `Should ${ACTION_LABELS[correctPlay]}`}</span>
+        </div>
+        <div class="ft-result-item ${countIsCorrect?'ft-result-good':'ft-result-bad'}">
+          <span class="ft-result-icon">${countIsCorrect?'✓':'✗'}</span>
+          <span>${countIsCorrect ? `Count ${rcStr}` : `Count: ${rcStr}, you said ${guessStr}`}</span>
+        </div>
+        <div class="ft-result-bet" style="color:${betColor}">${betChange}</div>
+      `;
+
+      Account.addResult(skillId, bothCorrect);
+      if (streak >= 5) AppState.skillStatus[skillId].done = true;
+      markScore(scoreEl, streak, 0);
+      window.dispatchEvent(new CustomEvent('colin:event', { detail: {
+        event: 'trainer_answer',
+        payload: {
+          skillId: 'full-training',
+          isCorrect: bothCorrect,
+          playWasCorrect,
+          countWasCorrect: countIsCorrect,
+          correctPlay,
+          chosenPlay: playWasCorrect ? correctPlay : (actionsEl.querySelector('.wrong') ? actionsEl.querySelector('.wrong').dataset.action : '?'),
+          runningCount,
+          playerCount,
+          streak,
+          bankroll
+        }
+      }}));
+
+      currentBet = 0;
+      showPhase('feedback');
     }
 
-    body.querySelector('#ft-minus').addEventListener('click',()=>{if(phase==='count'){playerCount--;updateDisplay();}});
-    body.querySelector('#ft-plus').addEventListener('click', ()=>{if(phase==='count'){playerCount++;updateDisplay();}});
-    body.querySelector('#ft-count-submit').addEventListener('click',submitCount);
-    nextEl.addEventListener('click',renderRound);
+    nextBtn.addEventListener('click', () => {
+      betAmountEl.textContent = '0';
+      dealBtn.disabled = true;
+      dealerCards.innerHTML = '';
+      playerCards.innerHTML = '';
+      showPhase('bet');
+    });
 
-    renderRound();
-    return()=>{};
+    body.querySelector('#ft-minus').addEventListener('click', () => { if(phase==='count'){playerCount--;updateCountDisplay();} });
+    body.querySelector('#ft-plus').addEventListener('click',  () => { if(phase==='count'){playerCount++;updateCountDisplay();} });
+    body.querySelector('#ft-count-submit').addEventListener('click', submitCount);
+    function ftKey(e) { if (phase === 'count' && e.key === 'Enter') submitCount(); }
+    document.addEventListener('keydown', ftKey);
+
+    showPhase('bet');
+    return () => {
+      if (trainerEl) trainerEl.classList.remove('ft-active');
+      document.removeEventListener('keydown', ftKey);
+    };
   }
 };
+
+// ============================================================
+// LOADING SPINNER
+// ============================================================
+window.addEventListener('load', () => {
+  const spinner = document.getElementById('page-spinner');
+  if (spinner) spinner.classList.add('spinner-hidden');
+});
+
+// ============================================================
+// WOW.JS — landing page elements outside snap sections
+// ============================================================
+if (typeof WOW !== 'undefined') {
+  new WOW({ offset: 60, mobile: false }).init();
+}
+
+// ============================================================
+// SNAP SECTION REVEAL — animate .snap-reveal when section enters view
+// ============================================================
+(function () {
+  const snap = document.getElementById('landing-snap');
+  if (!snap) return;
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      const reveals = entry.target.querySelectorAll('.snap-reveal');
+      if (entry.isIntersecting) {
+        reveals.forEach(el => el.classList.add('snap-visible'));
+      } else {
+        // Reset so the spring fires again when scrolling back
+        reveals.forEach(el => el.classList.remove('snap-visible'));
+      }
+    });
+  }, { root: snap, threshold: 0.3 });
+
+  snap.querySelectorAll('.ls').forEach(section => observer.observe(section));
+})();
+
+// Skills tab switching
+document.querySelectorAll('.sk-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const sk = tab.dataset.sk;
+    document.querySelectorAll('.sk-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.sk-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.sk-visual').forEach(v => v.classList.remove('active'));
+    tab.classList.add('active');
+    const panel = document.querySelector(`.sk-panel[data-panel="${sk}"]`);
+    const visual = document.querySelector(`.sk-visual[data-visual="${sk}"]`);
+    if (panel) panel.classList.add('active');
+    if (visual) visual.classList.add('active');
+  });
+});
+
+// Skill CTA buttons → launch trainer
+document.querySelectorAll('.sk-cta[data-skill]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const skill = btn.dataset.skill;
+    if (Account.currentUser()) goSkill(skill);
+    else openAuthModal('signup');
+  });
+});
+
+// ============================================================
+// TYPING ANIMATION (hero subtitle)
+// ============================================================
+(function () {
+  const el = document.getElementById('hero-typing-text');
+  if (!el) return;
+  const text = 'LEARN · PRACTICE · WIN';
+  let i = 0;
+  function type() {
+    if (i < text.length) {
+      el.textContent += text[i++];
+      setTimeout(type, 75);
+    }
+  }
+  // Start right after hero-line-2 finishes (2.1s delay + 0.55s anim = ~2.65s)
+  setTimeout(type, 2700);
+})();
+
+// ============================================================
+// HAMBURGER SIDEBAR NAV
+// ============================================================
+(function () {
+  // Inject backdrop element
+  const backdrop = document.createElement('div');
+  backdrop.id = 'sidebar-backdrop';
+  document.body.appendChild(backdrop);
+
+  const sidebar  = document.getElementById('nav-sidebar');
+  const hamburger = document.getElementById('nav-hamburger');
+  const closeBtn  = document.getElementById('sidebar-close');
+  const sidebarTrainBtn = document.getElementById('sidebar-train-btn');
+
+  function openSidebar() {
+    if (sidebar) sidebar.classList.add('sidebar-open');
+    backdrop.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeSidebar() {
+    if (sidebar) sidebar.classList.remove('sidebar-open');
+    backdrop.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  if (hamburger) hamburger.addEventListener('click', openSidebar);
+  if (closeBtn)  closeBtn.addEventListener('click', closeSidebar);
+  backdrop.addEventListener('click', closeSidebar);
+
+  // Close on any sidebar link click
+  if (sidebar) {
+    sidebar.querySelectorAll('a:not(#sidebar-train-btn)').forEach(a => {
+      a.addEventListener('click', closeSidebar);
+    });
+  }
+
+  if (sidebarTrainBtn) {
+    sidebarTrainBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeSidebar();
+      startTraining();
+    });
+  }
+})();
 
 // ============================================================
 // NAVIGATION WIRING
@@ -1566,9 +2009,210 @@ if (heroCta) heroCta.addEventListener('click', startTraining);
 const navCta = document.getElementById('nav-cta');
 if (navCta) navCta.addEventListener('click', startTraining);
 
+// Nav dropdown
+const navMenuBtn  = document.getElementById('nav-menu-btn');
+const navDropdown = document.getElementById('nav-dropdown');
+if (navMenuBtn && navDropdown) {
+  navMenuBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    const open = navMenuBtn.classList.toggle('open');
+    navDropdown.classList.toggle('open', open);
+    navMenuBtn.setAttribute('aria-expanded', open);
+  });
+  document.addEventListener('click', e => {
+    if (!navMenuBtn.contains(e.target) && !navDropdown.contains(e.target)) {
+      navMenuBtn.classList.remove('open');
+      navDropdown.classList.remove('open');
+      navMenuBtn.setAttribute('aria-expanded', 'false');
+    }
+  });
+  navDropdown.querySelectorAll('.nav-dropdown-item').forEach(item => {
+    item.addEventListener('click', () => {
+      navMenuBtn.classList.remove('open');
+      navDropdown.classList.remove('open');
+    });
+  });
+}
+
 const featuresCta = document.getElementById('features-cta');
 if (featuresCta) featuresCta.addEventListener('click', startTraining);
 
+const navStartBtn = document.getElementById('nav-start-btn');
+if (navStartBtn) navStartBtn.addEventListener('click', startTraining);
+
+const readyCta = document.getElementById('ready-cta');
+if (readyCta) readyCta.addEventListener('click', startTraining);
+
+const learnMoreBtn = document.getElementById('hero-explore-btn');
+if (learnMoreBtn) {
+  learnMoreBtn.addEventListener('click', () => {
+    const next = document.getElementById('info-sections');
+    if (next) next.scrollIntoView({ behavior: 'smooth' });
+  });
+}
+
+
+
+// ── Per-card mouse repulsion (proximity-based, no ring tilt) ─
+(function initCardRepulsion() {
+  const cards   = document.querySelectorAll('.rc-card');
+  const hero    = document.querySelector('.ls-hero');
+  if (!hero || !cards.length) return;
+
+  const INFLUENCE = 140; // screen-px radius to affect a card
+  const MAX_PUSH  = 65;  // px to push card in Y
+  const LERP      = 0.08;
+
+  let mx = -9999, my = -9999;
+
+  const state = Array.from(cards).map((_card, i) => ({
+    ry: i * 45, targetY: 0, curY: 0, ready: false,
+  }));
+
+  cards.forEach((card, i) => {
+    card.addEventListener('animationend', e => {
+      if (e.target !== card) return; // ignore child animation events
+      // Set final transform BEFORE killing animation to prevent snap
+      card.style.transform = `rotateY(${state[i].ry}deg) translateZ(210px) translateY(0px)`;
+      card.style.animation = 'none';
+      state[i].ready = true;
+    });
+  });
+
+  hero.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+  hero.addEventListener('mouseleave', () => { mx = -9999; my = -9999; });
+
+  function tick() {
+    cards.forEach((card, i) => {
+      const s = state[i];
+      if (!s.ready) return;
+
+      const rect = card.getBoundingClientRect();
+      const cx   = rect.left + rect.width  / 2;
+      const cy   = rect.top  + rect.height / 2;
+      const dist = Math.sqrt((mx - cx) ** 2 + (my - cy) ** 2);
+
+      if (dist < INFLUENCE) {
+        const strength = (1 - dist / INFLUENCE) ** 2;
+        // push up if mouse below card center, push down if mouse above
+        s.targetY = (my > cy ? -1 : 1) * strength * MAX_PUSH;
+      } else {
+        s.targetY = 0;
+      }
+
+      s.curY += (s.targetY - s.curY) * LERP;
+      card.style.transform = `rotateY(${s.ry}deg) translateZ(210px) translateY(${s.curY.toFixed(2)}px)`;
+    });
+    requestAnimationFrame(tick);
+  }
+  tick();
+})();
+
+// ── Per-letter hero headline drop ──────────────────────────
+(function splitHeroLetters() {
+  const LINE_DELAY  = 0.15; // gap between line 1 and line 2
+  const CHAR_DELAY  = 0.035;
+  const START       = 1.0;
+
+  function split(el, startDelay) {
+    const text = el.textContent;
+    el.textContent = '';
+    let d = startDelay;
+    for (const ch of text) {
+      const s = document.createElement('span');
+      s.className = 'hero-char';
+      s.textContent = ch === ' ' ? '\u00A0' : ch;
+      s.style.animationDelay = d.toFixed(3) + 's';
+      el.appendChild(s);
+      d += CHAR_DELAY;
+    }
+    return d;
+  }
+
+  const line1 = document.querySelector('.hero-line-1');
+  const line2 = document.querySelector('.hero-line-2');
+  if (line1 && line2) {
+    const after1 = split(line1, START);
+    split(line2, after1 + LINE_DELAY);
+  }
+})();
+
+// ── Hero grid background ────────────────────────────────────
+(function initHeroGrid() {
+  const canvas = document.getElementById('hero-grid-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  let W, H, mx = -999, my = -999;
+  const SPACING = 28;
+  const GLOW_R  = 55;
+
+  // Offscreen canvas for the spotlight bright layer
+  const off = document.createElement('canvas');
+  const offCtx = off.getContext('2d');
+
+  function resize() {
+    W = canvas.width  = off.width  = canvas.offsetWidth;
+    H = canvas.height = off.height = canvas.offsetHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function drawGrid(c, color, lineW) {
+    c.strokeStyle = color;
+    c.lineWidth   = lineW;
+    c.beginPath();
+    for (let x = 0; x <= W; x += SPACING) {
+      c.moveTo(x, 0); c.lineTo(x, H);
+    }
+    for (let y = 0; y <= H; y += SPACING) {
+      c.moveTo(0, y); c.lineTo(W, y);
+    }
+    c.stroke();
+  }
+
+  function tick() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Dim base grid
+    drawGrid(ctx, 'rgba(170,145,120,0.08)', 0.4);
+
+    // Bright spotlight grid — drawn to offscreen then masked
+    offCtx.clearRect(0, 0, W, H);
+    drawGrid(offCtx, 'rgba(140,100,55,0.35)', 0.8);
+
+    // Mask the bright grid with a radial gradient
+    offCtx.globalCompositeOperation = 'destination-in';
+    const grad = offCtx.createRadialGradient(mx, my, 0, mx, my, GLOW_R);
+    grad.addColorStop(0,   'rgba(0,0,0,1)');
+    grad.addColorStop(0.5, 'rgba(0,0,0,0.7)');
+    grad.addColorStop(1,   'rgba(0,0,0,0)');
+    offCtx.fillStyle = grad;
+    offCtx.fillRect(0, 0, W, H);
+    offCtx.globalCompositeOperation = 'source-over';
+
+    ctx.drawImage(off, 0, 0);
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+  let overButton = false;
+  document.querySelectorAll('button, a, .hero-explore').forEach(el => {
+    el.addEventListener('mouseenter', () => { overButton = true; });
+    el.addEventListener('mouseleave', () => { overButton = false; });
+  });
+
+  const hero = document.querySelector('.ls-hero');
+  if (hero) {
+    hero.addEventListener('mousemove', e => {
+      if (overButton) { mx = -999; my = -999; return; }
+      const r = canvas.getBoundingClientRect();
+      mx = e.clientX - r.left;
+      my = e.clientY - r.top;
+    });
+    hero.addEventListener('mouseleave', () => { mx = -999; my = -999; });
+  }
+})();
 
 // Info popups (Blackjack / Card Counting)
 function openInfoModal(id) {
@@ -1579,14 +2223,11 @@ function closeInfoModal(id) {
 }
 ['bj-modal', 'cc-modal'].forEach(id => {
   const overlay = document.getElementById(id);
-  if (!overlay) return;
+  if (!overlay) return; // modals removed; skip
   overlay.addEventListener('click', e => { if (e.target === overlay) closeInfoModal(id); });
   overlay.addEventListener('keydown', e => { if (e.key === 'Escape') closeInfoModal(id); });
 });
-document.getElementById('nav-open-bj-modal').addEventListener('click', () => openInfoModal('bj-modal'));
-document.getElementById('nav-open-cc-modal').addEventListener('click', () => openInfoModal('cc-modal'));
-document.getElementById('close-bj-modal').addEventListener('click', () => closeInfoModal('bj-modal'));
-document.getElementById('close-cc-modal').addEventListener('click', () => closeInfoModal('cc-modal'));
+// Modal nav buttons removed; info sections are now inline on the landing page
 
 // Skill panel CTAs → individual skills or pipeline
 document.querySelectorAll('.sp-cta[data-skill]').forEach(btn => {
@@ -1622,23 +2263,24 @@ document.querySelectorAll('.skill-item').forEach(item => {
   });
 });
 
-// Slide-in on scroll — trigger when features section enters view
-const featuresSlide = document.querySelector('.features-slide');
-if (featuresSlide) {
-  const featuresObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        featuresSlide.classList.add('features-visible');
-        featuresObserver.disconnect();
-      }
-    });
-  }, { threshold: 0.15 });
-  featuresObserver.observe(featuresSlide);
-}
+// Nav link smooth scroll within landing-snap
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    const target = document.querySelector(a.getAttribute('href'));
+    const snap = document.getElementById('landing-snap');
+    if (target && snap && snap.contains(target)) {
+      e.preventDefault();
+      target.scrollIntoView({ behavior: 'smooth' });
+    }
+  });
+});
 
 // Back buttons
 document.getElementById('pipeline-back').addEventListener('click', goLanding);
-document.getElementById('skill-back').addEventListener('click', goPipeline);
+document.getElementById('skill-back').addEventListener('click', () => {
+  if (activeSkillCleanup) { activeSkillCleanup(); activeSkillCleanup = null; }
+  goPipeline();
+});
 
 const dashBack = document.getElementById('dashboard-back');
 if (dashBack) dashBack.addEventListener('click', goLanding);
@@ -1720,14 +2362,39 @@ if (authModal) {
   authModal.addEventListener('keydown', e => { if (e.key === 'Escape') closeAuthModal(); });
 }
 
-// Pipeline nav account button
+// Pipeline nav account button + dropdown
 const pipeNavAccount = document.getElementById('pipe-nav-account');
+const pipeAccountDropdown = document.getElementById('pipe-account-dropdown');
+
 if (pipeNavAccount) {
   pipeNavAccount.addEventListener('click', () => {
-    if (Account.currentUser()) goDashboard();
-    else openAuthModal();
+    if (Account.currentUser()) {
+      pipeAccountDropdown.classList.toggle('hidden');
+    } else {
+      openAuthModal();
+    }
   });
 }
+
+document.getElementById('pipe-dd-insights')?.addEventListener('click', () => {
+  pipeAccountDropdown.classList.add('hidden');
+  goDashboard();
+});
+
+document.getElementById('pipe-dd-signout')?.addEventListener('click', () => {
+  pipeAccountDropdown.classList.add('hidden');
+  Account.signOut();
+  syncAuthUI();
+  goLanding();
+});
+
+document.addEventListener('click', e => {
+  if (pipeAccountDropdown && !pipeAccountDropdown.classList.contains('hidden')) {
+    if (!document.getElementById('pipe-account-wrap').contains(e.target)) {
+      pipeAccountDropdown.classList.add('hidden');
+    }
+  }
+});
 
 // Init auth UI on load
 syncAuthUI();

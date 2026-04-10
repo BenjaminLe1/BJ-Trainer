@@ -6,10 +6,28 @@
   <title>Ben's Card Counting Trainer</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=GFS+Didot&family=Instrument+Serif:ital@0;1&family=Hanken+Grotesk:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
+
+  <!-- WHITE INTRO OVERLAY -->
+  <div id="page-spinner"></div>
+
+  <!-- SLIDE-OUT SIDEBAR NAV -->
+  <div id="nav-sidebar">
+    <i class="fa fa-times fa-2x" id="sidebar-close"></i>
+    <div class="sidebar-links">
+      <ul>
+        <li><a href="#feat-anchor">Skills</a></li>
+        <li><a href="#info-sections">Blackjack</a></li>
+        <li><a href="#info-counting">Card Counting</a></li>
+        <li><a id="sidebar-train-btn" href="#">Start Training</a></li>
+      </ul>
+    </div>
+  </div>
 
   <!-- ===== LANDING ===== -->
   <div id="landing">
@@ -17,56 +35,72 @@
     <!-- NAV BAR -->
     <nav class="hero-nav" id="hero-nav">
       <div class="nav-brand">
-        <span class="nav-logo">♠</span>
-        <span class="nav-brand-name">Ben's Card Counting Trainer</span>
-      </div>
-      <div class="nav-links">
-        <button class="nav-info-btn" id="nav-open-bj-modal">What is Blackjack?</button>
-        <button class="nav-info-btn" id="nav-open-cc-modal">What is Card Counting?</button>
+        <svg class="nav-brand-spade" viewBox="0 0 40 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 2 C20 2 4 13 4 23 C4 29 9 33 15 31 C13 35 11 38 8 40 L32 40 C29 38 27 35 25 31 C31 33 36 29 36 23 C36 13 20 2 20 2Z" fill="#1a1208"/>
+        </svg>
+        <span class="nav-brand-name">Ben's Trainer</span>
       </div>
       <div class="nav-right">
-        <button class="nav-cta" id="nav-cta">Start Training</button>
+        <div class="nav-menu-wrap" id="nav-menu-wrap">
+          <button class="nav-menu-btn" id="nav-menu-btn" aria-label="Open menu" aria-expanded="false">
+            <span></span><span></span><span></span>
+          </button>
+          <div class="nav-dropdown" id="nav-dropdown">
+            <a class="nav-dropdown-item" href="#info-sections">What is Blackjack?</a>
+            <a class="nav-dropdown-item" href="#info-counting">What is Counting Cards?</a>
+            <a class="nav-dropdown-item" href="#feat-anchor">5 Step Process</a>
+            <button class="nav-dropdown-item nav-dropdown-start" id="nav-start-btn">Start Training →</button>
+          </div>
+        </div>
       </div>
     </nav>
 
-    <!-- STICKY HERO -->
-    <div class="hero-sticky">
+    <!-- SNAP SCROLL CONTAINER -->
+    <div id="landing-snap">
 
-      <!-- Floating background cards -->
-      <div class="bg-card bc-1 card suit-spades"><span class="rank tl">A</span><span class="suit-sym">♠</span><span class="rank br">A</span></div>
-      <div class="bg-card bc-2 card suit-hearts"><span class="rank tl">K</span><span class="suit-sym">♥</span><span class="rank br">K</span></div>
-      <div class="bg-card bc-3 card suit-diamonds"><span class="rank tl">7</span><span class="suit-sym">♦</span><span class="rank br">7</span></div>
-      <div class="bg-card bc-4 card suit-clubs"><span class="rank tl">Q</span><span class="suit-sym">♣</span><span class="rank br">Q</span></div>
-      <div class="bg-card bc-5 card suit-hearts"><span class="rank tl">3</span><span class="suit-sym">♥</span><span class="rank br">3</span></div>
-      <div class="bg-card bc-6 card suit-spades"><span class="rank tl">J</span><span class="suit-sym">♠</span><span class="rank br">J</span></div>
-      <div class="bg-card bc-7 card suit-diamonds"><span class="rank tl">9</span><span class="suit-sym">♦</span><span class="rank br">9</span></div>
+    <!-- SECTION 1: HERO -->
+    <div class="ls ls-hero">
+
+
+      <canvas id="hero-grid-canvas"></canvas>
 
       <div class="hero-body">
+
         <h1 class="hero-headline">
-          Count cards.<br>
-          <em>Play with an edge.</em>
+          <span class="hero-line-1">Count cards.</span>
+          <br>
+          <em class="hero-line-2">Play with an edge.</em>
         </h1>
-        <button class="hero-main-cta" id="hero-cta">Start Training</button>
+        <p class="hero-typing-line"><span id="hero-typing-text"></span><span class="blinking-cursor">|</span></p>
+        <button class="hero-main-cta" id="hero-cta">
+          <span class="hero-cta-text">Start Training</span>
+          <span class="hero-cta-arrow">→</span>
+        </button>
       </div>
 
-      <div class="hero-explore">
-        <span class="hero-explore-label">Explore</span>
+      <!-- 3D rotating card ring -->
+      <div class="hero-card-ring-wrap">
+        <div class="hero-card-ring">
+          <div class="rc-card card suit-spades"><span class="rank tl">A</span><span class="suit-sym">♠</span><span class="rank br">A</span></div>
+          <div class="rc-card card suit-hearts"><span class="rank tl">K</span><span class="suit-sym">♥</span><span class="rank br">K</span></div>
+          <div class="rc-card card suit-spades"><span class="rank tl">Q</span><span class="suit-sym">♠</span><span class="rank br">Q</span></div>
+          <div class="rc-card card suit-hearts"><span class="rank tl">J</span><span class="suit-sym">♥</span><span class="rank br">J</span></div>
+          <div class="rc-card card suit-spades"><span class="rank tl">10</span><span class="suit-sym">♠</span><span class="rank br">10</span></div>
+          <div class="rc-card card suit-hearts"><span class="rank tl">9</span><span class="suit-sym">♥</span><span class="rank br">9</span></div>
+          <div class="rc-card card suit-spades"><span class="rank tl">8</span><span class="suit-sym">♠</span><span class="rank br">8</span></div>
+          <div class="rc-card card suit-hearts"><span class="rank tl">7</span><span class="suit-sym">♥</span><span class="rank br">7</span></div>
+        </div>
+      </div>
+
+      <div class="hero-explore" id="hero-explore-btn">
+        <span class="hero-explore-label">Learn More</span>
         <svg class="hero-explore-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
       </div>
 
-    </div><!-- end .hero-sticky -->
+    </div><!-- end .ls-hero -->
 
-    <!-- FEATURES SECTION — slides over hero -->
-    <div class="features-slide">
-
-      <!-- Section header -->
-      <div class="feat-header">
-        <span class="feat-eyebrow">Training System</span>
-        <h2 class="feat-title">Six skills.<br><em>One edge.</em></h2>
-        <p class="feat-sub">Everything you need to count cards at a professional level — built into one structured trainer.</p>
-      </div>
-
-      <div class="feat-rows">
+    <!-- (old feat-rows removed — kept only for reference cleanup) -->
+    <div style="display:none"><div class="feat-rows">
 
         <!-- Row 1: Basic Strategy -->
         <div class="feat-row">
@@ -180,30 +214,10 @@
           </div>
         </div>
 
-        <!-- Row 4: Deck Estimation -->
+        <!-- Row 4: True Count -->
         <div class="feat-row">
           <div class="feat-info">
             <span class="feat-num">04</span>
-            <h3 class="feat-name">Deck Estimation</h3>
-            <p class="feat-desc">Estimate how many decks remain in the shoe by eye. Essential for converting your running count to a true count — the number that tells you your actual edge at any point in the shoe.</p>
-            <span class="feat-tag">Visual Training</span>
-          </div>
-          <div class="feat-mockup">
-            <div class="spm-label">Cards dealt from a 6-deck shoe</div>
-            <div class="spm-big-num">156</div>
-            <div style="font-size:.75rem;color:#4a5a4a;text-align:center;margin-bottom:1.25rem">out of 312 cards</div>
-            <div class="spm-slider-val">3.0 decks remaining</div>
-            <input type="range" class="sp-slider" min="0.5" max="6" step="0.5" value="3" disabled>
-            <div style="font-size:.68rem;color:#4a5a4a;display:flex;justify-content:space-between;margin-top:.35rem">
-              <span>½ deck</span><span>3 decks</span><span>6 decks</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Row 5: True Count -->
-        <div class="feat-row">
-          <div class="feat-info">
-            <span class="feat-num">05</span>
             <h3 class="feat-name">True Count</h3>
             <p class="feat-desc">Running count divided by decks remaining. This single calculation normalizes your edge so it's accurate regardless of shoe depth. Master this and you know your precise edge at any moment.</p>
             <span class="feat-tag">RC ÷ Decks</span>
@@ -232,7 +246,7 @@
         <!-- Row 6: Bet Spread -->
         <div class="feat-row">
           <div class="feat-info">
-            <span class="feat-num">06</span>
+            <span class="feat-num">05</span>
             <h3 class="feat-name">Bet Spread</h3>
             <p class="feat-desc">Build a betting system based on your bankroll and risk tolerance. Know exactly how much to bet at every true count level before you sit down. Size your bets like a professional.</p>
             <span class="feat-tag">Bankroll Management</span>
@@ -250,96 +264,256 @@
           </div>
         </div>
 
-      </div><!-- end .feat-rows -->
+      </div></div><!-- end hidden feat-rows -->
 
-      <!-- Bottom CTA -->
-      <div class="feat-cta">
-        <button class="hero-main-cta" id="features-cta">Start Training</button>
-      </div>
-
-    </div><!-- end .features-slide -->
-
-    <!-- WHAT IS BLACKJACK -->
-    <!-- BLACKJACK INFO POPUP -->
-    <div class="info-modal-overlay hidden" id="bj-modal">
-      <div class="info-modal-box">
-        <button class="info-modal-close" id="close-bj-modal">✕</button>
-        <span class="info-modal-eyebrow">First things first</span>
-        <h2 class="info-modal-title">What is Blackjack?</h2>
-        <div class="info-modal-body">
-          <p>Blackjack (also called "21") is the most popular casino card game in the world — and one of the few where <strong>your decisions actually change the odds</strong>.</p>
-          <p>The goal is simple: get a hand value closer to 21 than the dealer without going over. Cards 2–10 are worth face value. Face cards (J, Q, K) are worth 10. Aces are worth 1 or 11.</p>
-          <p>Hit 21 on your first two cards and that's a <strong>Blackjack</strong> — an automatic win paying 3:2. With perfect strategy, the house edge drops to just 0.5%.</p>
-          <div class="hand-examples" style="margin-top:1.5rem">
-            <div class="hand-example">
-              <span class="hand-label good">Blackjack — 21</span>
-              <div class="card-row">
-                <div class="card suit-spades"><span class="rank tl">A</span><span class="suit-sym">♠</span><span class="rank br">A</span></div>
-                <div class="card suit-hearts"><span class="rank tl">K</span><span class="suit-sym">♥</span><span class="rank br">K</span></div>
-              </div>
+    <!-- SECTION 3: WHAT IS BLACKJACK? -->
+    <div class="ls ls-info" id="info-sections">
+      <div class="ls-info-inner snap-reveal">
+        <div class="info-section-box">
+          <span class="info-modal-eyebrow">First things first</span>
+          <h2 class="info-modal-title">What is Blackjack?</h2>
+          <div class="info-modal-body">
+            <p>Blackjack is the most popular casino card game in the world — and one of the few where <strong>your decisions actually change the odds</strong>. You're not playing against other players. You're playing against the dealer.</p>
+            <p>The goal is to get a hand value closer to 21 than the dealer without going over. With perfect basic strategy — even without counting — the house edge is just <strong>0.5%</strong>, the lowest of most casino games. Card counting flips this edge and more, putting the advantage in your favor by as much as <strong>5%</strong>.</p>
+            <div class="bj-actions" style="margin-top:1.4rem">
+              <div class="bj-action"><span class="bj-action-name">Hit</span><span class="bj-action-desc">Take another card.</span></div>
+              <div class="bj-action"><span class="bj-action-name">Stand</span><span class="bj-action-desc">Keep your current hand.</span></div>
+              <div class="bj-action"><span class="bj-action-name">Double</span><span class="bj-action-desc">Double your bet, take exactly one more card.</span></div>
+              <div class="bj-action"><span class="bj-action-name">Split</span><span class="bj-action-desc">Split a pair into two separate hands.</span></div>
             </div>
-            <div class="hand-example">
-              <span class="hand-label bad">Bust — over 21</span>
-              <div class="card-row">
-                <div class="card suit-clubs"><span class="rank tl">9</span><span class="suit-sym">♣</span><span class="rank br">9</span></div>
-                <div class="card suit-diamonds"><span class="rank tl">7</span><span class="suit-sym">♦</span><span class="rank br">7</span></div>
-                <div class="card suit-spades"><span class="rank tl">K</span><span class="suit-sym">♠</span><span class="rank br">K</span></div>
+          </div>
+        </div>
+      </div>
+    </div><!-- end ls-info blackjack -->
+
+    <!-- SECTION 4: WHAT IS CARD COUNTING? -->
+    <div class="ls ls-info" id="info-counting">
+      <div class="ls-info-inner snap-reveal">
+        <div class="info-section-box">
+          <span class="info-modal-eyebrow">The skill</span>
+          <h2 class="info-modal-title">What is Card Counting?</h2>
+          <div class="info-modal-body">
+            <p>Card counting tracks the <strong>ratio of high cards to low cards</strong> remaining in the shoe. The more high cards, the higher your edge. It's a simple running number — not memorization.</p>
+            <div class="myth-card" style="margin:1.25rem 0">
+              <h3>Common myths</h3>
+              <ul class="myth-list">
+                <li><span class="myth-label">❌ "It's illegal"</span><span class="myth-body">Perfectly legal. Casinos can ask you to leave, but no law is broken.</span></li>
+                <li><span class="myth-label">❌ "You need to be a genius"</span><span class="myth-body">The math is trivial. Discipline and preparation are the true skills.</span></li>
+                <li><span class="myth-label">❌ "It only works in movies"</span><span class="myth-body">The MIT Blackjack Team won millions. Real people, real money.</span></li>
+              </ul>
+            </div>
+            <p class="info-modal-sub">In the Hi-Lo system, every card shifts your count by +1, 0, or −1. Three values. That's the whole system.</p>
+            <div class="hilo-chart hilo-chart-compact">
+              <div class="hilo-group">
+                <div class="hilo-cards">
+                  <div class="card card-sm suit-hearts"><span class="rank tl">2</span><span class="suit-sym">♥</span><span class="rank br">2</span></div>
+                  <div class="card card-sm suit-clubs"><span class="rank tl">5</span><span class="suit-sym">♣</span><span class="rank br">5</span></div>
+                  <div class="card card-sm suit-diamonds"><span class="rank tl">6</span><span class="suit-sym">♦</span><span class="rank br">6</span></div>
+                </div>
+                <div class="hilo-value c-green">+1</div>
+                <div class="hilo-label">Low cards (2–6)</div>
+              </div>
+              <div class="hilo-group">
+                <div class="hilo-cards">
+                  <div class="card card-sm suit-clubs"><span class="rank tl">7</span><span class="suit-sym">♣</span><span class="rank br">7</span></div>
+                  <div class="card card-sm suit-diamonds"><span class="rank tl">8</span><span class="suit-sym">♦</span><span class="rank br">8</span></div>
+                  <div class="card card-sm suit-spades"><span class="rank tl">9</span><span class="suit-sym">♠</span><span class="rank br">9</span></div>
+                </div>
+                <div class="hilo-value c-muted">0</div>
+                <div class="hilo-label">Mid cards (7–9)</div>
+              </div>
+              <div class="hilo-group">
+                <div class="hilo-cards">
+                  <div class="card card-sm suit-hearts"><span class="rank tl">10</span><span class="suit-sym">♥</span><span class="rank br">10</span></div>
+                  <div class="card card-sm suit-clubs"><span class="rank tl">J</span><span class="suit-sym">♣</span><span class="rank br">J</span></div>
+                  <div class="card card-sm suit-hearts"><span class="rank tl">A</span><span class="suit-sym">♥</span><span class="rank br">A</span></div>
+                </div>
+                <div class="hilo-value c-red">−1</div>
+                <div class="hilo-label">High cards (10–A)</div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </div><!-- end ls-info counting -->
 
-    <!-- CARD COUNTING INFO POPUP -->
-    <div class="info-modal-overlay hidden" id="cc-modal">
-      <div class="info-modal-box info-modal-box-wide">
-        <button class="info-modal-close" id="close-cc-modal">✕</button>
-        <span class="info-modal-eyebrow">The skill</span>
-        <h2 class="info-modal-title">What is Card Counting?</h2>
-        <div class="info-modal-body">
-          <p>Card counting tracks the <strong>ratio of high cards to low cards</strong> remaining in the shoe. The more high cards, the higher your edge. It's a simple running number — not memorization.</p>
-          <div class="myth-card" style="margin:1.25rem 0">
-            <h3>Common myths</h3>
-            <ul class="myth-list">
-              <li><span class="myth-label">❌ "It's illegal"</span><span class="myth-body">Perfectly legal. Casinos can ask you to leave, but no law is broken.</span></li>
-              <li><span class="myth-label">❌ "You need to be a genius"</span><span class="myth-body">The math is trivial. Discipline and preparation is the real skill.</span></li>
-              <li><span class="myth-label">❌ "It only works in movies"</span><span class="myth-body">The MIT Blackjack Team won millions. Real people, real money.</span></li>
-            </ul>
-          </div>
-          <p class="info-modal-sub">Every card changes your count by +1, 0, or −1. That's the whole Hi-Lo system.</p>
-          <div class="hilo-chart hilo-chart-compact">
-            <div class="hilo-group">
-              <div class="hilo-cards">
-                <div class="card card-sm suit-hearts"><span class="rank tl">2</span><span class="suit-sym">♥</span><span class="rank br">2</span></div>
-                <div class="card card-sm suit-clubs"><span class="rank tl">5</span><span class="suit-sym">♣</span><span class="rank br">5</span></div>
-                <div class="card card-sm suit-diamonds"><span class="rank tl">6</span><span class="suit-sym">♦</span><span class="rank br">6</span></div>
-              </div>
-              <div class="hilo-value c-green">+1</div>
-              <div class="hilo-label">Low cards (2–6)</div>
-            </div>
-            <div class="hilo-group">
-              <div class="hilo-cards">
-                <div class="card card-sm suit-clubs"><span class="rank tl">7</span><span class="suit-sym">♣</span><span class="rank br">7</span></div>
-                <div class="card card-sm suit-diamonds"><span class="rank tl">8</span><span class="suit-sym">♦</span><span class="rank br">8</span></div>
-                <div class="card card-sm suit-spades"><span class="rank tl">9</span><span class="suit-sym">♠</span><span class="rank br">9</span></div>
-              </div>
-              <div class="hilo-value c-muted">0</div>
-              <div class="hilo-label">Mid cards (7–9)</div>
-            </div>
-            <div class="hilo-group">
-              <div class="hilo-cards">
-                <div class="card card-sm suit-hearts"><span class="rank tl">10</span><span class="suit-sym">♥</span><span class="rank br">10</span></div>
-                <div class="card card-sm suit-clubs"><span class="rank tl">J</span><span class="suit-sym">♣</span><span class="rank br">J</span></div>
-                <div class="card card-sm suit-hearts"><span class="rank tl">A</span><span class="suit-sym">♥</span><span class="rank br">A</span></div>
-              </div>
-              <div class="hilo-value c-red">−1</div>
-              <div class="hilo-label">High cards (10–A)</div>
-            </div>
-          </div>
+    <!-- SECTION 3: 5 SKILLS TABBED -->
+    <div class="ls ls-skills" id="feat-anchor">
+      <div class="sk-wrap snap-reveal">
+
+        <!-- Tab bar -->
+        <div class="sk-tab-bar">
+          <button class="sk-tab active" data-sk="basic-strategy">Basic Strategy</button>
+          <button class="sk-tab" data-sk="keep-counting">Running Count</button>
+          <button class="sk-tab" data-sk="true-count">True Count</button>
+          <button class="sk-tab" data-sk="deviations">Deviations</button>
+          <button class="sk-tab" data-sk="bet-spread">Bet Spread</button>
         </div>
+
+        <!-- Body -->
+        <div class="sk-body">
+
+          <!-- Left: content panels -->
+          <div class="sk-left">
+            <div class="sk-panel active" data-panel="basic-strategy">
+              <span class="sk-num">01</span>
+              <h2 class="sk-title">Basic<br>Strategy</h2>
+              <p class="sk-desc">There is an optimal play for every hand. Practice making the mathematical decision until it becomes fully automatic — this is the foundation of all advantage play.</p>
+              <button class="sk-cta" data-skill="basic-strategy"><span class="hero-cta-text">Start Training</span><span class="hero-cta-arrow">→</span></button>
+            </div>
+            <div class="sk-panel" data-panel="keep-counting">
+              <span class="sk-num">02</span>
+              <h2 class="sk-title">Running<br>Count</h2>
+              <p class="sk-desc">Every card that comes out is assigned a value — low cards count up, high cards count down. You'll train yourself to effortlessly keep a running tally in your head as each card is dealt.</p>
+              <button class="sk-cta" data-skill="keep-counting"><span class="hero-cta-text">Start Training</span><span class="hero-cta-arrow">→</span></button>
+            </div>
+            <div class="sk-panel" data-panel="deviations">
+              <span class="sk-num">03</span>
+              <h2 class="sk-title">Deviations</h2>
+              <p class="sk-desc">Basic strategy assumes a neutral count — but as the true count shifts, the optimal play changes. Deviations are adjustments to basic strategy, squeezing out an additional edge.</p>
+              <button class="sk-cta" data-skill="deviations"><span class="hero-cta-text">Start Training</span><span class="hero-cta-arrow">→</span></button>
+            </div>
+            <div class="sk-panel" data-panel="true-count">
+              <span class="sk-num">04</span>
+              <h2 class="sk-title">True<br>Count</h2>
+              <p class="sk-desc">Convert your running count to a true count. This adjusts for shoe size, so the count works across any number of decks. The true count is the number all exploitative strategy is based on.</p>
+              <button class="sk-cta" data-skill="true-count"><span class="hero-cta-text">Start Training</span><span class="hero-cta-arrow">→</span></button>
+            </div>
+            <div class="sk-panel" data-panel="bet-spread">
+              <span class="sk-num">05</span>
+              <h2 class="sk-title">Bet<br>Spread</h2>
+              <p class="sk-desc">Build a custom bet spread around your bankroll to determine exactly how much to wager at each true count. Then analyze your expected value and variance to better understand your profit rate and risk before you play.</p>
+              <button class="sk-cta" data-skill="bet-spread"><span class="hero-cta-text">Start Training</span><span class="hero-cta-arrow">→</span></button>
+            </div>
+          </div>
+
+          <!-- Right: visual panels -->
+          <div class="sk-right">
+
+            <div class="sk-visual active" data-visual="basic-strategy">
+              <div class="sv-window">
+                <div class="sv-win-bar"><span class="sv-win-dot"></span><span class="sv-win-dot"></span><span class="sv-win-dot"></span><span class="sv-win-title">Basic Strategy Trainer</span></div>
+                <div class="sv-content">
+                  <div class="sv-scenario-label">What's the correct play?</div>
+                  <div class="sv-matchup">
+                    <div class="sv-matchup-side">
+                      <div class="sv-matchup-role">Dealer shows</div>
+                      <div class="card suit-hearts"><span class="rank tl">10</span><span class="suit-sym">♥</span><span class="rank br">10</span></div>
+                    </div>
+                    <div class="sv-matchup-vs">vs</div>
+                    <div class="sv-matchup-side">
+                      <div class="sv-matchup-role">Your hand — 16</div>
+                      <div class="card-row">
+                        <div class="card suit-spades"><span class="rank tl">9</span><span class="suit-sym">♠</span><span class="rank br">9</span></div>
+                        <div class="card suit-clubs"><span class="rank tl">7</span><span class="suit-sym">♣</span><span class="rank br">7</span></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="sv-btns">
+                    <button class="sv-btn sv-btn-wrong">Stand</button>
+                    <button class="sv-btn sv-btn-right">Hit ✓</button>
+                    <button class="sv-btn">Double</button>
+                    <button class="sv-btn">Split</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="sk-visual" data-visual="keep-counting">
+              <div class="sv-window">
+                <div class="sv-win-bar"><span class="sv-win-dot"></span><span class="sv-win-dot"></span><span class="sv-win-dot"></span><span class="sv-win-title">Running Count Trainer</span></div>
+                <div class="sv-content">
+                  <div class="sv-scenario-label">What's the running count?</div>
+                  <div class="sv-dealt-row">
+                    <div class="sv-dealt-item"><div class="card suit-hearts card-sm"><span class="rank tl">5</span><span class="suit-sym">♥</span><span class="rank br">5</span></div><span class="sv-val sv-pos">+1</span></div>
+                    <div class="sv-dealt-item"><div class="card suit-spades card-sm"><span class="rank tl">K</span><span class="suit-sym">♠</span><span class="rank br">K</span></div><span class="sv-val sv-neg">−1</span></div>
+                    <div class="sv-dealt-item"><div class="card suit-clubs card-sm"><span class="rank tl">3</span><span class="suit-sym">♣</span><span class="rank br">3</span></div><span class="sv-val sv-pos">+1</span></div>
+                    <div class="sv-dealt-item"><div class="card suit-diamonds card-sm"><span class="rank tl">8</span><span class="suit-sym">♦</span><span class="rank br">8</span></div><span class="sv-val sv-neu">0</span></div>
+                    <div class="sv-dealt-item"><div class="card suit-hearts card-sm"><span class="rank tl">A</span><span class="suit-sym">♥</span><span class="rank br">A</span></div><span class="sv-val sv-neg">−1</span></div>
+                  </div>
+                  <div class="sv-count-display">
+                    <span class="sv-count-label">Running Count</span>
+                    <span class="sv-count-val">+0</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="sk-visual" data-visual="deviations">
+              <div class="sv-window">
+                <div class="sv-win-bar"><span class="sv-win-dot"></span><span class="sv-win-dot"></span><span class="sv-win-dot"></span><span class="sv-win-title">Deviations Trainer</span></div>
+                <div class="sv-content">
+                  <div class="sv-tc-chip">True Count: +4</div>
+                  <div class="sv-matchup" style="margin-top:1.25rem">
+                    <div class="sv-matchup-side">
+                      <div class="sv-matchup-role">Dealer shows</div>
+                      <div class="card suit-spades"><span class="rank tl">2</span><span class="suit-sym">♠</span><span class="rank br">2</span></div>
+                    </div>
+                    <div class="sv-matchup-vs">vs</div>
+                    <div class="sv-matchup-side">
+                      <div class="sv-matchup-role">Your hand — 12</div>
+                      <div class="card-row">
+                        <div class="card suit-hearts"><span class="rank tl">7</span><span class="suit-sym">♥</span><span class="rank br">7</span></div>
+                        <div class="card suit-clubs"><span class="rank tl">5</span><span class="suit-sym">♣</span><span class="rank br">5</span></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="sv-dev-note">Basic strategy says Hit — at TC +4, you Stand.</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="sk-visual" data-visual="true-count">
+              <div class="sv-window">
+                <div class="sv-win-bar"><span class="sv-win-dot"></span><span class="sv-win-dot"></span><span class="sv-win-dot"></span><span class="sv-win-title">True Count Trainer</span></div>
+                <div class="sv-content sv-tc-content">
+                  <div class="sv-tc-formula">
+                    <div class="sv-tc-row"><span class="sv-tc-lbl">Running Count</span><span class="sv-tc-num">+12</span></div>
+                    <div class="sv-tc-op">÷</div>
+                    <div class="sv-tc-row"><span class="sv-tc-lbl">Decks Remaining</span><span class="sv-tc-num">3.5</span></div>
+                    <div class="sv-tc-line"></div>
+                    <div class="sv-tc-result-row"><span class="sv-tc-lbl sv-tc-lbl-result">True Count</span><span class="sv-tc-num sv-tc-result-num">+3.5</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="sk-visual" data-visual="bet-spread">
+              <div class="sv-window">
+                <div class="sv-win-bar"><span class="sv-win-dot"></span><span class="sv-win-dot"></span><span class="sv-win-dot"></span><span class="sv-win-title">Bet Spread Trainer</span></div>
+                <div class="sv-content">
+                  <div class="sv-scenario-label">Bet sizing by True Count</div>
+                  <div class="sv-bars">
+                    <div class="sv-bar-row"><span class="sv-bar-tc">TC ≤ 0</span><div class="sv-bar-track"><div class="sv-bar-fill" style="width:12%"></div></div><span class="sv-bar-amt">$10</span></div>
+                    <div class="sv-bar-row"><span class="sv-bar-tc">TC +1</span><div class="sv-bar-track"><div class="sv-bar-fill" style="width:12%"></div></div><span class="sv-bar-amt">$10</span></div>
+                    <div class="sv-bar-row"><span class="sv-bar-tc">TC +2</span><div class="sv-bar-track"><div class="sv-bar-fill" style="width:25%"></div></div><span class="sv-bar-amt">$25</span></div>
+                    <div class="sv-bar-row"><span class="sv-bar-tc">TC +3</span><div class="sv-bar-track"><div class="sv-bar-fill" style="width:50%"></div></div><span class="sv-bar-amt">$50</span></div>
+                    <div class="sv-bar-row sv-bar-hot"><span class="sv-bar-tc">TC +4</span><div class="sv-bar-track"><div class="sv-bar-fill sv-bar-fill-hot" style="width:75%"></div></div><span class="sv-bar-amt">$75</span></div>
+                    <div class="sv-bar-row sv-bar-hot"><span class="sv-bar-tc">TC +5</span><div class="sv-bar-track"><div class="sv-bar-fill sv-bar-fill-hot" style="width:100%"></div></div><span class="sv-bar-amt">$100</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div><!-- end sk-right -->
+        </div><!-- end sk-body -->
+      </div><!-- end sk-wrap -->
+    </div><!-- end .ls-skills -->
+
+
+
+    <!-- SOCIAL FOOTER -->
+    <div class="landing-footer snap-reveal">
+      <p>CONNECT</p>
+      <div class="landing-social-links">
+        <span><a href="#" aria-label="Twitter"><i class="fa-brands fa-twitter fa-lg"></i></a></span>
+        <span><a href="#" aria-label="Instagram"><i class="fa-brands fa-instagram fa-lg"></i></a></span>
+        <span><a href="#" aria-label="Reddit"><i class="fa-brands fa-reddit fa-lg"></i></a></span>
+        <span><a href="#" aria-label="Discord"><i class="fa-brands fa-discord fa-lg"></i></a></span>
       </div>
     </div>
+
+    </div><!-- end #landing-snap -->
 
   </div><!-- end #landing -->
 
@@ -349,138 +523,54 @@
     <nav class="dark-nav">
       <button class="dark-nav-back" id="pipeline-back">← Back</button>
       <span class="dark-nav-title">Training Pipeline</span>
-      <button class="dark-nav-account" id="pipe-nav-account">Sign In</button>
+      <div class="pipe-account-wrap" id="pipe-account-wrap">
+        <button class="dark-nav-account" id="pipe-nav-account">Sign In</button>
+        <div class="pipe-account-dropdown hidden" id="pipe-account-dropdown">
+          <button class="pipe-account-item" id="pipe-dd-insights">Insights</button>
+          <button class="pipe-account-item pipe-account-item-signout" id="pipe-dd-signout">Sign Out</button>
+        </div>
+      </div>
     </nav>
     <div class="pipeline-scroll">
       <div class="pipeline-intro">
-        <h2>Choose a skill to train</h2>
-        <p>Work through each module individually, or jump straight to full training.</p>
+        <h2>Training Pipeline</h2>
       </div>
-      <div class="pipe-track">
-        <div class="pipe-node" data-skill="basic-strategy">
-          <div class="pipe-left">
-            <div class="pipe-circle" id="circle-basic-strategy">01</div>
-            <div class="pipe-line"></div>
-          </div>
-          <div class="pipe-right">
-            <div class="pipe-node-top">
-              <div class="pipe-node-info">
-                <h3>Basic Strategy</h3>
-                <p>The mathematically optimal play for every hand. Hit, stand, double, split — always make the correct call.</p>
-              </div>
-              <div class="pipe-node-actions">
-                <span class="pipe-badge" id="badge-basic-strategy">Ready</span>
-                <button class="pipe-btn" data-skill="basic-strategy">Train →</button>
-              </div>
-            </div>
-          </div>
+      <div class="pipe-grid">
+        <div class="pipe-card" data-skill="basic-strategy">
+          <div class="pipe-card-num" id="circle-basic-strategy">01</div>
+          <div class="pipe-card-name">Basic Strategy</div>
+          <span class="pipe-card-badge" id="badge-basic-strategy"></span>
+          <button class="pipe-card-btn" data-skill="basic-strategy">Train →</button>
         </div>
-        <div class="pipe-node" data-skill="keep-counting">
-          <div class="pipe-left">
-            <div class="pipe-circle" id="circle-keep-counting">02</div>
-            <div class="pipe-line"></div>
-          </div>
-          <div class="pipe-right">
-            <div class="pipe-node-top">
-              <div class="pipe-node-info">
-                <h3>Running Count</h3>
-                <p>Track the Hi-Lo running count as cards are dealt. Five levels — from single cards to 5-card speed drills.</p>
-              </div>
-              <div class="pipe-node-actions">
-                <span class="pipe-badge" id="badge-keep-counting">Ready</span>
-                <button class="pipe-btn" data-skill="keep-counting">Train →</button>
-              </div>
-            </div>
-          </div>
+        <div class="pipe-card" data-skill="keep-counting">
+          <div class="pipe-card-num" id="circle-keep-counting">02</div>
+          <div class="pipe-card-name">Running Count</div>
+          <span class="pipe-card-badge" id="badge-keep-counting"></span>
+          <button class="pipe-card-btn" data-skill="keep-counting">Train →</button>
         </div>
-        <div class="pipe-node" data-skill="deviations">
-          <div class="pipe-left">
-            <div class="pipe-circle" id="circle-deviations">03</div>
-            <div class="pipe-line"></div>
-          </div>
-          <div class="pipe-right">
-            <div class="pipe-node-top">
-              <div class="pipe-node-info">
-                <h3>Deviations</h3>
-                <p>Learn the Illustrious 18 — the count-based situations where you override basic strategy for maximum edge.</p>
-              </div>
-              <div class="pipe-node-actions">
-                <span class="pipe-badge" id="badge-deviations">Ready</span>
-                <button class="pipe-btn" data-skill="deviations">Train →</button>
-              </div>
-            </div>
-          </div>
+        <div class="pipe-card" data-skill="true-count">
+          <div class="pipe-card-num" id="circle-true-count">03</div>
+          <div class="pipe-card-name">True Count</div>
+          <span class="pipe-card-badge" id="badge-true-count"></span>
+          <button class="pipe-card-btn" data-skill="true-count">Train →</button>
         </div>
-        <div class="pipe-node" data-skill="deck-estimation">
-          <div class="pipe-left">
-            <div class="pipe-circle" id="circle-deck-estimation">04</div>
-            <div class="pipe-line"></div>
-          </div>
-          <div class="pipe-right">
-            <div class="pipe-node-top">
-              <div class="pipe-node-info">
-                <h3>Deck Estimation</h3>
-                <p>Estimate how many decks remain in the shoe. Required to convert your running count to a true count.</p>
-              </div>
-              <div class="pipe-node-actions">
-                <span class="pipe-badge" id="badge-deck-estimation">Ready</span>
-                <button class="pipe-btn" data-skill="deck-estimation">Train →</button>
-              </div>
-            </div>
-          </div>
+        <div class="pipe-card" data-skill="deviations">
+          <div class="pipe-card-num" id="circle-deviations">04</div>
+          <div class="pipe-card-name">Deviations</div>
+          <span class="pipe-card-badge" id="badge-deviations"></span>
+          <button class="pipe-card-btn" data-skill="deviations">Train →</button>
         </div>
-        <div class="pipe-node" data-skill="true-count">
-          <div class="pipe-left">
-            <div class="pipe-circle" id="circle-true-count">05</div>
-            <div class="pipe-line"></div>
-          </div>
-          <div class="pipe-right">
-            <div class="pipe-node-top">
-              <div class="pipe-node-info">
-                <h3>True Count</h3>
-                <p>Divide running count by decks remaining. This normalizes the count and tells you your real edge.</p>
-              </div>
-              <div class="pipe-node-actions">
-                <span class="pipe-badge" id="badge-true-count">Ready</span>
-                <button class="pipe-btn" data-skill="true-count">Train →</button>
-              </div>
-            </div>
-          </div>
+        <div class="pipe-card" data-skill="bet-spread">
+          <div class="pipe-card-num" id="circle-bet-spread">05</div>
+          <div class="pipe-card-name">Bet Spread</div>
+          <span class="pipe-card-badge" id="badge-bet-spread"></span>
+          <button class="pipe-card-btn" data-skill="bet-spread">Configure →</button>
         </div>
-        <div class="pipe-node" data-skill="bet-spread">
-          <div class="pipe-left">
-            <div class="pipe-circle" id="circle-bet-spread">06</div>
-            <div class="pipe-line"></div>
-          </div>
-          <div class="pipe-right">
-            <div class="pipe-node-top">
-              <div class="pipe-node-info">
-                <h3>Custom Bet Spread</h3>
-                <p>Build a betting strategy based on your bankroll and risk tolerance. Know your exact bet at every true count.</p>
-              </div>
-              <div class="pipe-node-actions">
-                <span class="pipe-badge" id="badge-bet-spread">Ready</span>
-                <button class="pipe-btn" data-skill="bet-spread">Configure →</button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="pipe-node pipe-final" data-skill="full-training">
-          <div class="pipe-left">
-            <div class="pipe-circle pipe-circle-final">★</div>
-          </div>
-          <div class="pipe-right">
-            <div class="pipe-node-top">
-              <div class="pipe-node-info">
-                <h3>Put it All Together</h3>
-                <p>Count cards, make correct plays, and size your bets — all at once. Casino conditions.</p>
-              </div>
-              <div class="pipe-node-actions">
-                <span class="pipe-badge pipe-badge-final" id="badge-full-training">Capstone</span>
-                <button class="pipe-btn pipe-btn-final" data-skill="full-training">Train →</button>
-              </div>
-            </div>
-          </div>
+        <div class="pipe-card pipe-card-final" data-skill="full-training">
+          <div class="pipe-card-num pipe-card-num-final">★</div>
+          <div class="pipe-card-name">Full Training</div>
+          <span class="pipe-card-badge pipe-card-badge-final" id="badge-full-training">Capstone</span>
+          <button class="pipe-card-btn pipe-card-btn-final" data-skill="full-training">Train →</button>
         </div>
       </div>
     </div>
@@ -594,6 +684,8 @@
     </div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/wow/1.1.2/wow.min.js"></script>
   <script src="app.js"></script>
+  <script src="colin.js"></script>
 </body>
 </html>

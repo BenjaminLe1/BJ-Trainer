@@ -15,6 +15,7 @@
   let isPanelOpen = false;
   let isAwaitingResponse = false;
   let answersSinceLastMessage = 0;
+  let hasGreetedThisLoad = false; // reset on every page load, not per session
   const ANSWERS_THROTTLE = 5; // fire Colin every N correct answers
 
   // ── Colin face SVG ────────────────────────────────────────────
@@ -262,13 +263,14 @@
     setTimeout(syncWidgetVisibility, 50);
 
     if (event === 'view_change' && payload.view === 'pipeline') {
-      const alreadyGreeted = sessionStorage.getItem('colin_greeted');
-      if (!alreadyGreeted) {
-        sessionStorage.setItem('colin_greeted', '1');
+      // Greet once per page load — refresh resets this, so Colin always says hi
+      // to a fresh visitor but doesn't nag if they bounce between views.
+      if (!hasGreetedThisLoad) {
+        hasGreetedThisLoad = true;
         setTimeout(() => {
           openPanel();
           sendToServer(event, payload);
-        }, 900);
+        }, 1600); // slightly after the 900ms table entrance settles
       }
       return;
     }

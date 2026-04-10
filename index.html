@@ -24,36 +24,59 @@
         <li><a href="#feat-anchor">Skills</a></li>
         <li><a href="#info-sections">Blackjack</a></li>
         <li><a href="#info-counting">Card Counting</a></li>
-        <li><a id="sidebar-train-btn" href="#">Start Training</a></li>
+        <li><a id="sidebar-train-btn" href="#">Learn More</a></li>
       </ul>
     </div>
   </div>
 
+  <!-- ===== GLOBAL SIDE ARROWS (fixed, per-view visibility) ===== -->
+  <button class="side-arrow side-arrow-left hidden" id="side-arrow-left" aria-label="Previous">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+  <button class="side-arrow side-arrow-right hidden" id="side-arrow-right" aria-label="Next">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+  </button>
+
+  <!-- ===== TOUR STAGE (full-page chapters, entered from landing "Learn More") ===== -->
+  <div id="tour-stage" class="hidden">
+    <div class="tour-bg"></div>
+    <button class="tour-home" id="tour-home" aria-label="Home">
+      <svg class="tour-home-spade" viewBox="0 0 40 44" fill="none"><path d="M20 2 C20 2 4 13 4 23 C4 29 9 33 15 31 C13 35 11 38 8 40 L32 40 C29 38 27 35 25 31 C31 33 36 29 36 23 C36 13 20 2 20 2Z" fill="#f1e4c2"/></svg>
+      <span>Ben's Trainer</span>
+    </button>
+    <!-- Page slots — the landing content sections get moved in here at init -->
+    <div class="tour-pages" id="tour-pages"></div>
+    <!-- Transition ring (cloned from the hero ring) used between chapters -->
+    <div class="tour-ring-wrap hidden" id="tour-ring-wrap">
+      <div class="tour-ring" id="tour-ring">
+        <div class="rc-card card suit-spades"><span class="rank tl">A</span><span class="suit-sym">♠</span><span class="rank br">A</span></div>
+        <div class="rc-card card suit-hearts"><span class="rank tl">K</span><span class="suit-sym">♥</span><span class="rank br">K</span></div>
+        <div class="rc-card card suit-spades"><span class="rank tl">Q</span><span class="suit-sym">♠</span><span class="rank br">Q</span></div>
+        <div class="rc-card card suit-hearts"><span class="rank tl">J</span><span class="suit-sym">♥</span><span class="rank br">J</span></div>
+        <div class="rc-card card suit-spades"><span class="rank tl">10</span><span class="suit-sym">♠</span><span class="rank br">10</span></div>
+        <div class="rc-card card suit-hearts"><span class="rank tl">9</span><span class="suit-sym">♥</span><span class="rank br">9</span></div>
+        <div class="rc-card card suit-spades"><span class="rank tl">8</span><span class="suit-sym">♠</span><span class="rank br">8</span></div>
+        <div class="rc-card card suit-hearts"><span class="rank tl">7</span><span class="suit-sym">♥</span><span class="rank br">7</span></div>
+      </div>
+    </div>
+    <div class="tour-progress" id="tour-progress"></div>
+  </div>
+
+  <!-- GLOBAL NAV (persists across landing + tour) -->
+  <nav class="hero-nav" id="hero-nav">
+    <button class="nav-brand nav-brand-btn" id="nav-brand-home" aria-label="Home">
+      <svg class="nav-brand-spade" viewBox="0 0 40 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20 2 C20 2 4 13 4 23 C4 29 9 33 15 31 C13 35 11 38 8 40 L32 40 C29 38 27 35 25 31 C31 33 36 29 36 23 C36 13 20 2 20 2Z" fill="#1a1208"/>
+      </svg>
+      <span class="nav-brand-name">Ben's Trainer</span>
+    </button>
+    <div class="nav-right">
+      <button class="nav-start-btn" id="nav-start-btn"><span class="hero-cta-text">Start Training</span><span class="hero-cta-arrow">→</span></button>
+    </div>
+  </nav>
+
   <!-- ===== LANDING ===== -->
   <div id="landing">
-
-    <!-- NAV BAR -->
-    <nav class="hero-nav" id="hero-nav">
-      <div class="nav-brand">
-        <svg class="nav-brand-spade" viewBox="0 0 40 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M20 2 C20 2 4 13 4 23 C4 29 9 33 15 31 C13 35 11 38 8 40 L32 40 C29 38 27 35 25 31 C31 33 36 29 36 23 C36 13 20 2 20 2Z" fill="#1a1208"/>
-        </svg>
-        <span class="nav-brand-name">Ben's Trainer</span>
-      </div>
-      <div class="nav-right">
-        <div class="nav-menu-wrap" id="nav-menu-wrap">
-          <button class="nav-menu-btn" id="nav-menu-btn" aria-label="Open menu" aria-expanded="false">
-            <span></span><span></span><span></span>
-          </button>
-          <div class="nav-dropdown" id="nav-dropdown">
-            <a class="nav-dropdown-item" href="#info-sections">What is Blackjack?</a>
-            <a class="nav-dropdown-item" href="#info-counting">What is Counting Cards?</a>
-            <a class="nav-dropdown-item" href="#feat-anchor">5 Step Process</a>
-            <button class="nav-dropdown-item nav-dropdown-start" id="nav-start-btn">Start Training →</button>
-          </div>
-        </div>
-      </div>
-    </nav>
 
     <!-- SNAP SCROLL CONTAINER -->
     <div id="landing-snap">
@@ -73,7 +96,7 @@
         </h1>
         <p class="hero-typing-line"><span id="hero-typing-text"></span><span class="blinking-cursor">|</span></p>
         <button class="hero-main-cta" id="hero-cta">
-          <span class="hero-cta-text">Start Training</span>
+          <span class="hero-cta-text">Learn More</span>
           <span class="hero-cta-arrow">→</span>
         </button>
       </div>
@@ -90,11 +113,6 @@
           <div class="rc-card card suit-spades"><span class="rank tl">8</span><span class="suit-sym">♠</span><span class="rank br">8</span></div>
           <div class="rc-card card suit-hearts"><span class="rank tl">7</span><span class="suit-sym">♥</span><span class="rank br">7</span></div>
         </div>
-      </div>
-
-      <div class="hero-explore" id="hero-explore-btn">
-        <span class="hero-explore-label">Learn More</span>
-        <svg class="hero-explore-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
       </div>
 
     </div><!-- end .ls-hero -->
@@ -359,31 +377,26 @@
               <span class="sk-num">01</span>
               <h2 class="sk-title">Basic<br>Strategy</h2>
               <p class="sk-desc">There is an optimal play for every hand. Practice making the mathematical decision until it becomes fully automatic — this is the foundation of all advantage play.</p>
-              <button class="sk-cta" data-skill="basic-strategy"><span class="hero-cta-text">Start Training</span><span class="hero-cta-arrow">→</span></button>
             </div>
             <div class="sk-panel" data-panel="keep-counting">
               <span class="sk-num">02</span>
               <h2 class="sk-title">Running<br>Count</h2>
               <p class="sk-desc">Every card that comes out is assigned a value — low cards count up, high cards count down. You'll train yourself to effortlessly keep a running tally in your head as each card is dealt.</p>
-              <button class="sk-cta" data-skill="keep-counting"><span class="hero-cta-text">Start Training</span><span class="hero-cta-arrow">→</span></button>
             </div>
             <div class="sk-panel" data-panel="deviations">
               <span class="sk-num">03</span>
               <h2 class="sk-title">Deviations</h2>
               <p class="sk-desc">Basic strategy assumes a neutral count — but as the true count shifts, the optimal play changes. Deviations are adjustments to basic strategy, squeezing out an additional edge.</p>
-              <button class="sk-cta" data-skill="deviations"><span class="hero-cta-text">Start Training</span><span class="hero-cta-arrow">→</span></button>
             </div>
             <div class="sk-panel" data-panel="true-count">
               <span class="sk-num">04</span>
               <h2 class="sk-title">True<br>Count</h2>
               <p class="sk-desc">Convert your running count to a true count. This adjusts for shoe size, so the count works across any number of decks. The true count is the number all exploitative strategy is based on.</p>
-              <button class="sk-cta" data-skill="true-count"><span class="hero-cta-text">Start Training</span><span class="hero-cta-arrow">→</span></button>
             </div>
             <div class="sk-panel" data-panel="bet-spread">
               <span class="sk-num">05</span>
               <h2 class="sk-title">Bet<br>Spread</h2>
               <p class="sk-desc">Build a custom bet spread around your bankroll to determine exactly how much to wager at each true count. Then analyze your expected value and variance to better understand your profit rate and risk before you play.</p>
-              <button class="sk-cta" data-skill="bet-spread"><span class="hero-cta-text">Start Training</span><span class="hero-cta-arrow">→</span></button>
             </div>
           </div>
 
@@ -521,7 +534,10 @@
   <!-- ===== PIPELINE VIEW ===== -->
   <div id="pipeline" class="hidden">
     <nav class="dark-nav">
-      <button class="dark-nav-back" id="pipeline-back">← Back</button>
+      <button class="dark-nav-brand" id="pipe-brand-home" aria-label="Home">
+        <svg class="dark-nav-spade" viewBox="0 0 40 44" fill="none"><path d="M20 2 C20 2 4 13 4 23 C4 29 9 33 15 31 C13 35 11 38 8 40 L32 40 C29 38 27 35 25 31 C31 33 36 29 36 23 C36 13 20 2 20 2Z" fill="#e8c77a"/></svg>
+        <span>Ben's Trainer</span>
+      </button>
       <span class="dark-nav-title">Training Pipeline</span>
       <div class="pipe-account-wrap" id="pipe-account-wrap">
         <button class="dark-nav-account" id="pipe-nav-account">Sign In</button>
@@ -531,46 +547,311 @@
         </div>
       </div>
     </nav>
-    <div class="pipeline-scroll">
-      <div class="pipeline-intro">
-        <h2>Training Pipeline</h2>
-      </div>
-      <div class="pipe-grid">
-        <div class="pipe-card" data-skill="basic-strategy">
-          <div class="pipe-card-num" id="circle-basic-strategy">01</div>
-          <div class="pipe-card-name">Basic Strategy</div>
-          <span class="pipe-card-badge" id="badge-basic-strategy"></span>
-          <button class="pipe-card-btn" data-skill="basic-strategy">Train →</button>
+    <div class="bj-stage">
+      <div class="bj-scene" id="bj-scene">
+        <div class="bj-tilt" id="bj-tilt">
+          <svg id="bj-svg" viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid meet"
+               role="img" aria-label="Blackjack training table">
+            <defs>
+              <!-- Felt red radial — bright center spotlight fading to deep crimson/black -->
+              <radialGradient id="feltRed" cx="50%" cy="45%" r="70%">
+                <stop offset="0%"  stop-color="#b52033"/>
+                <stop offset="45%" stop-color="#7a0e1c"/>
+                <stop offset="85%" stop-color="#3d050c"/>
+                <stop offset="100%" stop-color="#1a0205"/>
+              </radialGradient>
+              <!-- Overhead spotlight -->
+              <radialGradient id="spotlight" cx="50%" cy="38%" r="55%">
+                <stop offset="0%"  stop-color="rgba(255,240,200,0.22)"/>
+                <stop offset="55%" stop-color="rgba(255,220,160,0.05)"/>
+                <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+              </radialGradient>
+              <!-- Gold gradient with metallic highlight -->
+              <linearGradient id="goldMetal" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%"  stop-color="#fbe88a"/>
+                <stop offset="40%" stop-color="#e6bf4a"/>
+                <stop offset="55%" stop-color="#a67b20"/>
+                <stop offset="85%" stop-color="#e2b846"/>
+                <stop offset="100%" stop-color="#7c5715"/>
+              </linearGradient>
+              <!-- Leather rim gradient -->
+              <linearGradient id="leather" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%"  stop-color="#2a1708"/>
+                <stop offset="50%" stop-color="#1a0d04"/>
+                <stop offset="100%" stop-color="#0a0502"/>
+              </linearGradient>
+              <!-- Wood shoe -->
+              <linearGradient id="woodGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%"  stop-color="#8a5a33"/>
+                <stop offset="60%" stop-color="#5a3418"/>
+                <stop offset="100%" stop-color="#2a1608"/>
+              </linearGradient>
+              <!-- Card paper -->
+              <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%"  stop-color="#ffffff"/>
+                <stop offset="100%" stop-color="#d6ceb7"/>
+              </linearGradient>
+              <!-- Card back pattern (red diamond weave) -->
+              <pattern id="cardBack" x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse">
+                <rect width="14" height="14" fill="#6b0f1a"/>
+                <path d="M0 0 L14 14 M14 0 L0 14" stroke="#4a0710" stroke-width="1"/>
+                <circle cx="7" cy="7" r="2.5" fill="#d4a14a" opacity="0.55"/>
+              </pattern>
+              <!-- Black chip radial (with soft highlight) -->
+              <radialGradient id="chipBlack" cx="40%" cy="30%" r="75%">
+                <stop offset="0%"  stop-color="#6b6b6b"/>
+                <stop offset="50%" stop-color="#1a1a1a"/>
+                <stop offset="100%" stop-color="#000"/>
+              </radialGradient>
+              <!-- Glow spot gradient (neon spotlight under items) -->
+              <radialGradient id="glowAmber" cx="50%" cy="50%" r="50%">
+                <stop offset="0%"  stop-color="rgba(255,215,130,0.85)"/>
+                <stop offset="35%" stop-color="rgba(255,175,70,0.35)"/>
+                <stop offset="70%" stop-color="rgba(255,120,40,0.08)"/>
+                <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+              </radialGradient>
+              <radialGradient id="glowGreen" cx="50%" cy="50%" r="50%">
+                <stop offset="0%"  stop-color="rgba(120,255,160,0.85)"/>
+                <stop offset="40%" stop-color="rgba(40,200,90,0.25)"/>
+                <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+              </radialGradient>
+              <!-- Drop shadow filter -->
+              <filter id="dropLarge" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur in="SourceAlpha" stdDeviation="5"/>
+                <feOffset dx="0" dy="8"/>
+                <feComponentTransfer><feFuncA type="linear" slope="0.6"/></feComponentTransfer>
+                <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <filter id="dropMed" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+                <feOffset dx="0" dy="5"/>
+                <feComponentTransfer><feFuncA type="linear" slope="0.5"/></feComponentTransfer>
+                <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <!-- Arc paths for curved text — BLACKJACK is huge and centered -->
+              <path id="arcBJ"  d="M 120 440 A 440 440 0 0 1 880 440" fill="none"/>
+              <path id="arcS17" d="M 320 460 A 200 200 0 0 1 680 460" fill="none"/>
+              <path id="arcPay" d="M 230 260 A 290 290 0 0 1 770 260" fill="none"/>
+            </defs>
+
+            <!-- ====== TABLE FRAME (leather rim + gold trim) ====== -->
+            <g id="bj-bg">
+              <!-- Outer leather rim with soft drop shadow -->
+              <path d="M 14 112 A 486 486 0 0 1 986 112 L 986 688 L 14 688 Z"
+                    fill="url(#leather)" filter="url(#dropLarge)"/>
+              <!-- Inner gold stripe -->
+              <path d="M 46 130 A 454 454 0 0 1 954 130 L 954 670 L 46 670 Z"
+                    fill="none" stroke="url(#goldMetal)" stroke-width="3.5" opacity="0.9"/>
+              <!-- Felt surface -->
+              <path d="M 56 140 A 444 444 0 0 1 944 140 L 944 660 L 56 660 Z"
+                    fill="url(#feltRed)"/>
+              <!-- Inner dark bevel -->
+              <path d="M 58 142 A 442 442 0 0 1 942 142 L 942 658 L 58 658 Z"
+                    fill="none" stroke="#000" stroke-width="1.5" opacity="0.45"/>
+              <!-- Overhead spotlight overlay -->
+              <ellipse cx="500" cy="280" rx="460" ry="320" fill="url(#spotlight)"/>
+            </g>
+
+            <!-- ====== FELT WORDMARK + MARKINGS ====== -->
+            <g id="bj-markings">
+              <!-- Big BLACKJACK wordmark (gold, curved) -->
+              <text class="bj-wordmark">
+                <textPath href="#arcBJ" startOffset="50%" text-anchor="middle">BLACKJACK</textPath>
+              </text>
+              <!-- DEALER MUST STAND ON SOFT 17 sub-line -->
+              <text class="bj-subtext">
+                <textPath href="#arcS17" startOffset="50%" text-anchor="middle">DEALER MUST STAND ON SOFT 17</textPath>
+              </text>
+              <!-- Pays 3 to 2 upper arc -->
+              <text class="bj-paytext">
+                <textPath href="#arcPay" startOffset="50%" text-anchor="middle">BLACKJACK PAYS 3 TO 2 · INSURANCE PAYS 2 TO 1</textPath>
+              </text>
+            </g>
+
+            <!-- ====== NEON GLOW SPOTLIGHTS UNDER ITEMS (stay flat on felt) ====== -->
+            <g id="bj-glows">
+              <ellipse class="bj-glow" data-for="bj-discard"    cx="150"  cy="215" rx="115" ry="32"/>
+              <ellipse class="bj-glow" data-for="bj-dealerhand" cx="500"  cy="210" rx="135" ry="36"/>
+              <ellipse class="bj-glow" data-for="bj-shoe"       cx="840"  cy="215" rx="115" ry="34"/>
+              <ellipse class="bj-glow" data-for="bj-playerhand" cx="400"  cy="570" rx="145" ry="40"/>
+              <ellipse class="bj-glow" data-for="bj-chipstack"  cx="680"  cy="575" rx="100" ry="28"/>
+            </g>
+
+            <!-- ====== CLICKABLE ITEMS ====== -->
+            <g id="bj-items">
+
+              <!-- Discard Tray (top-LEFT) → true-count -->
+              <g class="bj-item" id="bj-discard" data-skill="true-count" filter="url(#dropMed)">
+                <rect class="bj-hit" x="60" y="130" width="180" height="130" fill="transparent"/>
+                <!-- acrylic tray body -->
+                <rect x="70" y="158" width="160" height="60" rx="4"
+                      fill="rgba(210,230,255,0.15)" stroke="#e0ecff" stroke-width="2"/>
+                <rect x="74" y="162" width="152" height="52" rx="3"
+                      fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.22)" stroke-width="0.8"/>
+                <!-- stacked used cards sticking out the top -->
+                <rect x="88" y="138" width="130" height="24" rx="2" fill="#efe7cb" stroke="#8a7c5a" stroke-width="0.8"/>
+                <rect x="84" y="132" width="130" height="24" rx="2" fill="#f4edd5" stroke="#8a7c5a" stroke-width="0.8"/>
+                <rect x="92" y="126" width="130" height="24" rx="2" fill="#fbf5e0" stroke="#8a7c5a" stroke-width="0.8"/>
+                <rect x="86" y="122" width="130" height="24" rx="2" fill="#f8f1d8" stroke="#8a7c5a" stroke-width="0.8"/>
+                <!-- top card showing rank -->
+                <text x="100" y="138" font-family="Georgia, serif" font-size="11" font-weight="700" fill="#222">7</text>
+                <text x="100" y="147" font-family="Georgia, serif" font-size="8" fill="#c40e0e">♥</text>
+                <!-- acrylic highlight -->
+                <line x1="78" y1="163" x2="222" y2="163" stroke="rgba(255,255,255,0.55)" stroke-width="1.5"/>
+              </g>
+
+              <!-- Dealer's Hand (top CENTER) → deviations -->
+              <g class="bj-item" id="bj-dealerhand" data-skill="deviations" filter="url(#dropMed)">
+                <rect class="bj-hit" x="400" y="130" width="200" height="130" fill="transparent"/>
+                <!-- face-down hole card (tilted left) -->
+                <g transform="translate(436 146) rotate(-10)">
+                  <rect width="66" height="92" rx="5" fill="url(#cardBack)" stroke="#2a0808" stroke-width="1.5"/>
+                  <rect x="4" y="4" width="58" height="84" rx="3" fill="none" stroke="#d4a14a" stroke-width="1" opacity="0.75"/>
+                  <rect x="8" y="8" width="50" height="76" rx="2" fill="none" stroke="#d4a14a" stroke-width="0.5" opacity="0.5"/>
+                </g>
+                <!-- face-up card: Ace of Spades (tilted right) -->
+                <g transform="translate(498 140) rotate(12)">
+                  <rect width="66" height="92" rx="5" fill="url(#cardGrad)" stroke="#222" stroke-width="1.3"/>
+                  <text x="9" y="22" font-family="Georgia, serif" font-size="19" font-weight="700" fill="#111">A</text>
+                  <text x="9" y="38" font-family="Georgia, serif" font-size="14" fill="#111">♠</text>
+                  <text x="33" y="64" font-family="Georgia, serif" font-size="38" fill="#111" text-anchor="middle">♠</text>
+                  <text x="57" y="87" font-family="Georgia, serif" font-size="19" font-weight="700" fill="#111" text-anchor="end" transform="rotate(180 57 82)">A</text>
+                </g>
+              </g>
+
+              <!-- Shoe (top-RIGHT) → keep-counting -->
+              <g class="bj-item" id="bj-shoe" data-skill="keep-counting" filter="url(#dropMed)">
+                <rect class="bj-hit" x="750" y="120" width="180" height="140" fill="transparent"/>
+                <!-- shoe base (wedge, angled toward dealer) -->
+                <polygon points="775,240 905,240 920,158 790,158" fill="url(#woodGrad)" stroke="#0a0502" stroke-width="1.5"/>
+                <!-- slanted top face -->
+                <polygon points="790,158 920,158 908,140 802,140" fill="#1e0e04" stroke="#0a0502" stroke-width="1"/>
+                <!-- gold trim -->
+                <polygon points="775,240 905,240 920,158 790,158" fill="none" stroke="url(#goldMetal)" stroke-width="2" opacity="0.75"/>
+                <!-- gold corner caps -->
+                <rect x="772" y="236" width="9" height="9" fill="url(#goldMetal)"/>
+                <rect x="901" y="236" width="9" height="9" fill="url(#goldMetal)"/>
+                <!-- front slit (black slot) -->
+                <rect x="798" y="216" width="80" height="10" rx="1" fill="#000"/>
+                <!-- card peeking out the slit -->
+                <rect x="810" y="212" width="58" height="18" rx="1.5" fill="#fbf5e0" stroke="#8a7c5a" stroke-width="1"/>
+                <text x="816" y="224" font-family="Georgia, serif" font-size="9" fill="#222" font-weight="700">K</text>
+                <!-- top highlight -->
+                <line x1="800" y1="162" x2="916" y2="162" stroke="rgba(255,220,150,0.6)" stroke-width="1.4"/>
+                <!-- side wood grain hint -->
+                <line x1="790" y1="180" x2="920" y2="180" stroke="rgba(0,0,0,0.25)" stroke-width="0.8"/>
+                <line x1="790" y1="200" x2="920" y2="200" stroke="rgba(0,0,0,0.2)" stroke-width="0.6"/>
+              </g>
+
+              <!-- Player's Hand (bottom LEFT area) → basic-strategy -->
+              <g class="bj-item" id="bj-playerhand" data-skill="basic-strategy" filter="url(#dropLarge)">
+                <rect class="bj-hit" x="300" y="460" width="200" height="150" fill="transparent"/>
+                <!-- Ace of Spades (left card, tilted left) -->
+                <g transform="translate(328 480) rotate(-14 36 52)">
+                  <rect width="72" height="102" rx="6" fill="url(#cardGrad)" stroke="#222" stroke-width="1.4"/>
+                  <text x="9" y="24" font-family="Georgia, serif" font-size="22" font-weight="700" fill="#111">A</text>
+                  <text x="9" y="40" font-family="Georgia, serif" font-size="16" fill="#111">♠</text>
+                  <text x="36" y="70" font-family="Georgia, serif" font-size="42" fill="#111" text-anchor="middle">♠</text>
+                  <text x="63" y="95" font-family="Georgia, serif" font-size="22" font-weight="700" fill="#111" text-anchor="end" transform="rotate(180 63 88)">A</text>
+                </g>
+                <!-- King of Diamonds (right card, tilted right) -->
+                <g transform="translate(406 480) rotate(14 36 52)">
+                  <rect width="72" height="102" rx="6" fill="url(#cardGrad)" stroke="#222" stroke-width="1.4"/>
+                  <text x="9" y="24" font-family="Georgia, serif" font-size="22" font-weight="700" fill="#c40e0e">K</text>
+                  <text x="9" y="40" font-family="Georgia, serif" font-size="16" fill="#c40e0e">♦</text>
+                  <text x="36" y="70" font-family="Georgia, serif" font-size="42" fill="#c40e0e" text-anchor="middle">♦</text>
+                  <text x="63" y="95" font-family="Georgia, serif" font-size="22" font-weight="700" fill="#c40e0e" text-anchor="end" transform="rotate(180 63 88)">K</text>
+                </g>
+              </g>
+
+              <!-- Chip Stack (bottom RIGHT area) → bet-spread -->
+              <g class="bj-item" id="bj-chipstack" data-skill="bet-spread" filter="url(#dropLarge)">
+                <rect class="bj-hit" x="620" y="480" width="120" height="160" fill="transparent"/>
+                <!-- 7 stacked chips from bottom up -->
+                <g id="chip-stack-group">
+                  <!-- chip 1 (bottom) -->
+                  <ellipse cx="680" cy="598" rx="42" ry="11" fill="url(#chipBlack)" stroke="#000" stroke-width="1"/>
+                  <rect x="649" y="594" width="7" height="9" fill="#fff" opacity="0.85"/>
+                  <rect x="668" y="596" width="7" height="9" fill="#fff" opacity="0.85"/>
+                  <rect x="687" y="596" width="7" height="9" fill="#fff" opacity="0.85"/>
+                  <rect x="706" y="594" width="7" height="9" fill="#fff" opacity="0.85"/>
+                  <!-- chip 2 -->
+                  <ellipse cx="680" cy="586" rx="42" ry="11" fill="url(#chipBlack)" stroke="#000" stroke-width="1"/>
+                  <rect x="649" y="582" width="7" height="9" fill="#fff" opacity="0.85"/>
+                  <rect x="668" y="584" width="7" height="9" fill="#fff" opacity="0.85"/>
+                  <rect x="687" y="584" width="7" height="9" fill="#fff" opacity="0.85"/>
+                  <rect x="706" y="582" width="7" height="9" fill="#fff" opacity="0.85"/>
+                  <!-- chip 3 -->
+                  <ellipse cx="680" cy="574" rx="42" ry="11" fill="url(#chipBlack)" stroke="#000" stroke-width="1"/>
+                  <rect x="649" y="570" width="7" height="9" fill="#fff" opacity="0.85"/>
+                  <rect x="668" y="572" width="7" height="9" fill="#fff" opacity="0.85"/>
+                  <rect x="687" y="572" width="7" height="9" fill="#fff" opacity="0.85"/>
+                  <rect x="706" y="570" width="7" height="9" fill="#fff" opacity="0.85"/>
+                  <!-- chip 4 -->
+                  <ellipse cx="680" cy="562" rx="42" ry="11" fill="url(#chipBlack)" stroke="#000" stroke-width="1"/>
+                  <rect x="649" y="558" width="7" height="9" fill="#fff" opacity="0.85"/>
+                  <rect x="668" y="560" width="7" height="9" fill="#fff" opacity="0.85"/>
+                  <rect x="687" y="560" width="7" height="9" fill="#fff" opacity="0.85"/>
+                  <rect x="706" y="558" width="7" height="9" fill="#fff" opacity="0.85"/>
+                  <!-- chip 5 -->
+                  <ellipse cx="680" cy="550" rx="42" ry="11" fill="url(#chipBlack)" stroke="#000" stroke-width="1"/>
+                  <rect x="649" y="546" width="7" height="9" fill="#fff" opacity="0.85"/>
+                  <rect x="668" y="548" width="7" height="9" fill="#fff" opacity="0.85"/>
+                  <rect x="687" y="548" width="7" height="9" fill="#fff" opacity="0.85"/>
+                  <rect x="706" y="546" width="7" height="9" fill="#fff" opacity="0.85"/>
+                  <!-- chip 6 -->
+                  <ellipse cx="680" cy="538" rx="42" ry="11" fill="url(#chipBlack)" stroke="#000" stroke-width="1"/>
+                  <rect x="649" y="534" width="7" height="9" fill="#fff" opacity="0.85"/>
+                  <rect x="668" y="536" width="7" height="9" fill="#fff" opacity="0.85"/>
+                  <rect x="687" y="536" width="7" height="9" fill="#fff" opacity="0.85"/>
+                  <rect x="706" y="534" width="7" height="9" fill="#fff" opacity="0.85"/>
+                  <!-- chip 7 (top — full face visible) -->
+                  <ellipse cx="680" cy="524" rx="42" ry="13" fill="url(#chipBlack)" stroke="#000" stroke-width="1.3"/>
+                  <ellipse cx="680" cy="524" rx="32" ry="9" fill="none" stroke="#d9b35a" stroke-width="1.3"/>
+                  <ellipse cx="680" cy="524" rx="26" ry="7" fill="none" stroke="#d9b35a" stroke-width="0.6" opacity="0.7"/>
+                  <text x="680" y="528" font-family="Georgia, serif" font-size="11" font-weight="700" fill="#e8c77a" text-anchor="middle">$100</text>
+                </g>
+              </g>
+
+            </g>
+
+            <!-- Status overlays populated by JS -->
+            <g id="bj-status"></g>
+
+            <!-- VIP / Private Table entry → full-training -->
+            <g id="bj-vip">
+              <g class="bj-item bj-vip-item" data-skill="full-training">
+                <rect class="bj-hit" x="800" y="608" width="160" height="52" fill="transparent"/>
+                <rect x="815" y="620" width="130" height="32" rx="4" fill="rgba(0,0,0,0.55)" stroke="url(#goldMetal)" stroke-width="1.5"/>
+                <text x="880" y="636" font-family="Georgia, serif" font-size="10" fill="#e8c77a" text-anchor="middle" letter-spacing="2">VIP · PRIVATE</text>
+                <text x="880" y="648" font-family="Georgia, serif" font-size="9" fill="#c49743" text-anchor="middle" letter-spacing="1.5">FULL TRAINING →</text>
+              </g>
+            </g>
+          </svg>
         </div>
-        <div class="pipe-card" data-skill="keep-counting">
-          <div class="pipe-card-num" id="circle-keep-counting">02</div>
-          <div class="pipe-card-name">Running Count</div>
-          <span class="pipe-card-badge" id="badge-keep-counting"></span>
-          <button class="pipe-card-btn" data-skill="keep-counting">Train →</button>
-        </div>
-        <div class="pipe-card" data-skill="true-count">
-          <div class="pipe-card-num" id="circle-true-count">03</div>
-          <div class="pipe-card-name">True Count</div>
-          <span class="pipe-card-badge" id="badge-true-count"></span>
-          <button class="pipe-card-btn" data-skill="true-count">Train →</button>
-        </div>
-        <div class="pipe-card" data-skill="deviations">
-          <div class="pipe-card-num" id="circle-deviations">04</div>
-          <div class="pipe-card-name">Deviations</div>
-          <span class="pipe-card-badge" id="badge-deviations"></span>
-          <button class="pipe-card-btn" data-skill="deviations">Train →</button>
-        </div>
-        <div class="pipe-card" data-skill="bet-spread">
-          <div class="pipe-card-num" id="circle-bet-spread">05</div>
-          <div class="pipe-card-name">Bet Spread</div>
-          <span class="pipe-card-badge" id="badge-bet-spread"></span>
-          <button class="pipe-card-btn" data-skill="bet-spread">Configure →</button>
-        </div>
-        <div class="pipe-card pipe-card-final" data-skill="full-training">
-          <div class="pipe-card-num pipe-card-num-final">★</div>
-          <div class="pipe-card-name">Full Training</div>
-          <span class="pipe-card-badge pipe-card-badge-final" id="badge-full-training">Capstone</span>
-          <button class="pipe-card-btn pipe-card-btn-final" data-skill="full-training">Train →</button>
+
+        <!-- HTML floating labels (positioned via JS over each item) -->
+        <div class="bj-labels" id="bj-labels">
+          <div class="bj-label" data-for="bj-discard">
+            <span class="bj-label-num">03</span>
+            <span class="bj-label-name">TRUE COUNT</span>
+          </div>
+          <div class="bj-label" data-for="bj-dealerhand">
+            <span class="bj-label-num">04</span>
+            <span class="bj-label-name">DEVIATIONS</span>
+          </div>
+          <div class="bj-label" data-for="bj-shoe">
+            <span class="bj-label-num">02</span>
+            <span class="bj-label-name">RUNNING COUNT</span>
+          </div>
+          <div class="bj-label" data-for="bj-playerhand">
+            <span class="bj-label-num">01</span>
+            <span class="bj-label-name">BASIC STRATEGY</span>
+          </div>
+          <div class="bj-label" data-for="bj-chipstack">
+            <span class="bj-label-num">05</span>
+            <span class="bj-label-name">BET SPREAD</span>
+          </div>
         </div>
       </div>
     </div>
@@ -603,72 +884,20 @@
   <div class="modal-overlay hidden" id="auth-modal">
     <div class="auth-box">
       <button class="auth-close" id="auth-close">✕</button>
-
-      <!-- SIGN UP PANEL (default) -->
-      <div id="auth-signup">
-        <div class="auth-brand">
-          <span class="auth-brand-icon">♠</span>
+      <div class="auth-brand"><span class="auth-brand-icon">♠</span></div>
+      <h2 class="auth-heading">Sign In</h2>
+      <div class="auth-fields">
+        <div class="auth-field">
+          <label>Username</label>
+          <input class="auth-input" type="text" id="auth-username" placeholder="Username" autocomplete="username">
         </div>
-        <h2 class="auth-heading">Create your account</h2>
-        <p class="auth-sub">Track your weaknesses and train smarter.</p>
-
-        <div class="auth-fields">
-          <div class="auth-field">
-            <label>Username</label>
-            <input class="auth-input" type="text" id="signup-username" placeholder="Choose a username" autocomplete="username">
-          </div>
-          <div class="auth-field">
-            <label>PIN <span class="auth-label-hint">(4 digits)</span></label>
-            <input class="auth-input" type="password" id="signup-pin" placeholder="••••" maxlength="4" inputmode="numeric">
-          </div>
-          <div class="auth-field">
-            <label>Confirm PIN</label>
-            <input class="auth-input" type="password" id="signup-pin2" placeholder="••••" maxlength="4" inputmode="numeric">
-          </div>
+        <div class="auth-field">
+          <label>PIN <span class="auth-label-hint">(4 digits)</span></label>
+          <input class="auth-input" type="password" id="auth-pin" placeholder="••••" maxlength="4" inputmode="numeric">
         </div>
-        <div class="auth-error hidden" id="signup-error"></div>
-        <button class="auth-submit-btn" id="signup-btn">Create Account</button>
-
-        <div class="auth-divider"><span>or</span></div>
-
-        <button class="auth-guest-btn" id="guest-btn">Continue as Guest</button>
-
-        <p class="auth-footer-text">
-          Already have an account?
-          <button class="auth-switch-link" id="show-signin">Sign in</button>
-        </p>
       </div>
-
-      <!-- SIGN IN PANEL (hidden by default) -->
-      <div id="auth-signin" class="hidden">
-        <div class="auth-brand">
-          <span class="auth-brand-icon">♠</span>
-        </div>
-        <h2 class="auth-heading">Welcome back</h2>
-        <p class="auth-sub">Sign in to pick up where you left off.</p>
-
-        <div class="auth-fields">
-          <div class="auth-field">
-            <label>Username</label>
-            <input class="auth-input" type="text" id="signin-username" placeholder="Your username" autocomplete="username">
-          </div>
-          <div class="auth-field">
-            <label>PIN</label>
-            <input class="auth-input" type="password" id="signin-pin" placeholder="••••" maxlength="4" inputmode="numeric">
-          </div>
-        </div>
-        <div class="auth-error hidden" id="signin-error"></div>
-        <button class="auth-submit-btn" id="signin-btn">Sign In</button>
-
-        <div class="auth-divider"><span>or</span></div>
-
-        <button class="auth-guest-btn" id="guest-btn-2">Continue as Guest</button>
-
-        <p class="auth-footer-text">
-          No account?
-          <button class="auth-switch-link" id="show-signup">Create one</button>
-        </p>
-      </div>
+      <div class="auth-error hidden" id="auth-error"></div>
+      <button class="auth-submit-btn" id="auth-submit-btn">Sign In / Create Account</button>
     </div>
   </div>
 

@@ -155,17 +155,35 @@ const Account = {
 // ============================================================
 const VIEWS = ['landing', 'pipeline', 'skill-trainer', 'dashboard'];
 
+const APP_VIEWS = ['pipeline', 'skill-trainer', 'dashboard'];
+
 function showView(id) {
   VIEWS.forEach(v => {
     const el = document.getElementById(v);
     if (el) el.classList.toggle('hidden', v !== id);
   });
+  // Hero nav persists everywhere except app views (which have their own dark-nav)
+  const hn = document.getElementById('hero-nav');
+  if (hn) hn.classList.toggle('hidden', APP_VIEWS.includes(id));
+  if (typeof updateSideArrows === 'function') updateSideArrows();
 }
 
-function goLanding()  { showView('landing'); }
+function goLanding()  {
+  // Also close any active tour stage
+  const stage = document.getElementById('tour-stage');
+  if (stage && !stage.classList.contains('hidden')) {
+    stage.classList.add('hidden');
+    stage.classList.remove('active', 'entering', 'leaving');
+  }
+  showView('landing');
+  const hn = document.getElementById('hero-nav');
+  if (hn) hn.classList.remove('hidden');
+}
 function goPipeline() {
   showView('pipeline');
+  renderBJTable();
   renderPipelineStatus();
+  playBJEnterAnim();
   const data = Account.getStats();
   window.dispatchEvent(new CustomEvent('colin:event', { detail: {
     event: 'view_change',
@@ -178,6 +196,68 @@ function goPipeline() {
   }}));
 }
 function goSkill(id)  { showView('skill-trainer'); launchSkill(id); }
+
+// Phase-in: zoom the clicked pipeline item forward, then fade in the trainer.
+function phaseIntoTrainer(skillId, itemEl) {
+  const pipeline = document.getElementById('pipeline');
+  const trainer  = document.getElementById('skill-trainer');
+  if (!pipeline || !trainer) { goSkill(skillId); return; }
+
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    goSkill(skillId);
+    return;
+  }
+
+  // Set transform-origin on the pipeline to the clicked item's center
+  // so the zoom appears to "dive into" that specific item.
+  if (itemEl) {
+    const pipeRect = pipeline.getBoundingClientRect();
+    const hit = itemEl.querySelector('.bj-hit') || itemEl;
+    const iRect = hit.getBoundingClientRect();
+    const ox = ((iRect.left + iRect.width / 2)  - pipeRect.left) / pipeRect.width  * 100;
+    const oy = ((iRect.top  + iRect.height / 2) - pipeRect.top)  / pipeRect.height * 100;
+    pipeline.style.transformOrigin = `${ox}% ${oy}%`;
+  }
+
+  pipeline.classList.remove('phasing-in-return');
+  pipeline.classList.add('phasing-in');
+
+  setTimeout(() => {
+    pipeline.classList.remove('phasing-in');
+    pipeline.style.transformOrigin = '';
+    goSkill(skillId);
+    trainer.classList.remove('phasing-in-enter');
+    void trainer.offsetWidth;
+    trainer.classList.add('phasing-in-enter');
+    setTimeout(() => trainer.classList.remove('phasing-in-enter'), 520);
+  }, 460);
+}
+
+// Phase-out: fade/shrink the trainer, then bring pipeline back in.
+function phaseOutTrainer() {
+  const pipeline = document.getElementById('pipeline');
+  const trainer  = document.getElementById('skill-trainer');
+  if (!pipeline || !trainer) { goPipeline(); return; }
+
+  if (activeSkillCleanup) { activeSkillCleanup(); activeSkillCleanup = null; }
+
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    goPipeline();
+    return;
+  }
+
+  trainer.classList.remove('phasing-in-enter');
+  trainer.classList.add('phasing-out');
+
+  setTimeout(() => {
+    trainer.classList.remove('phasing-out');
+    goPipeline();
+    pipeline.classList.remove('phasing-in-return');
+    void pipeline.offsetWidth;
+    pipeline.classList.add('phasing-in-return');
+    setTimeout(() => pipeline.classList.remove('phasing-in-return'), 520);
+  }, 340);
+}
 function goDashboard() { showView('dashboard'); renderDashboard(); }
 
 function syncAuthUI() {
@@ -294,29 +374,189 @@ function renderDashboard() {
 }
 
 // ============================================================
-// PIPELINE
+// PIPELINE — BLACKJACK TABLE SCENE
 // ============================================================
-function renderPipelineStatus() {
-  Object.entries(AppState.skillStatus).forEach(([id, status]) => {
-    const badge  = document.getElementById(`badge-${id}`);
-    const circle = document.getElementById(`circle-${id}`);
-    if (badge && status.done) {
-      badge.textContent = 'Complete';
-      badge.classList.add('done');
+const BJ_SKILL_NAMES = {
+  'basic-strategy': 'Basic Strategy',
+  'keep-counting':  'Running Count',
+  'true-count':     'True Count',
+  'deviations':     'Deviations',
+  'bet-spread':     'Bet Spread',
+  'full-training':  'Full Training'
+};
+
+let bjWired = false;
+let bjResizeObserver = null;
+
+// How each label sits relative to its SVG item.
+// dx/dy are fractions of the item's bbox size:
+//   dy: -0.5 puts label top of item, +0.5 puts label below it
+//   dx: 0 = centered horizontally
+const BJ_LABEL_ANCHORS = {
+  'bj-discard':    { dx: 0,   dy:  0.85 }, // top-left item → label below it
+  'bj-dealerhand': { dx: 0,   dy:  0.95 }, // top-center → below dealer's hand
+  'bj-shoe':       { dx: 0,   dy:  0.85 }, // top-right → below shoe
+  'bj-playerhand': { dx: 0,   dy: -0.75 }, // bottom → label above
+  'bj-chipstack':  { dx: 0,   dy: -0.85 }, // bottom → label above
+};
+
+function renderBJTable() {
+  const svg = document.getElementById('bj-svg');
+  const scene = document.getElementById('bj-scene');
+  if (!svg || !scene) return;
+
+  if (!bjWired) {
+    // Delegated click — phase into the clicked item, then navigate to trainer
+    svg.addEventListener('click', (e) => {
+      const group = e.target.closest('.bj-item');
+      if (!group) return;
+      const skill = group.dataset.skill;
+      if (skill) phaseIntoTrainer(skill, group);
+    });
+
+    // Also let the HTML labels act as click targets (pointer-events enabled per-label)
+    const labelsEl = document.getElementById('bj-labels');
+    if (labelsEl) {
+      labelsEl.addEventListener('click', (e) => {
+        const label = e.target.closest('.bj-label');
+        if (!label) return;
+        const itemId = label.dataset.for;
+        const item = document.getElementById(itemId);
+        if (!item) return;
+        const skill = item.dataset.skill;
+        if (skill) phaseIntoTrainer(skill, item);
+      });
     }
-    if (circle && status.done) {
-      circle.classList.add('done');
-      circle.textContent = '✓';
+
+    // Reposition labels whenever the scene resizes
+    if ('ResizeObserver' in window) {
+      bjResizeObserver = new ResizeObserver(() => positionBJLabels());
+      bjResizeObserver.observe(scene);
     }
+    window.addEventListener('resize', positionBJLabels, { passive: true });
+
+    bjWired = true;
+  }
+
+  // Position labels now, and again once the SVG has laid out.
+  positionBJLabels();
+  requestAnimationFrame(positionBJLabels);
+  setTimeout(positionBJLabels, 100);
+  setTimeout(positionBJLabels, 500);
+}
+
+function positionBJLabels() {
+  const scene = document.getElementById('bj-scene');
+  const labelsEl = document.getElementById('bj-labels');
+  if (!scene || !labelsEl) return;
+
+  const sRect = scene.getBoundingClientRect();
+  if (sRect.width === 0) return;
+
+  labelsEl.querySelectorAll('.bj-label').forEach(label => {
+    const itemId = label.dataset.for;
+    const item = document.getElementById(itemId);
+    if (!item) return;
+
+    // Use the visible hitbox if present (it's the authoritative clickable bounds),
+    // otherwise fall back to the group itself.
+    const hit = item.querySelector('.bj-hit') || item;
+    const iRect = hit.getBoundingClientRect();
+    if (iRect.width === 0) return;
+
+    const anchor = BJ_LABEL_ANCHORS[itemId] || { dx: 0, dy: -0.75 };
+    const cx = iRect.left + iRect.width / 2 - sRect.left + anchor.dx * iRect.width;
+    const cy = iRect.top  + iRect.height / 2 - sRect.top  + anchor.dy * iRect.height;
+
+    label.style.left = `${cx}px`;
+    label.style.top  = `${cy}px`;
+
+    // Enable click targets on the labels themselves
+    label.style.pointerEvents = 'auto';
+    label.classList.add('visible');
+
+    // Sync done state from AppState
+    const skillId = item.dataset.skill;
+    const done = AppState.skillStatus && AppState.skillStatus[skillId] && AppState.skillStatus[skillId].done;
+    label.classList.toggle('done', !!done);
   });
 }
 
-document.querySelectorAll('.pipe-card-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const skill = btn.dataset.skill;
-    if (skill) goSkill(skill);
+function renderPipelineStatus() {
+  const svg = document.getElementById('bj-svg');
+  const statusLayer = document.getElementById('bj-status');
+  if (!svg || !statusLayer) return;
+
+  // Clear all previous status marks and done classes
+  statusLayer.innerHTML = '';
+  svg.querySelectorAll('.bj-item.done').forEach(g => g.classList.remove('done'));
+
+  Object.entries(AppState.skillStatus).forEach(([id, status]) => {
+    if (status && status.done) markBJItemDone(id);
   });
-});
+
+  // Re-sync HTML label done states
+  positionBJLabels();
+}
+
+function markBJItemDone(skillId) {
+  const svg = document.getElementById('bj-svg');
+  const statusLayer = document.getElementById('bj-status');
+  if (!svg || !statusLayer) return;
+  const group = svg.querySelector(`.bj-item[data-skill="${skillId}"]`);
+  if (!group) return;
+
+  group.classList.add('done');
+
+  // bbox of the item in SVG user coordinates — draw a ring + check around it
+  let bb;
+  try { bb = group.getBBox(); } catch { return; }
+
+  const cx = bb.x + bb.width / 2;
+  const cy = bb.y + bb.height / 2;
+  const r  = Math.max(bb.width, bb.height) / 2 + 10;
+
+  // Remove existing mark for this id, then append fresh
+  const existing = statusLayer.querySelector(`[data-for="${skillId}"]`);
+  if (existing) existing.remove();
+
+  const mark = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  mark.setAttribute('class', 'bj-done-mark');
+  mark.setAttribute('data-for', skillId);
+
+  const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  ring.setAttribute('cx', cx);
+  ring.setAttribute('cy', cy);
+  ring.setAttribute('r',  r);
+  mark.appendChild(ring);
+
+  // Small check badge in top-right of the ring
+  const checkCx = cx + r * 0.72;
+  const checkCy = cy - r * 0.72;
+  const bg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  bg.setAttribute('cx', checkCx);
+  bg.setAttribute('cy', checkCy);
+  bg.setAttribute('r',  11);
+  bg.setAttribute('fill', '#0a2815');
+  bg.setAttribute('stroke', '#16a34a');
+  bg.setAttribute('stroke-width', '2');
+  mark.appendChild(bg);
+
+  const check = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  check.setAttribute('d', `M ${checkCx - 5} ${checkCy} L ${checkCx - 1} ${checkCy + 4} L ${checkCx + 5} ${checkCy - 4}`);
+  mark.appendChild(check);
+
+  statusLayer.appendChild(mark);
+}
+
+function playBJEnterAnim() {
+  const scene = document.getElementById('bj-scene');
+  if (!scene) return;
+  scene.classList.remove('entering');
+  // Force reflow so the animation can replay
+  void scene.offsetWidth;
+  scene.classList.add('entering');
+}
 
 // ============================================================
 // SKILL LAUNCHER
@@ -627,8 +867,6 @@ function showSkillIntro(skillId, bodyEl, scoreEl, skill) {
     <div class="skill-intro-wrap">
       <div class="skill-intro-icon">${intro.icon}</div>
       <h2 class="skill-intro-headline">${intro.headline}</h2>
-      <p class="skill-intro-sub">${intro.sub}</p>
-      <button class="skill-intro-howto" id="skill-intro-howto-btn">How does this work?</button>
       <button class="skill-intro-start" id="skill-intro-start-btn">${intro.startLabel || 'Start Training →'}</button>
     </div>
   `;
@@ -645,35 +883,6 @@ function showSkillIntro(skillId, bodyEl, scoreEl, skill) {
     activeSkillCleanup = skill.start(bodyEl, scoreEl, skillId);
   });
 
-  bodyEl.querySelector('#skill-intro-howto-btn').addEventListener('click', () => {
-    const hw = intro.howto || { overview: '', sections: [] };
-    const sectionsHTML = hw.sections.map(s => `
-      <div class="skill-howto-section">
-        <div class="skill-howto-section-title">${s.title}</div>
-        <ul class="skill-howto-list">
-          ${s.items.map(item => `<li>${item}</li>`).join('')}
-        </ul>
-      </div>
-    `).join('');
-
-    const overlay = document.createElement('div');
-    overlay.className = 'skill-howto-overlay';
-    overlay.innerHTML = `
-      <div class="skill-howto-modal">
-        <div class="skill-howto-header">
-          <span class="skill-howto-title">${intro.headline} — How it works</span>
-          <button class="skill-howto-close" aria-label="Close">✕</button>
-        </div>
-        <div class="skill-howto-body">
-          ${hw.overview ? `<p class="skill-howto-overview">${hw.overview}</p>` : ''}
-          ${sectionsHTML}
-        </div>
-      </div>
-    `;
-    document.getElementById('skill-trainer').appendChild(overlay);
-    overlay.querySelector('.skill-howto-close').addEventListener('click', () => overlay.remove());
-    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-  });
 }
 
 // ============================================================
@@ -852,25 +1061,27 @@ const BasicStrategy = {
       dealerIdx = Math.floor(Math.random()*10);
       correctAction = bsLookup(hand, dealerIdx);
 
-      // Dealer: one face-down + upcard
+      // Build both hands first, then deal in casino order:
+      // player1 → dealer-up → player2 → dealer-hole
       dealerHandEl.innerHTML = '';
-      dealerHandEl.appendChild(cardBackEl());
+      playerHandEl.innerHTML = '';
+
+      const dealerBack   = cardBackEl();
       const dr = DEALER_LABELS[dealerIdx];
       const ds = SUITS[Math.floor(Math.random()*4)];
-      dealerHandEl.appendChild(cardEl({rank:dr, suit:ds.name, sym:ds.sym}));
+      const dealerUpcard = cardEl({rank:dr, suit:ds.name, sym:ds.sym});
 
-      // Player hand
-      playerHandEl.innerHTML = '';
+      let p1, p2;
       if (hand.type === 'pair') {
         const r = hand.pairKey[0]==='T'?'10':hand.pairKey[0];
         const suits = shuffle([...SUITS]);
-        playerHandEl.appendChild(cardEl({rank:r,suit:suits[0].name,sym:suits[0].sym}));
-        playerHandEl.appendChild(cardEl({rank:r,suit:suits[1].name,sym:suits[1].sym}));
+        p1 = cardEl({rank:r,suit:suits[0].name,sym:suits[0].sym});
+        p2 = cardEl({rank:r,suit:suits[1].name,sym:suits[1].sym});
       } else if (hand.type === 'soft') {
         const x = hand.total - 11;
         const suits = shuffle([...SUITS]);
-        playerHandEl.appendChild(cardEl({rank:'A',suit:suits[0].name,sym:suits[0].sym}));
-        playerHandEl.appendChild(cardEl({rank:String(x),suit:suits[1].name,sym:suits[1].sym}));
+        p1 = cardEl({rank:'A',suit:suits[0].name,sym:suits[0].sym});
+        p2 = cardEl({rank:String(x),suit:suits[1].name,sym:suits[1].sym});
       } else {
         const lo = Math.max(2, hand.total - 10);
         const hi = Math.min(10, hand.total - 2);
@@ -879,9 +1090,21 @@ const BasicStrategy = {
         const aRank = a === 10 ? '10' : String(a);
         const bRank = b === 10 ? '10' : String(b);
         const suits = shuffle([...SUITS]);
-        playerHandEl.appendChild(cardEl({rank:aRank,suit:suits[0].name,sym:suits[0].sym}));
-        playerHandEl.appendChild(cardEl({rank:bRank,suit:suits[1].name,sym:suits[1].sym}));
+        p1 = cardEl({rank:aRank,suit:suits[0].name,sym:suits[0].sym});
+        p2 = cardEl({rank:bRank,suit:suits[1].name,sym:suits[1].sym});
       }
+
+      // Stagger classes = deal order
+      p1.classList.add('dealt-in', 'deal-stagger-1');
+      dealerUpcard.classList.add('dealt-in', 'deal-stagger-2');
+      p2.classList.add('dealt-in', 'deal-stagger-3');
+      dealerBack.classList.add('dealt-in', 'deal-stagger-4');
+
+      // Append in DOM order: dealer [back, up], player [p1, p2]
+      dealerHandEl.appendChild(dealerBack);
+      dealerHandEl.appendChild(dealerUpcard);
+      playerHandEl.appendChild(p1);
+      playerHandEl.appendChild(p2);
 
       // Action buttons
       actionsEl.innerHTML = '';
@@ -1049,7 +1272,7 @@ const KeepCounting = {
       currentCards.forEach((c, i) => {
         const t = setTimeout(() => {
           const el = cardEl(c);
-          el.classList.add('dealing');
+          el.classList.add('dealt-in');
           stageEl.appendChild(el);
           if (i === currentCards.length - 1) {
             const t2 = setTimeout(() => {
@@ -1215,14 +1438,15 @@ const Deviations = {
       tcEl.style.color = givenTC > 0 ? '#4ade80' : givenTC < 0 ? '#f87171' : 'var(--tr-text)';
       basicEl.textContent = ACTION_FULL[currentDev.basic] || currentDev.basic;
 
-      // Dealer: back + upcard
+      // Build cards, then deal in casino order:
+      // player1 → dealer-up → player2 → dealer-hole
       dealerHandEl.innerHTML = '';
-      dealerHandEl.appendChild(cardBackEl());
-      const ds = SUITS[Math.floor(Math.random()*4)];
-      dealerHandEl.appendChild(cardEl({rank: currentDev.upcard, suit: ds.name, sym: ds.sym}));
-
-      // Player hand
       playerHandEl.innerHTML = '';
+
+      const dealerBack = cardBackEl();
+      const ds = SUITS[Math.floor(Math.random()*4)];
+      const dealerUpcard = cardEl({rank: currentDev.upcard, suit: ds.name, sym: ds.sym});
+
       const handStr = currentDev.hand;
       let cards = [];
       if (handStr.startsWith('A')) {
@@ -1242,7 +1466,18 @@ const Deviations = {
         const s = shuffle([...SUITS]);
         cards = [{rank: a===10?'10':String(a), suit:s[0].name, sym:s[0].sym}, {rank: b===10?'10':String(b), suit:s[1].name, sym:s[1].sym}];
       }
-      cards.forEach(c => playerHandEl.appendChild(cardEl(c)));
+      const p1 = cardEl(cards[0]);
+      const p2 = cardEl(cards[1]);
+
+      p1.classList.add('dealt-in', 'deal-stagger-1');
+      dealerUpcard.classList.add('dealt-in', 'deal-stagger-2');
+      p2.classList.add('dealt-in', 'deal-stagger-3');
+      dealerBack.classList.add('dealt-in', 'deal-stagger-4');
+
+      dealerHandEl.appendChild(dealerBack);
+      dealerHandEl.appendChild(dealerUpcard);
+      playerHandEl.appendChild(p1);
+      playerHandEl.appendChild(p2);
 
       actionsEl.innerHTML = '';
       ['H','S','D'].forEach(a => {
@@ -1996,60 +2231,386 @@ document.querySelectorAll('.sk-cta[data-skill]').forEach(btn => {
 // NAVIGATION WIRING
 // ============================================================
 
-// "Start Training" → open auth modal (or go straight to pipeline if already signed in)
-function startTraining() {
-  if (Account.currentUser()) goPipeline();
-  else openAuthModal('signup');
+// ============================================================
+// LEARN-MORE CHAPTER TOUR
+// ============================================================
+// The three "chapters" are the existing landing content sections,
+// moved out of #landing-snap into #tour-pages at init time.
+const TOUR_PAGE_IDS = ['info-sections', 'info-counting', 'feat-anchor'];
+let tourIndex = 0;
+let tourAnimating = false;
+let tourInitialized = false;
+
+function initTourPages() {
+  if (tourInitialized) return;
+  const pagesContainer = document.getElementById('tour-pages');
+  if (!pagesContainer) return;
+  TOUR_PAGE_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.parentElement !== pagesContainer) {
+      pagesContainer.appendChild(el);
+    }
+  });
+  tourInitialized = true;
 }
 
+function renderTourProgress(index) {
+  const prog = document.getElementById('tour-progress');
+  if (!prog) return;
+  prog.innerHTML = TOUR_PAGE_IDS.map((_, i) => {
+    const cls = i === index ? 'active' : (i < index ? 'done' : '');
+    return `<span class="tour-dot ${cls}"></span>`;
+  }).join('');
+}
+
+function showTourPage(index) {
+  const pagesContainer = document.getElementById('tour-pages');
+  if (!pagesContainer) return;
+  TOUR_PAGE_IDS.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (i === index) {
+      el.classList.add('tour-page-active');
+    } else {
+      el.classList.remove('tour-page-active', 'zoom-in', 'zoom-out');
+    }
+  });
+  // Scroll new page back to top
+  pagesContainer.scrollTop = 0;
+  renderTourProgress(index);
+  updateSideArrows();
+}
+
+// ── Camera pan helper: move hero ring from its spot to screen center ──
+function panHeroRingToCenter() {
+  const wrap = document.querySelector('.hero-card-ring-wrap');
+  if (!wrap) return 0;
+  const rect = wrap.getBoundingClientRect();
+  const dx = (window.innerWidth / 2) - (rect.left + rect.width / 2);
+  const dy = (window.innerHeight / 2) - (rect.top + rect.height / 2);
+  wrap.classList.add('panning');
+  // translateY(-50%) is the element's base (top:50% centering); add our delta on top.
+  wrap.style.transform = `translateY(-50%) translate(${dx}px, ${dy}px) scale(1.25)`;
+  return { wrap, dx, dy };
+}
+
+function zoomHeroRingThrough(pan) {
+  if (!pan || !pan.wrap) return;
+  const { wrap, dx, dy } = pan;
+  wrap.style.transform = `translateY(-50%) translate(${dx}px, ${dy}px) scale(7)`;
+  wrap.classList.add('zoom-through');
+}
+
+function resetHeroRing() {
+  const wrap = document.querySelector('.hero-card-ring-wrap');
+  if (!wrap) return;
+  wrap.classList.remove('panning', 'zoom-through', 'diving');
+  wrap.style.transform = '';
+  wrap.style.opacity = '';
+  const ring = document.querySelector('.hero-card-ring');
+  if (ring) {
+    ring.getAnimations().forEach(a => a.cancel());
+    ring.style.transform = '';
+    ring.style.animation = '';
+  }
+}
+
+// Spin ring from current position to Ace of Spades using Web Animations API
+// (preserves live 3D spin continuity — no snap to 0deg)
+function spinRingToAce(ring) {
+  return new Promise(resolve => {
+    // Read current Y angle from the running animation's computed matrix
+    const computedTransform = getComputedStyle(ring).transform;
+    const matrix = new DOMMatrix(computedTransform);
+    // For rotateX(14deg)*rotateY(θ): m11=cos(θ), m13=sin(θ)
+    let currentAngle = Math.atan2(matrix.m13, matrix.m11) * 180 / Math.PI;
+    if (currentAngle < 0) currentAngle += 360;
+
+    // Cancel CSS animation, freeze at current visual position
+    ring.getAnimations().forEach(a => a.cancel());
+    ring.style.animation = 'none';
+    void ring.offsetWidth;
+
+    // Target: nearest multiple-of-360 + 3 extra full spins (ends at Ace facing front)
+    const gap = (360 - (currentAngle % 360)) % 360;
+    const targetAngle = currentAngle + gap + 1080; // 3 extra full rotations
+
+    const anim = ring.animate([
+      { transform: `rotateX(14deg) rotateY(${currentAngle}deg)` },
+      { transform: `rotateX(14deg) rotateY(${targetAngle}deg)` }
+    ], {
+      duration: 2400,
+      easing: 'cubic-bezier(0.1, 0, 0.3, 1)', // fast start, dramatic deceleration to stop
+      fill: 'forwards'
+    });
+
+    anim.onfinish = () => resolve();
+  });
+}
+
+// Entry point: "Learn More" clicked on landing
+function startLearnMore() {
+  initTourPages();
+  const landing = document.getElementById('landing');
+  const hero = document.querySelector('.ls-hero');
+  const ring = document.querySelector('.hero-card-ring');
+  const stage = document.getElementById('tour-stage');
+
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    tourIndex = 0;
+    showTourPage(0);
+    if (landing) landing.classList.add('hidden');
+    if (stage) {
+      stage.classList.remove('hidden');
+      stage.classList.add('active');
+    }
+    updateSideArrows();
+    return;
+  }
+
+  // Phase 1: fade hero body, pan ring to center
+  if (hero) hero.classList.add('tour-pending');
+  const pan = panHeroRingToCenter();
+
+  // Phase 2: spin ring to Ace of Spades from current position
+  if (ring) {
+    spinRingToAce(ring).then(() => {
+      // Ace of Spades is now facing the viewer — pause 1 second
+
+      // Phase 3 (1000ms later): dive into the Ace
+      setTimeout(() => {
+        const wrap = document.querySelector('.hero-card-ring-wrap');
+        if (wrap) wrap.classList.add('diving');
+        zoomHeroRingThrough(pan);
+
+        // Phase 4 (1700ms after zoom starts): reveal tour
+        setTimeout(() => {
+          tourIndex = 0;
+          if (landing) landing.classList.add('hidden');
+          if (stage) {
+            stage.classList.remove('hidden');
+            stage.classList.add('active');
+          }
+          showTourPage(0);
+          const activeEl = document.getElementById(TOUR_PAGE_IDS[0]);
+          if (activeEl) {
+            activeEl.classList.remove('zoom-in');
+            void activeEl.offsetWidth;
+            activeEl.classList.add('zoom-in');
+          }
+          if (hero) hero.classList.remove('tour-pending');
+          resetHeroRing();
+        }, 1700);
+      }, 1000);
+    });
+  }
+}
+
+// ── Tour transition ring (between chapters) ──
+function playTourRingTransition(onMid, onDone) {
+  const wrap = document.getElementById('tour-ring-wrap');
+  const ring = document.getElementById('tour-ring');
+  if (!wrap || !ring) { onMid && onMid(); onDone && onDone(); return; }
+
+  // Reset any prior state
+  wrap.classList.remove('hidden', 'enter', 'zoom-through');
+  ring.classList.remove('fast-spin');
+  void wrap.offsetWidth;
+
+  // Phase A: ring fades in at center
+  wrap.classList.add('enter');
+  setTimeout(() => {
+    // Phase B: slow spin
+    ring.classList.add('fast-spin');
+  }, 400);
+
+  // Mid-point: swap page content (at ~halfway through spin)
+  setTimeout(() => { if (onMid) onMid(); }, 1400);
+
+  // Phase C: ring zooms through (after spin completes)
+  setTimeout(() => {
+    wrap.classList.add('zoom-through');
+  }, 2300);
+
+  // Phase D: cleanup
+  setTimeout(() => {
+    wrap.classList.add('hidden');
+    wrap.classList.remove('enter', 'zoom-through');
+    ring.classList.remove('fast-spin');
+    if (onDone) onDone();
+  }, 3200);
+}
+
+// Navigate to a different chapter (ring-spin + zoom transition)
+function goTourCard(nextIndex /*, direction */) {
+  if (tourAnimating) return;
+  if (nextIndex < 0 || nextIndex >= TOUR_PAGE_IDS.length) return;
+
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    tourIndex = nextIndex;
+    showTourPage(nextIndex);
+    return;
+  }
+
+  tourAnimating = true;
+  const prevEl = document.getElementById(TOUR_PAGE_IDS[tourIndex]);
+
+  // Zoom-out the current page as the ring fades in
+  if (prevEl) {
+    prevEl.classList.remove('zoom-in');
+    void prevEl.offsetWidth;
+    prevEl.classList.add('zoom-out');
+  }
+
+  playTourRingTransition(
+    // Mid: swap the active page
+    () => {
+      tourIndex = nextIndex;
+      showTourPage(nextIndex);
+      const activeEl = document.getElementById(TOUR_PAGE_IDS[nextIndex]);
+      if (activeEl) {
+        activeEl.classList.remove('zoom-in');
+        void activeEl.offsetWidth;
+        activeEl.classList.add('zoom-in');
+      }
+    },
+    // Done: clear flag
+    () => { tourAnimating = false; }
+  );
+}
+
+function tourNext() {
+  if (tourIndex < TOUR_PAGE_IDS.length - 1) {
+    goTourCard(tourIndex + 1, 'next');
+  }
+}
+
+function tourPrev() {
+  if (tourIndex > 0) {
+    goTourCard(tourIndex - 1, 'prev');
+  } else {
+    exitTourToLanding();
+  }
+}
+
+function exitTourToLanding() {
+  const stage = document.getElementById('tour-stage');
+  const landing = document.getElementById('landing');
+  if (!stage) return;
+
+  // Clear any active page state
+  TOUR_PAGE_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('tour-page-active', 'zoom-in', 'zoom-out');
+  });
+
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    stage.classList.add('hidden');
+    stage.classList.remove('active');
+    if (landing) landing.classList.remove('hidden');
+    updateSideArrows();
+    return;
+  }
+  // Fade the stage out
+  stage.style.transition = 'opacity 380ms ease';
+  stage.style.opacity = '0';
+  setTimeout(() => {
+    stage.classList.add('hidden');
+    stage.classList.remove('active');
+    stage.style.opacity = '';
+    stage.style.transition = '';
+    if (landing) landing.classList.remove('hidden');
+    resetHeroRing();
+    updateSideArrows();
+  }, 400);
+}
+
+// "Start Training" — fast-path straight to the pipeline (skips the tour).
+// Used by the top-right nav button for returning users who already know the app.
+function startTraining() {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    goPipeline();
+    return;
+  }
+  const landing = document.getElementById('landing');
+  if (!landing) { goPipeline(); return; }
+  landing.classList.add('leaving');
+  setTimeout(() => {
+    landing.classList.remove('leaving');
+    goPipeline();
+  }, 280);
+}
+
+// ── Side arrow visibility + wiring ──────────────────────────
+function updateSideArrows() {
+  const left = document.getElementById('side-arrow-left');
+  const right = document.getElementById('side-arrow-right');
+  if (!left || !right) return;
+
+  const stage = document.getElementById('tour-stage');
+  const onTour = stage && !stage.classList.contains('hidden');
+
+  // Default: hide both
+  left.classList.add('hidden');
+  right.classList.add('hidden');
+
+  if (onTour) {
+    // Left arrow always visible during the tour — on first page it exits to landing.
+    left.classList.remove('hidden');
+    // Right arrow hidden on final page — the 5 Skills page is the destination.
+    if (tourIndex < TOUR_PAGE_IDS.length - 1) right.classList.remove('hidden');
+  }
+  // Landing, pipeline, skill-trainer, dashboard → no side arrows
+}
+
+// Wire up button clicks
+const sideLeftBtn = document.getElementById('side-arrow-left');
+const sideRightBtn = document.getElementById('side-arrow-right');
+if (sideLeftBtn) sideLeftBtn.addEventListener('click', () => {
+  const stage = document.getElementById('tour-stage');
+  if (stage && !stage.classList.contains('hidden')) tourPrev();
+});
+if (sideRightBtn) sideRightBtn.addEventListener('click', () => {
+  const stage = document.getElementById('tour-stage');
+  if (stage && !stage.classList.contains('hidden')) tourNext();
+});
+
+// Keyboard nav for tour
+document.addEventListener('keydown', (e) => {
+  const stage = document.getElementById('tour-stage');
+  if (!stage || stage.classList.contains('hidden')) return;
+  if (e.key === 'ArrowRight') tourNext();
+  else if (e.key === 'ArrowLeft') tourPrev();
+  else if (e.key === 'Escape') exitTourToLanding();
+});
+
+// Tour home button
+const tourHome = document.getElementById('tour-home');
+if (tourHome) tourHome.addEventListener('click', exitTourToLanding);
+
 const heroCta = document.getElementById('hero-cta');
-if (heroCta) heroCta.addEventListener('click', startTraining);
+if (heroCta) heroCta.addEventListener('click', startLearnMore);
 
 
 const navCta = document.getElementById('nav-cta');
-if (navCta) navCta.addEventListener('click', startTraining);
+if (navCta) navCta.addEventListener('click', startLearnMore);
 
-// Nav dropdown
-const navMenuBtn  = document.getElementById('nav-menu-btn');
-const navDropdown = document.getElementById('nav-dropdown');
-if (navMenuBtn && navDropdown) {
-  navMenuBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    const open = navMenuBtn.classList.toggle('open');
-    navDropdown.classList.toggle('open', open);
-    navMenuBtn.setAttribute('aria-expanded', open);
-  });
-  document.addEventListener('click', e => {
-    if (!navMenuBtn.contains(e.target) && !navDropdown.contains(e.target)) {
-      navMenuBtn.classList.remove('open');
-      navDropdown.classList.remove('open');
-      navMenuBtn.setAttribute('aria-expanded', 'false');
-    }
-  });
-  navDropdown.querySelectorAll('.nav-dropdown-item').forEach(item => {
-    item.addEventListener('click', () => {
-      navMenuBtn.classList.remove('open');
-      navDropdown.classList.remove('open');
-    });
-  });
-}
 
 const featuresCta = document.getElementById('features-cta');
-if (featuresCta) featuresCta.addEventListener('click', startTraining);
+if (featuresCta) featuresCta.addEventListener('click', startLearnMore);
 
 const navStartBtn = document.getElementById('nav-start-btn');
 if (navStartBtn) navStartBtn.addEventListener('click', startTraining);
 
 const readyCta = document.getElementById('ready-cta');
-if (readyCta) readyCta.addEventListener('click', startTraining);
+if (readyCta) readyCta.addEventListener('click', startLearnMore);
 
 const learnMoreBtn = document.getElementById('hero-explore-btn');
-if (learnMoreBtn) {
-  learnMoreBtn.addEventListener('click', () => {
-    const next = document.getElementById('info-sections');
-    if (next) next.scrollIntoView({ behavior: 'smooth' });
-  });
-}
+if (learnMoreBtn) learnMoreBtn.addEventListener('click', startLearnMore);
+
+// Move the landing content sections into the tour stage as soon as possible
+// so the landing only shows the hero and the tour pages are ready to display.
+initTourPages();
 
 
 
@@ -2276,89 +2837,64 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
 });
 
 // Back buttons
-document.getElementById('pipeline-back').addEventListener('click', goLanding);
-document.getElementById('skill-back').addEventListener('click', () => {
-  if (activeSkillCleanup) { activeSkillCleanup(); activeSkillCleanup = null; }
-  goPipeline();
-});
+const pipelineBack = document.getElementById('pipeline-back');
+if (pipelineBack) pipelineBack.addEventListener('click', goLanding);
+
+document.getElementById('skill-back').addEventListener('click', phaseOutTrainer);
 
 const dashBack = document.getElementById('dashboard-back');
 if (dashBack) dashBack.addEventListener('click', goLanding);
 
+// Clickable brand logos — always go home (landing)
+['nav-brand-home', 'pipe-brand-home'].forEach(id => {
+  const btn = document.getElementById(id);
+  if (btn) btn.addEventListener('click', (e) => {
+    e.preventDefault();
+    goLanding();
+  });
+});
+
 // ============================================================
 // AUTH MODAL
 // ============================================================
-function openAuthModal(panel = 'signup') {
+function openAuthModal() {
   document.getElementById('auth-modal').classList.remove('hidden');
-  _showAuthPanel(panel);
-  const focusId = panel === 'signin' ? 'signin-username' : 'signup-username';
-  setTimeout(() => { const el = document.getElementById(focusId); if (el) el.focus(); }, 50);
+  setTimeout(() => { const el = document.getElementById('auth-username'); if (el) el.focus(); }, 50);
 }
 
 function closeAuthModal() {
   document.getElementById('auth-modal').classList.add('hidden');
-  ['signin-error','signup-error'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) { el.textContent = ''; el.classList.add('hidden'); }
-  });
-  ['signin-username','signin-pin','signup-username','signup-pin','signup-pin2'].forEach(id => {
+  const errEl = document.getElementById('auth-error');
+  if (errEl) { errEl.textContent = ''; errEl.classList.add('hidden'); }
+  ['auth-username', 'auth-pin'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
 }
 
-function _showAuthPanel(panel) {
-  document.getElementById('auth-signup').classList.toggle('hidden', panel !== 'signup');
-  document.getElementById('auth-signin').classList.toggle('hidden', panel !== 'signin');
-}
-
 const authModal = document.getElementById('auth-modal');
 if (authModal) {
-  // Close on backdrop click
   authModal.addEventListener('click', e => { if (e.target === authModal) closeAuthModal(); });
   document.getElementById('auth-close').addEventListener('click', closeAuthModal);
 
-  // Panel switching links
-  document.getElementById('show-signin').addEventListener('click', () => _showAuthPanel('signin'));
-  document.getElementById('show-signup').addEventListener('click', () => _showAuthPanel('signup'));
-
-  // Guest buttons
-  function continueAsGuest() { closeAuthModal(); goPipeline(); }
-  document.getElementById('guest-btn').addEventListener('click', continueAsGuest);
-  document.getElementById('guest-btn-2').addEventListener('click', continueAsGuest);
-
-  // Sign Up
-  document.getElementById('signup-btn').addEventListener('click', () => {
-    const username = document.getElementById('signup-username').value.trim();
-    const pin      = document.getElementById('signup-pin').value.trim();
-    const pin2     = document.getElementById('signup-pin2').value.trim();
-    const errEl    = document.getElementById('signup-error');
+  document.getElementById('auth-submit-btn').addEventListener('click', () => {
+    const username = document.getElementById('auth-username').value.trim();
+    const pin      = document.getElementById('auth-pin').value.trim();
+    const errEl    = document.getElementById('auth-error');
     errEl.classList.add('hidden');
-    if (!username || !pin || !pin2) { errEl.textContent = 'Please fill in all fields.'; errEl.classList.remove('hidden'); return; }
-    if (!/^\d{4}$/.test(pin))       { errEl.textContent = 'PIN must be exactly 4 digits.'; errEl.classList.remove('hidden'); return; }
-    if (pin !== pin2)                { errEl.textContent = 'PINs do not match.'; errEl.classList.remove('hidden'); return; }
-    const result = Account.signUp(username, pin);
-    if (result.error) { errEl.textContent = result.error; errEl.classList.remove('hidden'); return; }
+    if (!username || !pin) { errEl.textContent = 'Please enter a username and PIN.'; errEl.classList.remove('hidden'); return; }
+    if (!/^\d{4}$/.test(pin)) { errEl.textContent = 'PIN must be exactly 4 digits.'; errEl.classList.remove('hidden'); return; }
+    // Try sign in first, create account if user doesn't exist
+    let result = Account.signIn(username, pin);
+    if (result.error) {
+      result = Account.signUp(username, pin);
+      if (result.error) { errEl.textContent = result.error; errEl.classList.remove('hidden'); return; }
+    }
     syncAuthUI();
     closeAuthModal();
     goPipeline();
   });
 
-  // Sign In
-  document.getElementById('signin-btn').addEventListener('click', () => {
-    const username = document.getElementById('signin-username').value.trim();
-    const pin      = document.getElementById('signin-pin').value.trim();
-    const errEl    = document.getElementById('signin-error');
-    errEl.classList.add('hidden');
-    if (!username || !pin) { errEl.textContent = 'Please fill in all fields.'; errEl.classList.remove('hidden'); return; }
-    const result = Account.signIn(username, pin);
-    if (result.error) { errEl.textContent = result.error; errEl.classList.remove('hidden'); return; }
-    syncAuthUI();
-    closeAuthModal();
-    goPipeline();
-  });
-
-  // Escape to close
   authModal.addEventListener('keydown', e => { if (e.key === 'Escape') closeAuthModal(); });
 }
 

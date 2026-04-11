@@ -2315,6 +2315,128 @@ function resetHeroRing() {
   }
 }
 
+// Build a flip-card overlay. The overlay is a fixed-size wrapper positioned on
+// a full-viewport background (so the card is clearly visible), with the real
+// tour page DOM moved into its back face. The BG div fades in during grow so
+// the card sits on the same color as the final tour page — "zooming into card".
+function buildFlipOverlay(tourSource) {
+  const overlay = document.createElement('div');
+  overlay.className = 'ace-flip-overlay';
+  overlay.innerHTML = `
+    <div class="ace-flip-bg"></div>
+    <div class="ace-flip-wrap">
+      <div class="ace-flip-inner">
+        <div class="ace-flip-front">
+          <span class="ace-rank-tl">A</span>
+          <span class="ace-suit">♠</span>
+          <span class="ace-rank-br">A</span>
+        </div>
+        <div class="ace-flip-back"></div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  const back = overlay.querySelector('.ace-flip-back');
+  back.appendChild(tourSource);
+  tourSource.classList.add('tour-page-active');
+  tourSource.classList.remove('zoom-in', 'zoom-out');
+  return overlay;
+}
+
+// Cinematic reveal: ring Ace → grow card → flip → pause → zoom to fullscreen.
+// The real tour page DOM lives on the back of the card the whole time, so the
+// final handoff to the tour stage is an invisible same-node restore.
+function flipAceIntoContent() {
+  return new Promise(resolve => {
+    const aceEl = document.querySelector('.hero-card-ring .rc-card:nth-child(1)');
+    const ringWrap = document.querySelector('.hero-card-ring-wrap');
+    const source = document.getElementById('info-sections');
+    if (!aceEl || !ringWrap || !source) { resolve(null); return; }
+
+    const aceRect = aceEl.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // Remember where the tour page lives so we can put it back later
+    const sourceParent = source.parentNode;
+    const sourceNext = source.nextSibling;
+
+    // Fixed "card viewing size" for the flip phase — big enough that the flip
+    // rotation is clearly visible.
+    const CARD_W = 340;
+    const CARD_H = 476;
+
+    const overlay = buildFlipOverlay(source);
+    const bg = overlay.querySelector('.ace-flip-bg');
+    const wrap = overlay.querySelector('.ace-flip-wrap');
+    const inner = overlay.querySelector('.ace-flip-inner');
+
+    // Start: wrap sized & positioned exactly over the Ace
+    wrap.style.width = aceRect.width + 'px';
+    wrap.style.height = aceRect.height + 'px';
+    wrap.style.left = aceRect.left + 'px';
+    wrap.style.top = aceRect.top + 'px';
+    inner.style.transform = 'rotateY(0deg)';
+    bg.style.opacity = '0';
+
+    // Hide the real hero ring now that the overlay has replaced it
+    ringWrap.style.opacity = '0';
+
+    void wrap.offsetWidth;
+
+    // PHASE A — Grow: shift from Ace rect to a centered card-size (550ms)
+    const growCenterX = (vw - CARD_W) / 2;
+    const growCenterY = (vh - CARD_H) / 2;
+    wrap.style.transition = 'left 550ms cubic-bezier(.4,0,.2,1), top 550ms cubic-bezier(.4,0,.2,1), width 550ms cubic-bezier(.4,0,.2,1), height 550ms cubic-bezier(.4,0,.2,1)';
+    bg.style.transition = 'opacity 550ms ease';
+    requestAnimationFrame(() => {
+      wrap.style.left = growCenterX + 'px';
+      wrap.style.top = growCenterY + 'px';
+      wrap.style.width = CARD_W + 'px';
+      wrap.style.height = CARD_H + 'px';
+      bg.style.opacity = '1';
+    });
+
+    setTimeout(() => {
+      // PHASE B — Flip: rotY 0 → 90 → 180 at center-card size (850ms)
+      // Three keyframes force the browser to interpolate explicitly along Y
+      // instead of decomposing the 180° matrix into an ambiguous axis.
+      const flipAnim = inner.animate(
+        [
+          { transform: 'rotateY(0deg)' },
+          { transform: 'rotateY(90deg)' },
+          { transform: 'rotateY(180deg)' }
+        ],
+        { duration: 850, fill: 'forwards', easing: 'cubic-bezier(.5,.1,.3,1)' }
+      );
+      flipAnim.onfinish = () => {
+        // Bake the end state into inline style so nothing snaps back
+        inner.style.transform = 'rotateY(180deg)';
+        try { flipAnim.cancel(); } catch (e) { /* ignore */ }
+
+        // PHASE C — Pause on flipped card
+        setTimeout(() => {
+          // PHASE D — Zoom the card frame out to fullscreen (850ms).
+          // We morph the wrap's position/size, not transform — so the tour page
+          // content inside reflows to viewport dimensions naturally.
+          wrap.style.transition = 'left 850ms cubic-bezier(.3,0,.2,1), top 850ms cubic-bezier(.3,0,.2,1), width 850ms cubic-bezier(.3,0,.2,1), height 850ms cubic-bezier(.3,0,.2,1)';
+          wrap.style.left = '0px';
+          wrap.style.top = '0px';
+          wrap.style.width = vw + 'px';
+          wrap.style.height = vh + 'px';
+
+          setTimeout(() => {
+            // Restore tour page to its original slot — same DOM node, no flicker
+            if (sourceNext) sourceParent.insertBefore(source, sourceNext);
+            else sourceParent.appendChild(source);
+            resolve(overlay);
+          }, 870);
+        }, 550);
+      };
+    }, 580);
+  });
+}
+
 // Spin ring from current position to Ace of Spades using Web Animations API
 // (preserves live 3D spin continuity — no snap to 0deg)
 function spinRingToAce(ring) {
@@ -2331,15 +2453,15 @@ function spinRingToAce(ring) {
     ring.style.animation = 'none';
     void ring.offsetWidth;
 
-    // Target: nearest multiple-of-360 + 3 extra full spins (ends at Ace facing front)
+    // Target: nearest multiple-of-360 + 2 extra full spins (ends at Ace facing front)
     const gap = (360 - (currentAngle % 360)) % 360;
-    const targetAngle = currentAngle + gap + 1080; // 3 extra full rotations
+    const targetAngle = currentAngle + gap + 720; // 2 extra full rotations
 
     const anim = ring.animate([
       { transform: `rotateX(14deg) rotateY(${currentAngle}deg)` },
       { transform: `rotateX(14deg) rotateY(${targetAngle}deg)` }
     ], {
-      duration: 2400,
+      duration: 950,
       easing: 'cubic-bezier(0.1, 0, 0.3, 1)', // fast start, dramatic deceleration to stop
       fill: 'forwards'
     });
@@ -2370,38 +2492,37 @@ function startLearnMore() {
 
   // Phase 1: fade hero body, pan ring to center
   if (hero) hero.classList.add('tour-pending');
-  const pan = panHeroRingToCenter();
+  panHeroRingToCenter();
 
   // Phase 2: spin ring to Ace of Spades from current position
   if (ring) {
     spinRingToAce(ring).then(() => {
-      // Ace of Spades is now facing the viewer — pause 1 second
-
-      // Phase 3 (1000ms later): dive into the Ace
+      // Ace is facing front — brief pause before the flip
       setTimeout(() => {
-        const wrap = document.querySelector('.hero-card-ring-wrap');
-        if (wrap) wrap.classList.add('diving');
-        zoomHeroRingThrough(pan);
+        // Phase 3: flip the Ace (with the real tour page on its back), pause, then
+        // zoom it to fill the viewport. The overlay contains the real tour DOM which
+        // is restored to #tour-pages when the zoom finishes — so the swap is invisible.
+        // Pre-activate the tour stage (but hidden) so restored DOM lands in the right place.
+        tourIndex = 0;
+        if (stage) {
+          stage.classList.remove('hidden');
+          stage.classList.add('active');
+          stage.style.opacity = '0';
+        }
+        showTourPage(0);
 
-        // Phase 4 (1700ms after zoom starts): reveal tour
-        setTimeout(() => {
-          tourIndex = 0;
+        flipAceIntoContent().then((overlay) => {
           if (landing) landing.classList.add('hidden');
-          if (stage) {
-            stage.classList.remove('hidden');
-            stage.classList.add('active');
-          }
-          showTourPage(0);
           const activeEl = document.getElementById(TOUR_PAGE_IDS[0]);
-          if (activeEl) {
-            activeEl.classList.remove('zoom-in');
-            void activeEl.offsetWidth;
-            activeEl.classList.add('zoom-in');
-          }
+          if (activeEl) activeEl.classList.remove('zoom-in', 'zoom-out');
           if (hero) hero.classList.remove('tour-pending');
           resetHeroRing();
-        }, 1700);
-      }, 1000);
+
+          // Reveal the real stage under the overlay, then remove the overlay
+          if (stage) stage.style.opacity = '';
+          if (overlay) overlay.remove();
+        });
+      }, 450);
     });
   }
 }
@@ -2441,7 +2562,9 @@ function playTourRingTransition(onMid, onDone) {
   }, 3200);
 }
 
-// Navigate to a different chapter (ring-spin + zoom transition)
+// Navigate to a different chapter: zoom out of current → flip → zoom into new.
+// Uses the same flip-overlay as the reveal, but starts from fullscreen and the
+// card back swaps its content during the flip's edge-on moment.
 function goTourCard(nextIndex /*, direction */) {
   if (tourAnimating) return;
   if (nextIndex < 0 || nextIndex >= TOUR_PAGE_IDS.length) return;
@@ -2452,31 +2575,110 @@ function goTourCard(nextIndex /*, direction */) {
     return;
   }
 
+  const currentId = TOUR_PAGE_IDS[tourIndex];
+  const nextId = TOUR_PAGE_IDS[nextIndex];
+  const currentSource = document.getElementById(currentId);
+  const nextSource = document.getElementById(nextId);
+  const stage = document.getElementById('tour-stage');
+  if (!currentSource || !nextSource || !stage) return;
+
   tourAnimating = true;
-  const prevEl = document.getElementById(TOUR_PAGE_IDS[tourIndex]);
 
-  // Zoom-out the current page as the ring fades in
-  if (prevEl) {
-    prevEl.classList.remove('zoom-in');
-    void prevEl.offsetWidth;
-    prevEl.classList.add('zoom-out');
-  }
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const CARD_W = 340;
+  const CARD_H = 476;
+  const centerX = (vw - CARD_W) / 2;
+  const centerY = (vh - CARD_H) / 2;
 
-  playTourRingTransition(
-    // Mid: swap the active page
-    () => {
-      tourIndex = nextIndex;
-      showTourPage(nextIndex);
-      const activeEl = document.getElementById(TOUR_PAGE_IDS[nextIndex]);
-      if (activeEl) {
-        activeEl.classList.remove('zoom-in');
-        void activeEl.offsetWidth;
-        activeEl.classList.add('zoom-in');
-      }
-    },
-    // Done: clear flag
-    () => { tourAnimating = false; }
-  );
+  // Remember source positions so we can restore them
+  const curParent = currentSource.parentNode;
+  const curNext = currentSource.nextSibling;
+  const nxtParent = nextSource.parentNode;
+  const nxtNext = nextSource.nextSibling;
+
+  const overlay = buildFlipOverlay(currentSource);
+  const bg = overlay.querySelector('.ace-flip-bg');
+  const wrap = overlay.querySelector('.ace-flip-wrap');
+  const inner = overlay.querySelector('.ace-flip-inner');
+
+  // Start: current page fills the viewport (same as tour-stage), back-facing
+  wrap.style.left = '0px';
+  wrap.style.top = '0px';
+  wrap.style.width = vw + 'px';
+  wrap.style.height = vh + 'px';
+  inner.style.transform = 'rotateY(180deg)';
+  bg.style.opacity = '1';
+  stage.style.opacity = '0';
+
+  void wrap.offsetWidth;
+
+  // PHASE A — Zoom out: fullscreen → centered card (550ms), rotY locked at 180
+  wrap.style.transition = 'left 550ms cubic-bezier(.4,0,.2,1), top 550ms cubic-bezier(.4,0,.2,1), width 550ms cubic-bezier(.4,0,.2,1), height 550ms cubic-bezier(.4,0,.2,1)';
+  requestAnimationFrame(() => {
+    wrap.style.left = centerX + 'px';
+    wrap.style.top = centerY + 'px';
+    wrap.style.width = CARD_W + 'px';
+    wrap.style.height = CARD_H + 'px';
+  });
+
+  setTimeout(() => {
+    // PHASE B — Flip: rotY 180 → 360 (visually the front appears, then rotates
+    // back around to 540 = back facing us again). Swap the back content at
+    // rotY=360 (back hidden, front facing) — the user only ever sees the
+    // front face during the content swap.
+    const flip = inner.animate(
+      [
+        { transform: 'rotateY(180deg)' },
+        { transform: 'rotateY(270deg)' },
+        { transform: 'rotateY(360deg)' },
+        { transform: 'rotateY(450deg)' },
+        { transform: 'rotateY(540deg)' }
+      ],
+      { duration: 1100, fill: 'forwards', easing: 'cubic-bezier(.35,.05,.25,1)' }
+    );
+
+    // Swap back content at ~40% through (rotY ≈ 324°, back is hidden, front shows)
+    setTimeout(() => {
+      const back = overlay.querySelector('.ace-flip-back');
+      if (back.contains(currentSource)) back.removeChild(currentSource);
+      currentSource.classList.remove('tour-page-active');
+      back.appendChild(nextSource);
+      nextSource.classList.add('tour-page-active');
+      nextSource.classList.remove('zoom-in', 'zoom-out');
+    }, 440);
+
+    flip.onfinish = () => {
+      inner.style.transform = 'rotateY(540deg)';
+      try { flip.cancel(); } catch (e) { /* ignore */ }
+
+      // PHASE C — brief pause on the new back
+      setTimeout(() => {
+        // PHASE D — zoom the card back out to fullscreen
+        wrap.style.transition = 'left 750ms cubic-bezier(.3,0,.2,1), top 750ms cubic-bezier(.3,0,.2,1), width 750ms cubic-bezier(.3,0,.2,1), height 750ms cubic-bezier(.3,0,.2,1)';
+        wrap.style.left = '0px';
+        wrap.style.top = '0px';
+        wrap.style.width = vw + 'px';
+        wrap.style.height = vh + 'px';
+
+        setTimeout(() => {
+          // Restore both pages to their original DOM positions
+          tourIndex = nextIndex;
+          const back = overlay.querySelector('.ace-flip-back');
+          if (back.contains(nextSource)) back.removeChild(nextSource);
+          if (curNext) curParent.insertBefore(currentSource, curNext);
+          else curParent.appendChild(currentSource);
+          if (nxtNext) nxtParent.insertBefore(nextSource, nxtNext);
+          else nxtParent.appendChild(nextSource);
+
+          showTourPage(nextIndex);
+          stage.style.opacity = '';
+          overlay.remove();
+          tourAnimating = false;
+        }, 770);
+      }, 400);
+    };
+  }, 580);
 }
 
 function tourNext() {

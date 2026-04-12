@@ -3673,7 +3673,9 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
 .ace-flip-front {
   background: #fff;
   color: #1a1a1a;
-  font-family: Georgia, 'Times New Roman', serif;
+  /* Match the real ring cards (.card uses --font-sans) so flipping the card
+     doesn't visibly change fonts mid-animation. */
+  font-family: var(--font-sans);
   border-radius: 8px;
   box-shadow:
     0 24px 60px rgba(0, 0, 0, 0.22),
@@ -3686,6 +3688,7 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
   font-size: clamp(14px, 2vw, 26px);
   font-weight: 700;
   line-height: 1;
+  font-family: var(--font-sans);
 }
 .ace-flip-front .ace-rank-tl { top: 8%; left: 8%; }
 .ace-flip-front .ace-rank-br { bottom: 8%; right: 8%; transform: rotate(180deg); }
@@ -3696,18 +3699,34 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
   transform: translate(-50%, -50%);
   font-size: clamp(48px, 12vw, 120px);
   color: #1a1a1a;
+  font-family: var(--font-sans);
 }
 .ace-flip-back {
   transform: rotateY(180deg);
   background: #faf9f6;
+  /* Clip the rotating content to the back-face rectangle so the content
+     appears to live INSIDE the card, even while it rotates mid-turn. */
+  overflow: hidden;
+}
+/* The tour content lives inside this rotator. While the card is portrait the
+   rotator is oriented -90° (text reads vertically). When the card "turns
+   horizontal" (portrait → landscape) we simultaneously animate the rotator
+   back to 0° so the text ends up upright on a landscape card. */
+.ace-flip-back-rotator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform-origin: center center;
+  transform: translate(-50%, -50%) rotate(0deg);
+  background: #faf9f6;
   /* Match .tour-pages layout so the handoff at fullscreen is pixel-identical */
   padding-top: 80px;
-  /* The back face holds the real tour page DOM while the overlay is alive. */
+  will-change: transform, width, height;
 }
-/* The embedded tour page is a direct child of .ace-flip-back. Force it visible
-   and override the snap-reveal opacity pattern (which depends on scroll detection
-   that never fires inside the overlay). */
-.ace-flip-back > .ls {
+/* The embedded tour page is a direct child of the rotator. Force it visible
+   and override the snap-reveal opacity pattern (which depends on scroll
+   detection that never fires inside the overlay). */
+.ace-flip-back-rotator > .ls {
   min-height: 100% !important;
   height: 100% !important;
   overflow: hidden !important;

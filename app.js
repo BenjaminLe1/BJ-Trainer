@@ -2331,21 +2331,33 @@ function buildFlipOverlay(tourSource) {
           <span class="ace-suit">♠</span>
           <span class="ace-rank-br">A</span>
         </div>
-        <div class="ace-flip-back"></div>
+        <div class="ace-flip-back">
+          <div class="ace-flip-back-rotator"></div>
+        </div>
       </div>
     </div>
   `;
   document.body.appendChild(overlay);
-  const back = overlay.querySelector('.ace-flip-back');
-  back.appendChild(tourSource);
+  const rotator = overlay.querySelector('.ace-flip-back-rotator');
+  rotator.appendChild(tourSource);
   tourSource.classList.add('tour-page-active');
   tourSource.classList.remove('zoom-in', 'zoom-out');
   return overlay;
 }
 
-// Cinematic reveal: ring Ace → grow card → flip → pause → zoom to fullscreen.
-// The real tour page DOM lives on the back of the card the whole time, so the
-// final handoff to the tour stage is an invisible same-node restore.
+// Helper: snap the back-content rotator to a given size + 2D rotation.
+// The rotator is always absolutely positioned and centered via translate(-50%).
+function setRotatorState(rotator, w, h, angleDeg) {
+  rotator.style.width = w + 'px';
+  rotator.style.height = h + 'px';
+  rotator.style.transform = 'translate(-50%, -50%) rotate(' + angleDeg + 'deg)';
+}
+
+// Cinematic reveal: ring Ace → grow portrait card → flip to reveal vertical
+// text on the back → turn card horizontal (text rotates upright with it) →
+// seamless zoom to fullscreen. The real tour page DOM lives inside the back
+// rotator the whole time, so the final handoff is an invisible same-node
+// restore.
 function flipAceIntoContent() {
   return new Promise(resolve => {
     const aceEl = document.querySelector('.hero-card-ring .rc-card:nth-child(1)');
@@ -2361,15 +2373,20 @@ function flipAceIntoContent() {
     const sourceParent = source.parentNode;
     const sourceNext = source.nextSibling;
 
-    // Fixed "card viewing size" for the flip phase — big enough that the flip
-    // rotation is clearly visible.
+    // Portrait "card viewing size" for flip phase, landscape = swapped dims
+    // so the rotator naturally fits inside both orientations (w×h rotated
+    // 90° ⇔ h×w, so a 476×340 rotator fits perfectly inside both a 340×476
+    // portrait card and a 476×340 landscape card).
     const CARD_W = 340;
     const CARD_H = 476;
+    const LAND_W = CARD_H; // 476
+    const LAND_H = CARD_W; // 340
 
     const overlay = buildFlipOverlay(source);
     const bg = overlay.querySelector('.ace-flip-bg');
     const wrap = overlay.querySelector('.ace-flip-wrap');
     const inner = overlay.querySelector('.ace-flip-inner');
+    const rotator = overlay.querySelector('.ace-flip-back-rotator');
 
     // Start: wrap sized & positioned exactly over the Ace
     wrap.style.width = aceRect.width + 'px';
@@ -2379,61 +2396,84 @@ function flipAceIntoContent() {
     inner.style.transform = 'rotateY(0deg)';
     bg.style.opacity = '0';
 
+    // Rotator pre-set to the "vertical text inside portrait card" state.
+    // The back face has backface-visibility: hidden, so the rotator isn't
+    // actually visible yet during phase A (rotY=0 shows front only).
+    setRotatorState(rotator, LAND_W, LAND_H, -90);
+
     // Hide the real hero ring now that the overlay has replaced it
     ringWrap.style.opacity = '0';
 
     void wrap.offsetWidth;
 
-    // PHASE A — Grow: shift from Ace rect to a centered card-size (550ms)
-    const growCenterX = (vw - CARD_W) / 2;
-    const growCenterY = (vh - CARD_H) / 2;
-    wrap.style.transition = 'left 550ms cubic-bezier(.4,0,.2,1), top 550ms cubic-bezier(.4,0,.2,1), width 550ms cubic-bezier(.4,0,.2,1), height 550ms cubic-bezier(.4,0,.2,1)';
-    bg.style.transition = 'opacity 550ms ease';
+    // PHASE A — Grow: Ace rect → centered portrait card (500ms)
+    const portX = (vw - CARD_W) / 2;
+    const portY = (vh - CARD_H) / 2;
+    wrap.style.transition = 'left 500ms cubic-bezier(.4,0,.2,1), top 500ms cubic-bezier(.4,0,.2,1), width 500ms cubic-bezier(.4,0,.2,1), height 500ms cubic-bezier(.4,0,.2,1)';
+    bg.style.transition = 'opacity 500ms ease';
     requestAnimationFrame(() => {
-      wrap.style.left = growCenterX + 'px';
-      wrap.style.top = growCenterY + 'px';
+      wrap.style.left = portX + 'px';
+      wrap.style.top = portY + 'px';
       wrap.style.width = CARD_W + 'px';
       wrap.style.height = CARD_H + 'px';
       bg.style.opacity = '1';
     });
 
     setTimeout(() => {
-      // PHASE B — Flip: rotY 0 → 90 → 180 at center-card size (850ms)
-      // Three keyframes force the browser to interpolate explicitly along Y
-      // instead of decomposing the 180° matrix into an ambiguous axis.
+      // PHASE B — Flip rotY 0 → 180 at portrait size (720ms)
+      // User now sees: vertical text (rotator rotated -90°) on a portrait card.
       const flipAnim = inner.animate(
         [
           { transform: 'rotateY(0deg)' },
           { transform: 'rotateY(90deg)' },
           { transform: 'rotateY(180deg)' }
         ],
-        { duration: 850, fill: 'forwards', easing: 'cubic-bezier(.5,.1,.3,1)' }
+        { duration: 720, fill: 'forwards', easing: 'cubic-bezier(.5,.1,.3,1)' }
       );
       flipAnim.onfinish = () => {
-        // Bake the end state into inline style so nothing snaps back
         inner.style.transform = 'rotateY(180deg)';
         try { flipAnim.cancel(); } catch (e) { /* ignore */ }
 
-        // PHASE C — Pause on flipped card
+        // PHASE C — Turn horizontal (650ms):
+        //   wrap dims portrait 340×476 → landscape 476×340  AND
+        //   rotator rotate(-90°) → rotate(0°)
+        // Combined, the card appears to physically rotate 90° clockwise: it
+        // widens into landscape while the text inside unwinds to upright.
+        const landX = (vw - LAND_W) / 2;
+        const landY = (vh - LAND_H) / 2;
+        wrap.style.transition = 'left 650ms cubic-bezier(.4,0,.2,1), top 650ms cubic-bezier(.4,0,.2,1), width 650ms cubic-bezier(.4,0,.2,1), height 650ms cubic-bezier(.4,0,.2,1)';
+        rotator.style.transition = 'transform 650ms cubic-bezier(.4,0,.2,1)';
+        requestAnimationFrame(() => {
+          wrap.style.left = landX + 'px';
+          wrap.style.top = landY + 'px';
+          wrap.style.width = LAND_W + 'px';
+          wrap.style.height = LAND_H + 'px';
+          rotator.style.transform = 'translate(-50%, -50%) rotate(0deg)';
+        });
+
         setTimeout(() => {
-          // PHASE D — Zoom the card frame out to fullscreen (850ms).
-          // We morph the wrap's position/size, not transform — so the tour page
-          // content inside reflows to viewport dimensions naturally.
-          wrap.style.transition = 'left 850ms cubic-bezier(.3,0,.2,1), top 850ms cubic-bezier(.3,0,.2,1), width 850ms cubic-bezier(.3,0,.2,1), height 850ms cubic-bezier(.3,0,.2,1)';
-          wrap.style.left = '0px';
-          wrap.style.top = '0px';
-          wrap.style.width = vw + 'px';
-          wrap.style.height = vh + 'px';
+          // PHASE D — Seamless zoom landscape → fullscreen (680ms). The
+          // rotator grows with the wrap so the content fills the viewport.
+          wrap.style.transition = 'left 680ms cubic-bezier(.3,0,.2,1), top 680ms cubic-bezier(.3,0,.2,1), width 680ms cubic-bezier(.3,0,.2,1), height 680ms cubic-bezier(.3,0,.2,1)';
+          rotator.style.transition = 'width 680ms cubic-bezier(.3,0,.2,1), height 680ms cubic-bezier(.3,0,.2,1)';
+          requestAnimationFrame(() => {
+            wrap.style.left = '0px';
+            wrap.style.top = '0px';
+            wrap.style.width = vw + 'px';
+            wrap.style.height = vh + 'px';
+            rotator.style.width = vw + 'px';
+            rotator.style.height = vh + 'px';
+          });
 
           setTimeout(() => {
             // Restore tour page to its original slot — same DOM node, no flicker
             if (sourceNext) sourceParent.insertBefore(source, sourceNext);
             else sourceParent.appendChild(source);
             resolve(overlay);
-          }, 870);
-        }, 550);
+          }, 700);
+        }, 670);
       };
-    }, 580);
+    }, 530);
   });
 }
 
@@ -2562,9 +2602,18 @@ function playTourRingTransition(onMid, onDone) {
   }, 3200);
 }
 
-// Navigate to a different chapter: zoom out of current → flip → zoom into new.
-// Uses the same flip-overlay as the reveal, but starts from fullscreen and the
-// card back swaps its content during the flip's edge-on moment.
+// Navigate to a different chapter:
+//   STEP 1 — Zoom out: fullscreen horizontal → portrait card AND rotator
+//            rotates 0° → -90° (text turns vertical). Card shrinks and text
+//            rotates inside it in one synchronized motion.
+//   STEP 2 — Spin right: rotY 180 → 540 (full 360° turn). At rotY=360 the
+//            front Ace face is visible and the back is hidden — we swap the
+//            back content there invisibly, so the new chapter is on the back
+//            when it rotates into view again at rotY=540.
+//   STEP 3 — Turn horizontal: wrap portrait → landscape AND rotator rotate
+//            -90° → 0°. Same as reveal's Phase C — card physically turns,
+//            text unwinds upright.
+//   STEP 4 — Seamless zoom landscape → fullscreen. Same as reveal's Phase D.
 function goTourCard(nextIndex /*, direction */) {
   if (tourAnimating) return;
   if (nextIndex < 0 || nextIndex >= TOUR_PAGE_IDS.length) return;
@@ -2588,8 +2637,12 @@ function goTourCard(nextIndex /*, direction */) {
   const vh = window.innerHeight;
   const CARD_W = 340;
   const CARD_H = 476;
-  const centerX = (vw - CARD_W) / 2;
-  const centerY = (vh - CARD_H) / 2;
+  const LAND_W = CARD_H; // 476
+  const LAND_H = CARD_W; // 340
+  const portX = (vw - CARD_W) / 2;
+  const portY = (vh - CARD_H) / 2;
+  const landX = (vw - LAND_W) / 2;
+  const landY = (vh - LAND_H) / 2;
 
   // Remember source positions so we can restore them
   const curParent = currentSource.parentNode;
@@ -2601,8 +2654,9 @@ function goTourCard(nextIndex /*, direction */) {
   const bg = overlay.querySelector('.ace-flip-bg');
   const wrap = overlay.querySelector('.ace-flip-wrap');
   const inner = overlay.querySelector('.ace-flip-inner');
+  const rotator = overlay.querySelector('.ace-flip-back-rotator');
 
-  // Start: current page fills the viewport (same as tour-stage), back-facing
+  // Start: wrap fills viewport, inner back-facing, rotator full-size horizontal
   wrap.style.left = '0px';
   wrap.style.top = '0px';
   wrap.style.width = vw + 'px';
@@ -2610,24 +2664,31 @@ function goTourCard(nextIndex /*, direction */) {
   inner.style.transform = 'rotateY(180deg)';
   bg.style.opacity = '1';
   stage.style.opacity = '0';
+  setRotatorState(rotator, vw, vh, 0);
 
   void wrap.offsetWidth;
 
-  // PHASE A — Zoom out: fullscreen → centered card (550ms), rotY locked at 180
-  wrap.style.transition = 'left 550ms cubic-bezier(.4,0,.2,1), top 550ms cubic-bezier(.4,0,.2,1), width 550ms cubic-bezier(.4,0,.2,1), height 550ms cubic-bezier(.4,0,.2,1)';
+  // STEP 1 — Zoom out: fullscreen horizontal → portrait vertical (620ms).
+  // Wrap and rotator animate simultaneously; the rotator shrinks from full
+  // viewport into LAND_W×LAND_H and rotates 0°→-90°, so the text smoothly
+  // turns vertical as the card shrinks into portrait.
+  wrap.style.transition = 'left 620ms cubic-bezier(.4,0,.2,1), top 620ms cubic-bezier(.4,0,.2,1), width 620ms cubic-bezier(.4,0,.2,1), height 620ms cubic-bezier(.4,0,.2,1)';
+  rotator.style.transition = 'transform 620ms cubic-bezier(.4,0,.2,1), width 620ms cubic-bezier(.4,0,.2,1), height 620ms cubic-bezier(.4,0,.2,1)';
   requestAnimationFrame(() => {
-    wrap.style.left = centerX + 'px';
-    wrap.style.top = centerY + 'px';
+    wrap.style.left = portX + 'px';
+    wrap.style.top = portY + 'px';
     wrap.style.width = CARD_W + 'px';
     wrap.style.height = CARD_H + 'px';
+    rotator.style.width = LAND_W + 'px';
+    rotator.style.height = LAND_H + 'px';
+    rotator.style.transform = 'translate(-50%, -50%) rotate(-90deg)';
   });
 
   setTimeout(() => {
-    // PHASE B — Flip: rotY 180 → 360 (visually the front appears, then rotates
-    // back around to 540 = back facing us again). Swap the back content at
-    // rotY=360 (back hidden, front facing) — the user only ever sees the
-    // front face during the content swap.
-    const flip = inner.animate(
+    // STEP 2 — Spin right: rotY 180 → 540 (full 360° turn, 900ms).
+    // Mid-point rotY=360 shows the Ace front face; back is hidden here via
+    // backface-visibility, so we can swap the rotator's content invisibly.
+    const spin = inner.animate(
       [
         { transform: 'rotateY(180deg)' },
         { transform: 'rotateY(270deg)' },
@@ -2635,37 +2696,50 @@ function goTourCard(nextIndex /*, direction */) {
         { transform: 'rotateY(450deg)' },
         { transform: 'rotateY(540deg)' }
       ],
-      { duration: 1100, fill: 'forwards', easing: 'cubic-bezier(.35,.05,.25,1)' }
+      { duration: 900, fill: 'forwards', easing: 'cubic-bezier(.35,.05,.25,1)' }
     );
 
-    // Swap back content at ~40% through (rotY ≈ 324°, back is hidden, front shows)
+    // Swap rotator content at ~50% (rotY = 360, front facing, back hidden)
     setTimeout(() => {
-      const back = overlay.querySelector('.ace-flip-back');
-      if (back.contains(currentSource)) back.removeChild(currentSource);
+      if (rotator.contains(currentSource)) rotator.removeChild(currentSource);
       currentSource.classList.remove('tour-page-active');
-      back.appendChild(nextSource);
+      rotator.appendChild(nextSource);
       nextSource.classList.add('tour-page-active');
       nextSource.classList.remove('zoom-in', 'zoom-out');
-    }, 440);
+    }, 450);
 
-    flip.onfinish = () => {
+    spin.onfinish = () => {
       inner.style.transform = 'rotateY(540deg)';
-      try { flip.cancel(); } catch (e) { /* ignore */ }
+      try { spin.cancel(); } catch (e) { /* ignore */ }
 
-      // PHASE C — brief pause on the new back
+      // STEP 3 — Turn horizontal (650ms): same as reveal's Phase C.
+      wrap.style.transition = 'left 650ms cubic-bezier(.4,0,.2,1), top 650ms cubic-bezier(.4,0,.2,1), width 650ms cubic-bezier(.4,0,.2,1), height 650ms cubic-bezier(.4,0,.2,1)';
+      rotator.style.transition = 'transform 650ms cubic-bezier(.4,0,.2,1)';
+      requestAnimationFrame(() => {
+        wrap.style.left = landX + 'px';
+        wrap.style.top = landY + 'px';
+        wrap.style.width = LAND_W + 'px';
+        wrap.style.height = LAND_H + 'px';
+        rotator.style.transform = 'translate(-50%, -50%) rotate(0deg)';
+      });
+
       setTimeout(() => {
-        // PHASE D — zoom the card back out to fullscreen
-        wrap.style.transition = 'left 750ms cubic-bezier(.3,0,.2,1), top 750ms cubic-bezier(.3,0,.2,1), width 750ms cubic-bezier(.3,0,.2,1), height 750ms cubic-bezier(.3,0,.2,1)';
-        wrap.style.left = '0px';
-        wrap.style.top = '0px';
-        wrap.style.width = vw + 'px';
-        wrap.style.height = vh + 'px';
+        // STEP 4 — Seamless zoom landscape → fullscreen (680ms): same as reveal's Phase D.
+        wrap.style.transition = 'left 680ms cubic-bezier(.3,0,.2,1), top 680ms cubic-bezier(.3,0,.2,1), width 680ms cubic-bezier(.3,0,.2,1), height 680ms cubic-bezier(.3,0,.2,1)';
+        rotator.style.transition = 'width 680ms cubic-bezier(.3,0,.2,1), height 680ms cubic-bezier(.3,0,.2,1)';
+        requestAnimationFrame(() => {
+          wrap.style.left = '0px';
+          wrap.style.top = '0px';
+          wrap.style.width = vw + 'px';
+          wrap.style.height = vh + 'px';
+          rotator.style.width = vw + 'px';
+          rotator.style.height = vh + 'px';
+        });
 
         setTimeout(() => {
           // Restore both pages to their original DOM positions
           tourIndex = nextIndex;
-          const back = overlay.querySelector('.ace-flip-back');
-          if (back.contains(nextSource)) back.removeChild(nextSource);
+          if (rotator.contains(nextSource)) rotator.removeChild(nextSource);
           if (curNext) curParent.insertBefore(currentSource, curNext);
           else curParent.appendChild(currentSource);
           if (nxtNext) nxtParent.insertBefore(nextSource, nxtNext);
@@ -2675,10 +2749,10 @@ function goTourCard(nextIndex /*, direction */) {
           stage.style.opacity = '';
           overlay.remove();
           tourAnimating = false;
-        }, 770);
-      }, 400);
+        }, 700);
+      }, 670);
     };
-  }, 580);
+  }, 650);
 }
 
 function tourNext() {

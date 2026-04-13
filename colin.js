@@ -17,6 +17,7 @@
   let answersSinceLastMessage = 0;
   let hasGreetedThisLoad = false; // reset on every page load, not per session
   const ANSWERS_THROTTLE = 5; // fire Colin every N correct answers
+  // feedbackToastTimer removed — bubbles now persist until next answer
 
   // ── Colin face SVG ────────────────────────────────────────────
   function colinFaceSVG(size) {
@@ -59,6 +60,7 @@
     widget.id = 'colin-widget';
     widget.className = 'colin-hidden';
     widget.innerHTML = `
+      <div id="colin-feedback-toast" class="colin-feedback-toast colin-toast-hidden" aria-live="polite"></div>
       <button id="colin-bubble" aria-label="Chat with Colin">
         <span class="colin-bubble-avatar">${colinFaceSVG(64)}</span>
         <span class="colin-bubble-badge hidden" id="colin-unread">1</span>
@@ -89,6 +91,13 @@
     document.getElementById('colin-input').addEventListener('keydown', e => {
       if (e.key === 'Enter') handleUserSend();
     });
+
+    // Close panel when clicking outside the widget
+    document.addEventListener('click', e => {
+      if (isPanelOpen && !document.getElementById('colin-widget').contains(e.target)) {
+        closePanel();
+      }
+    });
   }
 
   // ── Panel open/close ──────────────────────────────────────────
@@ -100,6 +109,8 @@
     isPanelOpen = true;
     const panel = document.getElementById('colin-panel');
     if (panel) panel.classList.remove('colin-panel-closed');
+    const widget = document.getElementById('colin-widget');
+    if (widget) widget.classList.add('colin-panel-is-open');
     clearUnread();
     scrollMessages();
   }
@@ -108,6 +119,8 @@
     isPanelOpen = false;
     const panel = document.getElementById('colin-panel');
     if (panel) panel.classList.add('colin-panel-closed');
+    const widget = document.getElementById('colin-widget');
+    if (widget) widget.classList.remove('colin-panel-is-open');
   }
 
   // ── Unread badge ──────────────────────────────────────────────
@@ -185,11 +198,29 @@
     if (messages) setTimeout(() => { messages.scrollTop = messages.scrollHeight; }, 50);
   }
 
+  // ── Feedback toast (inline verdict, no panel needed) ─────────
+  function showFeedbackToast(text) {
+    const toast = document.getElementById('colin-feedback-toast');
+    if (!toast) return;
+    // Detect correct vs wrong for styling
+    const isWrong = /^wrong/i.test(text.trim());
+    toast.className = 'colin-feedback-toast' + (isWrong ? ' colin-toast-wrong' : ' colin-toast-correct');
+    toast.textContent = text;
+    // No auto-hide — bubble stays until the next answer replaces it
+  }
+
+  function hideFeedbackToast() {
+    const toast = document.getElementById('colin-feedback-toast');
+    if (toast) toast.classList.add('colin-toast-hidden');
+  }
+
   // ── Server call ───────────────────────────────────────────────
-  async function sendToServer(event, payload, userMessage = null) {
+  // showAsToast: true  → feedback appears inline (drill answers)
+  //             false → append to chat panel (greetings, manual questions)
+  async function sendToServer(event, payload, userMessage = null, showAsToast = false) {
     if (isAwaitingResponse) return;
     isAwaitingResponse = true;
-    showTyping();
+    if (!showAsToast) showTyping();
 
     try {
       const res = await fetch(COLIN_API, {
@@ -202,10 +233,19 @@
       const data = await res.json();
 
       hideTyping();
-      appendMessage(data.reply, 'colin');
-      if (data.action) appendActionChip(data.action);
 
-      if (!isPanelOpen) incrementUnread();
+      if (showAsToast) {
+        // Show verdict inline on screen; also save to chat history silently
+        showFeedbackToast(data.reply);
+        appendMessage(data.reply, 'colin'); // keeps history for when panel is opened
+        if (data.action) appendActionChip(data.action);
+        // Show unread badge so user knows there's a message waiting in the panel
+        if (!isPanelOpen) incrementUnread();
+      } else {
+        appendMessage(data.reply, 'colin');
+        if (data.action) appendActionChip(data.action);
+        if (!isPanelOpen) incrementUnread();
+      }
     } catch (e) {
       hideTyping();
       // Colin is non-critical — fail silently
@@ -241,18 +281,33 @@
     if (fn) { closePanel(); fn(); }
   }
 
-  // ── View visibility sync ──────────────────────────────────────
+  // ── View visibility + position sync ──────────────────────────
   const COLIN_ACTIVE_VIEWS = ['pipeline', 'skill-trainer', 'dashboard'];
+
+  function isViewVisible(id) {
+    const el = document.getElementById(id);
+    return el && !el.classList.contains('hidden') && el.style.display !== 'none';
+  }
 
   function syncWidgetVisibility() {
     const widget = document.getElementById('colin-widget');
     if (!widget) return;
-    const isActive = COLIN_ACTIVE_VIEWS.some(viewId => {
-      const el = document.getElementById(viewId);
-      return el && !el.classList.contains('hidden') && el.style.display !== 'none';
-    });
+    const isActive = COLIN_ACTIVE_VIEWS.some(isViewVisible);
     if (isActive) widget.classList.remove('colin-hidden');
     else widget.classList.add('colin-hidden');
+    syncWidgetPosition();
+  }
+
+  // Trainer mode: icon moves to left-center with speech bubble layout.
+  // Lobby mode (pipeline/dashboard): icon stays bottom-left with chat panel.
+  function syncWidgetPosition() {
+    const widget = document.getElementById('colin-widget');
+    if (!widget) return;
+    if (isViewVisible('skill-trainer')) {
+      widget.classList.add('colin-trainer-mode');
+    } else {
+      widget.classList.remove('colin-trainer-mode');
+    }
   }
 
   // ── Colin event listener ──────────────────────────────────────
@@ -284,13 +339,15 @@
     }
 
     if (event === 'trainer_enter') {
-      sendToServer(event, payload);
+      closePanel(); // always close chat panel when entering a trainer
+      hideFeedbackToast();
+      sendToServer(event, payload, null, true /* showAsToast = speech bubble */);
       return;
     }
 
     if (event === 'trainer_answer') {
-      openPanel();
-      sendToServer(event, payload);
+      hideFeedbackToast(); // clear previous so the new verdict feels fresh
+      sendToServer(event, payload, null, true /* showAsToast */);
       return;
     }
   });

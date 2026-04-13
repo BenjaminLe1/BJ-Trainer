@@ -42,12 +42,10 @@ The app has these trainers:
 
 Rules:
 - You ARE the feedback system. There is no other feedback box — your reply IS the verdict.
-- Always open your reply with the verdict: start with "Correct." or "Wrong." so the player knows immediately.
-- Maximum 2-3 sentences. Never be verbose.
+- For CORRECT answers: reply with 1–3 words ONLY. No punctuation needed. Examples: "Nice", "Perfect", "Sharp", "Exactly", "Yes"
+- For WRONG answers: reply "Wrong —" then the reason in 8 words or fewer. One tight line, no extra sentences.
 - When suggesting a redirect, include [ACTION:redirect:trainer-id] at the END of your message on its own line. Valid IDs: basic-strategy, keep-counting, deviations, true-count, bet-spread, full-training, dashboard, pipeline
-- On wrong answers, explain WHY it was wrong using blackjack reasoning. Be specific.
-- On correct answers, give brief confirmation plus one useful insight or encouragement.
-- On the dashboard, assess the weakest skill first and give one concrete next step.
+- On the dashboard, assess the weakest skill first and give one concrete next step (2 sentences max).
 - A player is casino-ready when: Basic Strategy >95%, Running Count >90%, True Count within ±0.5 consistently, at least one deviation set memorized.
 - Stay focused on blackjack training. You are not a general chatbot.`;
 
@@ -61,14 +59,18 @@ function buildUserMessage(event, payload, userMessage) {
           .map(([k, v]) => `${k}: ${v.total > 0 ? Math.round((v.correct / v.total) * 100) : 'untrained'}%`)
           .join(', ')
       : 'no stats yet (new user)';
-    return `User arrived at the Training Pipeline. Username: ${payload.user || 'Guest'}. Sessions: ${payload.sessions || 0}. Stats: ${statsStr}. Greet them and give a one-sentence assessment of where they should focus. If it's their first time (no stats), give a warm welcome and brief orientation.`;
+    const isNew = !payload.stats || Object.values(payload.stats).every(v => v.total === 0);
+    if (isNew) {
+      return `New user just arrived. Your reply MUST start with this exact sentence: "Hi, I'm Colin — I'll be your personal card counting coach." Then add exactly 1–2 more short sentences: mention you'll give live feedback on every question and they can ask you anything, then tell them to start with Basic Strategy. Do not deviate from this structure.`;
+    }
+    return `Returning user "${payload.user || 'Guest'}" is back. Sessions: ${payload.sessions || 0}. Stats: ${statsStr}. Reply in 1–2 short sentences: greet them by name if available, then tell them exactly what to work on next based on their weakest stat. Be direct, not generic.`;
   }
 
   if (event === 'trainer_enter') {
     const s = payload.stats || { correct: 0, total: 0 };
     const pct = s.total > 0 ? Math.round((s.correct / s.total) * 100) : null;
     const statsStr = pct !== null ? `${s.correct}/${s.total} (${pct}%)` : 'no attempts yet';
-    return `User entered the ${payload.skillName} trainer. Their current stats for this skill: ${statsStr}. Acknowledge this briefly and set expectations for the session in 1-2 sentences.`;
+    return `User entered the ${payload.skillName} trainer. Stats: ${statsStr}. One short sentence — like a coach saying "let's go" with one specific focus for this session.`;
   }
 
   if (event === 'trainer_answer') {
@@ -76,45 +78,45 @@ function buildUserMessage(event, payload, userMessage) {
 
     if (skillId === 'basic-strategy') {
       if (!isCorrect) {
-        return `Basic Strategy — Wrong answer. Hand: ${payload.handLabel} vs dealer ${payload.dealerLabel}. Player chose: ${payload.chosen}. Correct action: ${payload.correctAction}. Streak reset. Explain the correct reasoning briefly using blackjack strategy logic.`;
+        return `Basic Strategy wrong. Hand: ${payload.handLabel} vs dealer ${payload.dealerLabel}. Chose: ${payload.chosen}. Correct: ${payload.correctAction}. Reply "Wrong —" + reason in 8 words or fewer.`;
       }
-      return `Basic Strategy — Correct. Streak: ${streak}. Hand: ${payload.handLabel} vs dealer ${payload.dealerLabel}. Chose: ${payload.chosen}. Give brief encouragement or a quick tip if relevant.`;
+      return `Basic Strategy correct. Reply 1–3 words of praise only.`;
     }
 
     if (skillId === 'keep-counting') {
       if (!isCorrect) {
-        return `Running Count — Wrong. Player submitted count: ${payload.playerCount}. Correct count: ${payload.correctCount}. Cards were: ${payload.cardBreakdown ? payload.cardBreakdown.map(c => `${c.rank}(${c.value > 0 ? '+' : ''}${c.value})`).join(', ') : 'not provided'}. Explain what they likely miscounted.`;
+        return `Running Count wrong. Submitted: ${payload.playerCount}. Correct: ${payload.correctCount}. Cards: ${payload.cardBreakdown ? payload.cardBreakdown.map(c => `${c.rank}(${c.value > 0 ? '+' : ''}${c.value})`).join(', ') : 'not provided'}. Reply "Wrong —" + reason in 8 words or fewer.`;
       }
-      return `Running Count — Correct. Streak: ${streak}. Brief encouragement.`;
+      return `Running Count correct. Reply 1–3 words of praise only.`;
     }
 
     if (skillId === 'deviations') {
       if (!isCorrect) {
-        const shouldStr = payload.shouldDeviate ? 'SHOULD deviate' : 'should NOT deviate';
-        return `Deviations — Wrong. Scenario: ${payload.hand} vs ${payload.upcard}, True Count: ${payload.trueCount}. Player chose: ${payload.chosen}. The correct play is ${payload.correctAction} (player ${shouldStr} here). Explain why this deviation applies or doesn't.`;
+        const shouldStr = payload.shouldDeviate ? 'should deviate' : 'should NOT deviate';
+        return `Deviations wrong. ${payload.hand} vs ${payload.upcard}, TC: ${payload.trueCount}. Chose: ${payload.chosen}. Correct: ${payload.correctAction} (${shouldStr}). Reply "Wrong —" + reason in 8 words or fewer.`;
       }
-      return `Deviations — Correct. Streak: ${streak}. Brief positive feedback.`;
+      return `Deviations correct. Reply 1–3 words of praise only.`;
     }
 
     if (skillId === 'true-count') {
       if (!isCorrect) {
-        return `True Count — Wrong. Player answered: ${payload.playerAnswer}. Correct answer: ${payload.correctAnswer}. Explain the calculation briefly (RC / decks remaining, round to nearest 0.5).`;
+        return `True Count wrong. Answered: ${payload.playerAnswer}. Correct: ${payload.correctAnswer}. Reply "Wrong —" + reason in 8 words or fewer.`;
       }
-      return `True Count — Correct. Streak: ${streak}. Brief encouragement.`;
+      return `True Count correct. Reply 1–3 words of praise only.`;
     }
 
     if (skillId === 'full-training') {
-      const playStr  = payload.playWasCorrect  ? 'correct' : `WRONG (chose ${payload.chosenPlay}, correct was ${payload.correctPlay})`;
-      const countStr = payload.countWasCorrect ? 'correct' : `WRONG (submitted ${payload.playerCount}, correct was ${payload.runningCount})`;
+      const playStr  = payload.playWasCorrect  ? 'correct' : `WRONG (chose ${payload.chosenPlay}, correct ${payload.correctPlay})`;
+      const countStr = payload.countWasCorrect ? 'correct' : `WRONG (submitted ${payload.playerCount}, correct ${payload.runningCount})`;
       if (!isCorrect) {
-        return `Full Training — Round result: play was ${playStr}, count was ${countStr}. Streak: ${streak}. Bankroll: $${payload.bankroll}. Give targeted feedback on what went wrong.`;
+        return `Full Training: play ${playStr}, count ${countStr}. Reply "Wrong —" + targeted reason in 8 words or fewer.`;
       }
-      return `Full Training — Round correct. Streak: ${streak}. Bankroll: $${payload.bankroll}. Brief encouragement.`;
+      return `Full Training correct. Reply 1–3 words of praise only.`;
     }
 
     // Generic fallback
-    if (!isCorrect) return `${skillId} — Wrong answer. Streak reset. Give brief corrective feedback.`;
-    return `${skillId} — Correct. Streak: ${streak}. Brief encouragement.`;
+    if (!isCorrect) return `${skillId} wrong. Reply "Wrong —" + reason in 8 words or fewer.`;
+    return `${skillId} correct. Reply 1–3 words of praise only.`;
   }
 
   if (event === 'dashboard_load') {

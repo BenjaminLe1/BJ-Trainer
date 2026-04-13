@@ -3018,6 +3018,7 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
   position: fixed;
   bottom: 1.5rem;
   right: 1.5rem;
+  left: auto;
   z-index: 300;
   display: flex;
   flex-direction: column;
@@ -3027,6 +3028,105 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
 }
 #colin-widget.colin-hidden { display: none; }
 #colin-widget > * { pointer-events: auto; }
+
+/* ── Trainer mode: top center, row layout (icon + speech bubble) ── */
+#colin-widget.colin-trainer-mode {
+  bottom: auto;
+  right: auto;
+  left: 50%;
+  top: 3.5rem;
+  transform: translateX(-50%);
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: calc(100vw - 2rem);
+}
+/* Icon first, speech bubble second */
+#colin-widget.colin-trainer-mode #colin-bubble        { order: 1; }
+#colin-widget.colin-trainer-mode .colin-feedback-toast { order: 2; }
+/* Panel drops below icon */
+#colin-widget.colin-trainer-mode #colin-panel {
+  order: 3;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: calc(100% + 0.6rem);
+  bottom: auto;
+  transform-origin: top center;
+}
+#colin-widget.colin-trainer-mode #colin-panel.colin-panel-closed {
+  transform: translateX(-50%) scale(0.85) translateY(-8px);
+}
+
+/* ── Speech bubble tail in trainer mode — tail points UP-LEFT toward icon ── */
+#colin-widget.colin-trainer-mode .colin-feedback-toast {
+  position: relative;
+  max-width: min(220px, calc(100vw - 100px));
+  word-break: break-word;
+}
+#colin-widget.colin-trainer-mode .colin-feedback-toast::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 7px solid transparent;
+}
+#colin-widget.colin-trainer-mode .colin-feedback-toast.colin-toast-correct::before {
+  border-right-color: #1a3d22;
+}
+#colin-widget.colin-trainer-mode .colin-feedback-toast.colin-toast-wrong::before {
+  border-right-color: #3d1a1a;
+}
+/* Slide up instead of down when appearing in trainer mode */
+#colin-widget.colin-trainer-mode .colin-feedback-toast.colin-toast-hidden {
+  transform: translateY(-4px);
+  opacity: 0;
+}
+#colin-widget.colin-trainer-mode .colin-feedback-toast:not(.colin-toast-hidden) {
+  transform: translateY(0);
+}
+
+/* ── Panel open: bubble fades out — it "moved" into the panel header ── */
+#colin-widget.colin-panel-is-open #colin-bubble {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+#colin-widget.colin-trainer-mode.colin-panel-is-open #colin-bubble {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Inline feedback toast — shows verdict above the Colin bubble without
+   requiring the panel to open. Auto-hides after a few seconds. */
+.colin-feedback-toast {
+  max-width: 240px;
+  padding: 0.55rem 0.85rem;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  line-height: 1.35;
+  pointer-events: none;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.colin-feedback-toast.colin-toast-correct {
+  background: #1a3d22;
+  color: #6ee08a;
+  border: 1px solid rgba(110, 224, 138, 0.25);
+}
+.colin-feedback-toast.colin-toast-wrong {
+  background: #3d1a1a;
+  color: #f08080;
+  border: 1px solid rgba(240, 128, 128, 0.25);
+}
+.colin-feedback-toast.colin-toast-hidden {
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+}
 
 /* Floating bubble */
 #colin-bubble {
@@ -3075,8 +3175,12 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
 }
 .colin-bubble-badge.hidden { display: none; }
 
-/* Chat panel */
+/* Chat panel — absolutely positioned so it floats above the bubble
+   without pushing the bubble out of the bottom-right corner */
 #colin-panel {
+  position: absolute;
+  bottom: calc(100% + 0.75rem);
+  right: 0;
   width: 320px;
   max-height: 440px;
   background: var(--tr-panel, #0d1510);
@@ -3275,7 +3379,7 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
 
 /* Mobile */
 @media (max-width: 480px) {
-  #colin-widget { bottom: 1rem; right: 1rem; }
+  #colin-widget { bottom: 1rem; right: 1rem; left: auto; }
   #colin-panel  { width: calc(100vw - 2rem); max-height: 360px; }
 }
 
@@ -3629,6 +3733,13 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
   transition: transform 1600ms cubic-bezier(.15,0,.3,1), opacity 1200ms ease !important;
 }
 
+/* Subtle float animation used on the Ace card during the "Learn More" reveal,
+   between the ring zoom-in and the flip. Adds a gentle vertical bob. */
+@keyframes aceCardFloat {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-10px); }
+}
+
 /* ── Ace flip overlay ──
    A fixed full-viewport overlay hosting:
    - .ace-flip-bg: a full-viewport cream backdrop (matches tour-page bg so the
@@ -3701,6 +3812,10 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
   color: #1a1a1a;
   font-family: var(--font-sans);
 }
+/* Red suits (hearts, diamonds) on the flip overlay card */
+.ace-flip-front.suit-hearts .ace-rank-tl,
+.ace-flip-front.suit-hearts .ace-rank-br,
+.ace-flip-front.suit-hearts .ace-suit { color: #dc2626; }
 .ace-flip-back {
   transform: rotateY(180deg);
   background: #faf9f6;

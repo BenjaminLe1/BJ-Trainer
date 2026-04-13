@@ -613,7 +613,7 @@ const SKILL_INTROS = {
             'You are dealt two cards and shown the dealer\'s upcard.',
             'Select Hit, Stand, Double Down, or Split.',
             'The correct play is revealed immediately after you choose.',
-            'A wrong answer resets your streak — keep going until decisions feel automatic.',
+            'Keep going until decisions feel automatic.',
           ],
         },
         {
@@ -1011,7 +1011,7 @@ function randomHand() {
 const BasicStrategy = {
   name: 'Basic Strategy',
   start(body, scoreEl, skillId) {
-    let correct=0, total=0, streak=0, phase='question', hand, dealerIdx, correctAction;
+    let correct=0, total=0, phase='question', hand, dealerIdx, correctAction;
 
     const wrap = document.createElement('div');
     wrap.className = 'kc-wrapper';
@@ -1019,12 +1019,6 @@ const BasicStrategy = {
     wrap.style.width = '100%';
 
     wrap.innerHTML = `
-      <div style="display:flex;align-items:center;gap:.5rem;font-size:.82rem;color:var(--tr-muted)">
-        <span>Streak</span>
-        <span class="sk-score-num" id="bs-streak" style="font-size:1.5rem;font-family:var(--font-serif);color:var(--accent);line-height:1">0</span>
-        <span id="bs-fire" style="font-size:1rem;opacity:0;transition:opacity .2s">🔥</span>
-      </div>
-
       <div class="felt-table" style="width:100%">
         <div class="felt-dealer-zone">
           <span class="felt-zone-label">Dealer</span>
@@ -1046,8 +1040,6 @@ const BasicStrategy = {
     const playerHandEl = wrap.querySelector('#bs-player-hand');
     const actionsEl    = wrap.querySelector('#bs-actions');
     const nextEl       = wrap.querySelector('#bs-next');
-    const streakEl     = wrap.querySelector('#bs-streak');
-    const fireEl       = wrap.querySelector('#bs-fire');
 
     function cardBackEl() {
       const el = document.createElement('div');
@@ -1126,10 +1118,7 @@ const BasicStrategy = {
       phase = 'feedback';
       total++;
       const isCorrect = chosen === correctAction;
-      if (isCorrect) { correct++; streak++; } else { streak = 0; }
-
-      streakEl.textContent = streak;
-      fireEl.style.opacity = streak >= 3 ? '1' : '0';
+      if (isCorrect) correct++;
 
       // Mark buttons
       actionsEl.querySelectorAll('.sk-action-btn').forEach(b => {
@@ -1151,7 +1140,6 @@ const BasicStrategy = {
           correctAction,
           handLabel: hand.label,
           dealerLabel: DEALER_LABELS[dealerIdx],
-          streak,
           correct,
           total
         }
@@ -1180,17 +1168,11 @@ const KeepCounting = {
   name: 'Running Count',
   start(body, scoreEl, skillId) {
     let deck=[], deckIdx=0, runningCount=0, playerCount=0;
-    let score=0, streak=0;
+    let score=0;
     let phase='dealing', revealTimers=[], currentCards=[];
 
     body.innerHTML = `
       <div class="kc-wrapper">
-        <div style="display:flex;align-items:center;gap:.5rem;font-size:.82rem;color:var(--tr-muted)">
-          <span>Streak</span>
-          <span id="kc-streak" style="font-size:1.5rem;font-family:var(--font-serif);color:var(--accent);line-height:1">0</span>
-          <span id="kc-fire" style="font-size:1rem;opacity:0;transition:opacity .2s">🔥</span>
-        </div>
-
         <div class="kc-speed-wrap">
           <span class="kc-speed-label">Slow</span>
           <input type="range" id="kc-speed" min="400" max="3000" step="200" value="1800">
@@ -1219,8 +1201,6 @@ const KeepCounting = {
       </div>
     `;
 
-    const strkEl   = body.querySelector('#kc-streak');
-    const fireEl   = body.querySelector('#kc-fire');
     const stageEl  = body.querySelector('#kc-stage');
     const inputSec = body.querySelector('#kc-input-section');
     const displayEl= body.querySelector('#kc-display');
@@ -1291,11 +1271,8 @@ const KeepCounting = {
       phase = 'feedback';
 
       const isCorrect = playerCount === runningCount;
-      if (isCorrect) { score++; streak++; }
-      else { streak = 0; }
+      if (isCorrect) score++;
 
-      strkEl.textContent = streak;
-      fireEl.style.opacity = streak >= 3 ? '1' : '0';
       markScore(scoreEl, score, score + (AppState.skillStatus[skillId].total||0));
       Account.addResult(skillId, isCorrect);
       if (isCorrect) AppState.skillStatus[skillId].done = true;
@@ -1306,8 +1283,7 @@ const KeepCounting = {
           isCorrect,
           playerCount,
           correctCount: runningCount,
-          cardBreakdown: currentCards.map(c => ({ rank: c.rank, value: c.value })),
-          streak
+          cardBreakdown: currentCards.map(c => ({ rank: c.rank, value: c.value }))
         }
       }}));
 
@@ -1364,7 +1340,7 @@ const DEVIATIONS_LIST = [
 const Deviations = {
   name: 'Deviations',
   start(body, scoreEl, skillId) {
-    let correct=0, total=0, streak=0, phase='question', currentDev, givenTC, shouldDeviate;
+    let correct=0, total=0, phase='question', currentDev, givenTC, shouldDeviate;
 
     const wrap = document.createElement('div');
     wrap.className = 'kc-wrapper';
@@ -1372,12 +1348,6 @@ const Deviations = {
     wrap.style.width = '100%';
 
     wrap.innerHTML = `
-      <div style="display:flex;align-items:center;gap:.5rem;font-size:.82rem;color:var(--tr-muted)">
-        <span>Streak</span>
-        <span id="dev-streak" style="font-size:1.5rem;font-family:var(--font-serif);color:var(--accent);line-height:1">0</span>
-        <span id="dev-fire" style="font-size:1rem;opacity:0;transition:opacity .2s">🔥</span>
-      </div>
-
       <div class="felt-table" style="width:100%">
         <div style="position:absolute;top:.75rem;right:.85rem;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:.3rem .75rem;text-align:center">
           <div style="font-size:.5rem;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,0.3);margin-bottom:.1rem;font-weight:700">True Count</div>
@@ -1406,8 +1376,6 @@ const Deviations = {
     const playerHandEl = wrap.querySelector('#dev-player-hand');
     const actionsEl    = wrap.querySelector('#dev-actions');
     const nextEl       = wrap.querySelector('#dev-next');
-    const streakEl     = wrap.querySelector('#dev-streak');
-    const fireEl       = wrap.querySelector('#dev-fire');
 
     const ACTION_FULL = { H:'Hit', S:'Stand', D:'Double', P:'Split' };
 
@@ -1497,10 +1465,7 @@ const Deviations = {
       total++;
       const correctAction = shouldDeviate ? currentDev.deviate : currentDev.basic;
       const isCorrect = chosen === correctAction;
-      if (isCorrect) { correct++; streak++; } else { streak = 0; }
-
-      streakEl.textContent = streak;
-      fireEl.style.opacity = streak >= 3 ? '1' : '0';
+      if (isCorrect) correct++;
 
       actionsEl.querySelectorAll('.sk-action-btn').forEach(b => {
         b.disabled = true;
@@ -1521,8 +1486,7 @@ const Deviations = {
           hand: currentDev.hand,
           upcard: currentDev.upcard,
           trueCount: givenTC,
-          shouldDeviate,
-          streak
+          shouldDeviate
         }
       }}));
       nextEl.classList.add('visible');
@@ -1540,18 +1504,12 @@ const Deviations = {
 const TrueCount = {
   name: 'True Count',
   start(body, scoreEl, skillId) {
-    let correct=0, total=0, streak=0, phase='question', trueCount;
+    let correct=0, total=0, phase='question', trueCount;
     const SHOE_HEIGHT = 180;
     const CARD_EDGE_PX = 3;
 
     body.innerHTML = `
       <div class="kc-wrapper" style="max-width:400px;width:100%">
-        <div style="display:flex;align-items:center;gap:.5rem;font-size:.82rem;color:var(--tr-muted)">
-          <span>Streak</span>
-          <span id="tc-streak" style="font-size:1.5rem;font-family:var(--font-serif);color:var(--accent);line-height:1">0</span>
-          <span id="tc-fire" style="font-size:1rem;opacity:0;transition:opacity .2s">🔥</span>
-        </div>
-
         <div class="shoe-visual-wrap">
           <div class="shoe-outer">
             <div class="shoe-body">
@@ -1587,8 +1545,6 @@ const TrueCount = {
     const decksLbl  = body.querySelector('#tc-decks-label');
     const inputEl   = body.querySelector('#tc-input');
     const nextEl    = body.querySelector('#tc-next');
-    const streakEl  = body.querySelector('#tc-streak');
-    const fireEl    = body.querySelector('#tc-fire');
 
     function buildCardEdges(remaining) {
       stackEl.innerHTML = '';
@@ -1629,10 +1585,7 @@ const TrueCount = {
       total++;
       const playerTC = Math.round(val * 2) / 2;
       const isCorrect = playerTC === trueCount;
-      if (isCorrect) { correct++; streak++; } else { streak = 0; }
-
-      streakEl.textContent = streak;
-      fireEl.style.opacity = streak >= 3 ? '1' : '0';
+      if (isCorrect) correct++;
 
       markScore(scoreEl, correct, total);
       Account.addResult(skillId, isCorrect);
@@ -1643,8 +1596,7 @@ const TrueCount = {
           skillId: 'true-count',
           isCorrect,
           playerAnswer: playerTC,
-          correctAnswer: trueCount,
-          streak
+          correctAnswer: trueCount
         }
       }}));
       nextEl.classList.add('visible');
@@ -1792,7 +1744,7 @@ const FullTraining = {
     // Session state
     let deck = shuffle(buildDeck()), deckIdx = 0;
     let runningCount = 0, playerCount = 0;
-    let streak = 0;
+    let correct = 0;
     let bankroll = 1000, currentBet = 0;
     let phase = 'bet'; // 'bet' | 'play' | 'count' | 'feedback'
     let correctPlay, playWasCorrect;
@@ -1805,14 +1757,9 @@ const FullTraining = {
     body.innerHTML = `
       <div class="ft-table">
 
-        <!-- Top bar: bankroll + streak -->
+        <!-- Top bar: bankroll -->
         <div class="ft-topbar">
           <div class="ft-bankroll">$<span id="ft-bankroll">1,000</span></div>
-          <div class="ft-streak-bar">
-            <span class="ft-streak-label">Streak</span>
-            <span id="ft-streak" class="ft-streak-num">0</span>
-            <span id="ft-fire" class="ft-streak-fire">🔥</span>
-          </div>
         </div>
 
         <!-- Dealer zone -->
@@ -1878,8 +1825,6 @@ const FullTraining = {
 
     // Element refs
     const bankrollEl  = body.querySelector('#ft-bankroll');
-    const streakEl    = body.querySelector('#ft-streak');
-    const fireEl      = body.querySelector('#ft-fire');
     const dealerCards = body.querySelector('#ft-dealer-cards');
     const playerCards = body.querySelector('#ft-player-cards');
     const betAmountEl = body.querySelector('#ft-bet-amount');
@@ -2031,10 +1976,7 @@ const FullTraining = {
       const countIsCorrect = playerCount === runningCount;
       const bothCorrect = playWasCorrect && countIsCorrect;
 
-      // Update streak
-      if (bothCorrect) { streak++; } else { streak = 0; }
-      streakEl.textContent = streak;
-      fireEl.style.opacity = streak >= 3 ? '1' : '0';
+      if (bothCorrect) correct++;
 
       // Update bankroll
       if (playWasCorrect) { bankroll += currentBet; }
@@ -2060,8 +2002,8 @@ const FullTraining = {
       `;
 
       Account.addResult(skillId, bothCorrect);
-      if (streak >= 5) AppState.skillStatus[skillId].done = true;
-      markScore(scoreEl, streak, 0);
+      if (correct >= 5) AppState.skillStatus[skillId].done = true;
+      markScore(scoreEl, correct, 0);
       window.dispatchEvent(new CustomEvent('colin:event', { detail: {
         event: 'trainer_answer',
         payload: {
@@ -2073,7 +2015,6 @@ const FullTraining = {
           chosenPlay: playWasCorrect ? correctPlay : (actionsEl.querySelector('.wrong') ? actionsEl.querySelector('.wrong').dataset.action : '?'),
           runningCount,
           playerCount,
-          streak,
           bankroll
         }
       }}));
@@ -2306,13 +2247,26 @@ function resetHeroRing() {
   if (!wrap) return;
   wrap.classList.remove('panning', 'zoom-through', 'diving');
   wrap.style.transform = '';
-  wrap.style.opacity = '';
+
+  // Hide before the snap so the position jump is invisible
+  wrap.style.transition = 'none';
+  wrap.style.opacity = '0';
+
   const ring = document.querySelector('.hero-card-ring');
   if (ring) {
     ring.getAnimations().forEach(a => a.cancel());
     ring.style.transform = '';
     ring.style.animation = '';
   }
+
+  // Fade back in after the snap settles (ring wrap is inside #landing so
+  // it's invisible while the tour stage is open anyway)
+  setTimeout(() => {
+    wrap.style.transition = 'opacity 0.5s ease';
+    void wrap.offsetHeight;
+    wrap.style.opacity = '';
+    setTimeout(() => { if (wrap) wrap.style.transition = ''; }, 600);
+  }, 60);
 }
 
 // Build a flip-card overlay. The overlay is a fixed-size wrapper positioned on
@@ -2409,7 +2363,7 @@ function flipAceIntoContent() {
     // PHASE A — Grow: Ace rect → centered portrait card (500ms)
     const portX = (vw - CARD_W) / 2;
     const portY = (vh - CARD_H) / 2;
-    wrap.style.transition = 'left 500ms cubic-bezier(.4,0,.2,1), top 500ms cubic-bezier(.4,0,.2,1), width 500ms cubic-bezier(.4,0,.2,1), height 500ms cubic-bezier(.4,0,.2,1)';
+    wrap.style.transition = 'left 500ms cubic-bezier(0.22,1,0.36,1), top 500ms cubic-bezier(0.22,1,0.36,1), width 500ms cubic-bezier(0.22,1,0.36,1), height 500ms cubic-bezier(0.22,1,0.36,1)';
     bg.style.transition = 'opacity 500ms ease';
     requestAnimationFrame(() => {
       wrap.style.left = portX + 'px';
@@ -2434,15 +2388,15 @@ function flipAceIntoContent() {
         inner.style.transform = 'rotateY(180deg)';
         try { flipAnim.cancel(); } catch (e) { /* ignore */ }
 
-        // PHASE C — Turn horizontal (650ms):
+        // PHASE C — Turn horizontal (700ms):
         //   wrap dims portrait 340×476 → landscape 476×340  AND
         //   rotator rotate(-90°) → rotate(0°)
         // Combined, the card appears to physically rotate 90° clockwise: it
         // widens into landscape while the text inside unwinds to upright.
         const landX = (vw - LAND_W) / 2;
         const landY = (vh - LAND_H) / 2;
-        wrap.style.transition = 'left 650ms cubic-bezier(.4,0,.2,1), top 650ms cubic-bezier(.4,0,.2,1), width 650ms cubic-bezier(.4,0,.2,1), height 650ms cubic-bezier(.4,0,.2,1)';
-        rotator.style.transition = 'transform 650ms cubic-bezier(.4,0,.2,1)';
+        wrap.style.transition = 'left 700ms cubic-bezier(0.22,1,0.36,1), top 700ms cubic-bezier(0.22,1,0.36,1), width 700ms cubic-bezier(0.22,1,0.36,1), height 700ms cubic-bezier(0.22,1,0.36,1)';
+        rotator.style.transition = 'transform 700ms cubic-bezier(0.22,1,0.36,1)';
         requestAnimationFrame(() => {
           wrap.style.left = landX + 'px';
           wrap.style.top = landY + 'px';
@@ -2452,10 +2406,10 @@ function flipAceIntoContent() {
         });
 
         setTimeout(() => {
-          // PHASE D — Seamless zoom landscape → fullscreen (680ms). The
+          // PHASE D — Seamless zoom landscape → fullscreen (700ms). The
           // rotator grows with the wrap so the content fills the viewport.
-          wrap.style.transition = 'left 680ms cubic-bezier(.3,0,.2,1), top 680ms cubic-bezier(.3,0,.2,1), width 680ms cubic-bezier(.3,0,.2,1), height 680ms cubic-bezier(.3,0,.2,1)';
-          rotator.style.transition = 'width 680ms cubic-bezier(.3,0,.2,1), height 680ms cubic-bezier(.3,0,.2,1)';
+          wrap.style.transition = 'left 700ms cubic-bezier(0.2,0,0.1,1), top 700ms cubic-bezier(0.2,0,0.1,1), width 700ms cubic-bezier(0.2,0,0.1,1), height 700ms cubic-bezier(0.2,0,0.1,1)';
+          rotator.style.transition = 'width 700ms cubic-bezier(0.2,0,0.1,1), height 700ms cubic-bezier(0.2,0,0.1,1)';
           requestAnimationFrame(() => {
             wrap.style.left = '0px';
             wrap.style.top = '0px';
@@ -2470,10 +2424,43 @@ function flipAceIntoContent() {
             if (sourceNext) sourceParent.insertBefore(source, sourceNext);
             else sourceParent.appendChild(source);
             resolve(overlay);
-          }, 700);
-        }, 670);
+          }, 730);
+        }, 720);
       };
     }, 530);
+  });
+}
+
+// Generic spin: bring the ring card at `cardIndex` to the front-facing position.
+// cardIndex 0 = Ace (same as spinRingToAce), 1 = K♥, 2 = Q♠, etc.
+function spinRingToCard(ring, cardIndex) {
+  return new Promise(resolve => {
+    const computedTransform = getComputedStyle(ring).transform;
+    const matrix = new DOMMatrix(computedTransform);
+    let currentAngle = Math.atan2(matrix.m13, matrix.m11) * 180 / Math.PI;
+    if (currentAngle < 0) currentAngle += 360;
+
+    ring.getAnimations().forEach(a => a.cancel());
+    ring.style.animation = 'none';
+    void ring.offsetWidth;
+
+    // Card i sits at rotateY(i*45deg) on the ring.
+    // For card i to face front the ring must be at -(i*45) mod 360.
+    const cardDeg   = (cardIndex * 45) % 360;
+    const targetMod = (360 - cardDeg) % 360;
+    const gap       = ((targetMod - (currentAngle % 360)) + 360) % 360;
+    const targetAngle = currentAngle + gap + 720; // ≥2 extra full spins
+
+    const anim = ring.animate([
+      { transform: `rotateX(14deg) rotateY(${currentAngle}deg)` },
+      { transform: `rotateX(14deg) rotateY(${targetAngle}deg)` }
+    ], {
+      duration: 950,
+      easing: 'cubic-bezier(0.1, 0, 0.3, 1)',
+      fill: 'forwards'
+    });
+
+    anim.onfinish = () => resolve();
   });
 }
 
@@ -2510,7 +2497,17 @@ function spinRingToAce(ring) {
   });
 }
 
-// Entry point: "Learn More" clicked on landing
+// Entry point: "Learn More" clicked on landing.
+//
+// Cinematic flow — NO view switch, landing stays visible throughout:
+//   Phase 1 — Pan ring to center + spin to Ace (existing)
+//   Phase 2 — Camera zoom: scale ring wrap so Ace appears portrait-card sized
+//             (other ring cards visible receding to the edges)
+//   Phase 3 — Float: small portrait Ace card bobs gently at center
+//   Phase 4 — Flip: rotY 0 → 180 (ring still visible around the card)
+//   Phase 5 — Turn landscape (portrait → landscape)
+//   Phase 6 — Slow zoom to fullscreen: bg fades in, covering ring
+//   At end: tour-stage shown (under overlay), overlay removed. Landing never hidden.
 function startLearnMore() {
   initTourPages();
   const landing = document.getElementById('landing');
@@ -2530,19 +2527,48 @@ function startLearnMore() {
     return;
   }
 
-  // Phase 1: fade hero body, pan ring to center
-  if (hero) hero.classList.add('tour-pending');
-  panHeroRingToCenter();
+  // Snap all ring cards to their final drop positions immediately
+  document.querySelectorAll('.hero-card-ring .rc-card').forEach((card, i) => {
+    card.style.animation = 'none';
+    card.style.transform = `rotateY(${i * 45}deg) translateZ(210px) translateY(0px)`;
+  });
 
-  // Phase 2: spin ring to Ace of Spades from current position
-  if (ring) {
-    spinRingToAce(ring).then(() => {
-      // Ace is facing front — brief pause before the flip
+  // Phase 1: fade hero text, pan ring to center, spin to Ace
+  if (hero) hero.classList.add('tour-pending');
+  const pan = panHeroRingToCenter(); // returns { wrap, dx, dy }
+
+  if (!ring) return;
+  spinRingToAce(ring).then(() => {
+    // Brief pause after spin
+    setTimeout(() => {
+      const aceEl = document.querySelector('.hero-card-ring .rc-card:nth-child(1)');
+      if (!aceEl || !pan) return;
+
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const CARD_W = 340;
+      const CARD_H = 476;
+      const LAND_W = CARD_H; // 476
+      const LAND_H = CARD_W; // 340
+      const portX = (vw - CARD_W) / 2;
+      const portY = (vh - CARD_H) / 2;
+      const landX = (vw - LAND_W) / 2;
+      const landY = (vh - LAND_H) / 2;
+
+      // Phase 2 — Camera zoom: scale ring wrap until Ace = portrait card size.
+      // Read Ace's current visual width (at scale 1.25), compute target scale.
+      const aceRect0 = aceEl.getBoundingClientRect();
+      const totalScale = 1.25 * (CARD_W / aceRect0.width);
+      pan.wrap.style.transition = 'transform 950ms cubic-bezier(0.2, 0, 0.1, 1)';
+      pan.wrap.style.transform = `translateY(-50%) translate(${pan.dx}px, ${pan.dy}px) scale(${totalScale})`;
+
       setTimeout(() => {
-        // Phase 3: flip the Ace (with the real tour page on its back), pause, then
-        // zoom it to fill the viewport. The overlay contains the real tour DOM which
-        // is restored to #tour-pages when the zoom finishes — so the swap is invisible.
-        // Pre-activate the tour stage (but hidden) so restored DOM lands in the right place.
+        pan.wrap.style.transition = '';
+
+        // Read Ace's zoomed position — overlay will sit exactly on top of it
+        const aceRect = aceEl.getBoundingClientRect();
+
+        // Pre-activate tour stage (hidden) so restored DOM has a home
         tourIndex = 0;
         if (stage) {
           stage.classList.remove('hidden');
@@ -2551,20 +2577,111 @@ function startLearnMore() {
         }
         showTourPage(0);
 
-        flipAceIntoContent().then((overlay) => {
-          if (landing) landing.classList.add('hidden');
-          const activeEl = document.getElementById(TOUR_PAGE_IDS[0]);
-          if (activeEl) activeEl.classList.remove('zoom-in', 'zoom-out');
-          if (hero) hero.classList.remove('tour-pending');
-          resetHeroRing();
+        const source = document.getElementById('info-sections');
+        if (!source) return;
+        const sourceParent = source.parentNode;
+        const sourceNext = source.nextSibling;
 
-          // Reveal the real stage under the overlay, then remove the overlay
-          if (stage) stage.style.opacity = '';
-          if (overlay) overlay.remove();
+        // Build overlay: Ace front visible, bg transparent so ring shows behind
+        const overlay = buildFlipOverlay(source);
+        const bg   = overlay.querySelector('.ace-flip-bg');
+        const wrap = overlay.querySelector('.ace-flip-wrap');
+        const inner  = overlay.querySelector('.ace-flip-inner');
+        const rotator = overlay.querySelector('.ace-flip-back-rotator');
+
+        wrap.style.left   = aceRect.left + 'px';
+        wrap.style.top    = aceRect.top + 'px';
+        wrap.style.width  = aceRect.width + 'px';
+        wrap.style.height = aceRect.height + 'px';
+        inner.style.transform = 'rotateY(0deg)';
+        bg.style.opacity  = '0'; // transparent — ring visible behind overlay
+        setRotatorState(rotator, LAND_W, LAND_H, -90);
+
+        // Hide the ring Ace — the overlay is now on top of it
+        aceEl.style.opacity = '0';
+
+        void wrap.offsetWidth;
+
+        // Snap to exact portrait-card center (tiny correction if needed)
+        wrap.style.transition = 'left 400ms cubic-bezier(0.22,1,0.36,1), top 400ms cubic-bezier(0.22,1,0.36,1), width 400ms cubic-bezier(0.22,1,0.36,1), height 400ms cubic-bezier(0.22,1,0.36,1)';
+        requestAnimationFrame(() => {
+          wrap.style.left   = portX + 'px';
+          wrap.style.top    = portY + 'px';
+          wrap.style.width  = CARD_W + 'px';
+          wrap.style.height = CARD_H + 'px';
         });
-      }, 450);
-    });
-  }
+
+        // Phase 3 — Float: card gently bobs while the viewer appreciates the scene
+        setTimeout(() => {
+          wrap.style.animation = 'aceCardFloat 1.6s ease-in-out infinite';
+
+          // Phase 4 — Flip: rotY 0 → 180 (ring still visible around card)
+          setTimeout(() => {
+            wrap.style.animation = ''; // stop float cleanly before flip
+
+            const flipAnim = inner.animate(
+              [
+                { transform: 'rotateY(0deg)' },
+                { transform: 'rotateY(90deg)' },
+                { transform: 'rotateY(180deg)' }
+              ],
+              { duration: 720, fill: 'forwards', easing: 'cubic-bezier(.5,.1,.3,1)' }
+            );
+
+            flipAnim.onfinish = () => {
+              inner.style.transform = 'rotateY(180deg)';
+              try { flipAnim.cancel(); } catch (e) { /* ignore */ }
+
+              // Phase 5 — Turn horizontal (700ms)
+              wrap.style.transition = 'left 700ms cubic-bezier(0.22,1,0.36,1), top 700ms cubic-bezier(0.22,1,0.36,1), width 700ms cubic-bezier(0.22,1,0.36,1), height 700ms cubic-bezier(0.22,1,0.36,1)';
+              rotator.style.transition = 'transform 700ms cubic-bezier(0.22,1,0.36,1)';
+              requestAnimationFrame(() => {
+                wrap.style.left   = landX + 'px';
+                wrap.style.top    = landY + 'px';
+                wrap.style.width  = LAND_W + 'px';
+                wrap.style.height = LAND_H + 'px';
+                rotator.style.transform = 'translate(-50%, -50%) rotate(0deg)';
+              });
+
+              setTimeout(() => {
+                // Phase 6 — Slow zoom: landscape → fullscreen (1100ms).
+                // bg fades in NOW (covering ring as card expands to fill viewport).
+                wrap.style.transition = 'left 1100ms cubic-bezier(0.2,0,0.1,1), top 1100ms cubic-bezier(0.2,0,0.1,1), width 1100ms cubic-bezier(0.2,0,0.1,1), height 1100ms cubic-bezier(0.2,0,0.1,1)';
+                rotator.style.transition = 'width 1100ms cubic-bezier(0.2,0,0.1,1), height 1100ms cubic-bezier(0.2,0,0.1,1)';
+                bg.style.transition = 'opacity 900ms ease';
+                requestAnimationFrame(() => {
+                  wrap.style.left   = '0px';
+                  wrap.style.top    = '0px';
+                  wrap.style.width  = vw + 'px';
+                  wrap.style.height = vh + 'px';
+                  rotator.style.width  = vw + 'px';
+                  rotator.style.height = vh + 'px';
+                  bg.style.opacity = '1';
+                });
+
+                setTimeout(() => {
+                  // Restore source to its DOM home
+                  if (sourceNext) sourceParent.insertBefore(source, sourceNext);
+                  else sourceParent.appendChild(source);
+
+                  const activeEl = document.getElementById(TOUR_PAGE_IDS[0]);
+                  if (activeEl) activeEl.classList.remove('zoom-in', 'zoom-out');
+                  if (hero) hero.classList.remove('tour-pending');
+
+                  // Reset ring (snap hidden: ring is behind opaque overlay + stage)
+                  resetHeroRing();
+
+                  // Reveal tour stage, remove overlay — landing remains visible beneath
+                  if (stage) stage.style.opacity = '';
+                  if (overlay) overlay.remove();
+                }, 1150);
+              }, 720);
+            };
+          }, 500); // float duration before flip
+        }, 430);   // pause after position snap before float starts
+      }, 1000);    // ring zoom duration
+    }, 450);       // pause after spinRingToAce
+  });
 }
 
 // ── Tour transition ring (between chapters) ──
@@ -2602,18 +2719,13 @@ function playTourRingTransition(onMid, onDone) {
   }, 3200);
 }
 
-// Navigate to a different chapter:
-//   STEP 1 — Zoom out: fullscreen horizontal → portrait card AND rotator
-//            rotates 0° → -90° (text turns vertical). Card shrinks and text
-//            rotates inside it in one synchronized motion.
-//   STEP 2 — Spin right: rotY 180 → 540 (full 360° turn). At rotY=360 the
-//            front Ace face is visible and the back is hidden — we swap the
-//            back content there invisibly, so the new chapter is on the back
-//            when it rotates into view again at rotY=540.
-//   STEP 3 — Turn horizontal: wrap portrait → landscape AND rotator rotate
-//            -90° → 0°. Same as reveal's Phase C — card physically turns,
-//            text unwinds upright.
-//   STEP 4 — Seamless zoom landscape → fullscreen. Same as reveal's Phase D.
+// Navigate to a new tour card — full cinematic reverse + forward of startLearnMore:
+//   Phase 1 (~1000ms) — Fullscreen card zooms out + flips to Ace face + ring fades in
+//   Phase 2 (~950ms)  — Ring fast-spins to next chapter's card (chapter index = ring card index)
+//   Phase 3 (~500ms)  — Float at card position
+//   Phase 4 (~720ms)  — Flip: Ace → new content (rotY 0→180)
+//   Phase 5 (~700ms)  — Turn landscape
+//   Phase 6 (~1100ms) — Zoom fullscreen, bg fades in over ring
 function goTourCard(nextIndex /*, direction */) {
   if (tourAnimating) return;
   if (nextIndex < 0 || nextIndex >= TOUR_PAGE_IDS.length) return;
@@ -2624,11 +2736,11 @@ function goTourCard(nextIndex /*, direction */) {
     return;
   }
 
-  const currentId = TOUR_PAGE_IDS[tourIndex];
-  const nextId = TOUR_PAGE_IDS[nextIndex];
-  const currentSource = document.getElementById(currentId);
-  const nextSource = document.getElementById(nextId);
-  const stage = document.getElementById('tour-stage');
+  const curId         = TOUR_PAGE_IDS[tourIndex];
+  const nextId        = TOUR_PAGE_IDS[nextIndex];
+  const currentSource = document.getElementById(curId);
+  const nextSource    = document.getElementById(nextId);
+  const stage         = document.getElementById('tour-stage');
   if (!currentSource || !nextSource || !stage) return;
 
   tourAnimating = true;
@@ -2637,122 +2749,256 @@ function goTourCard(nextIndex /*, direction */) {
   const vh = window.innerHeight;
   const CARD_W = 340;
   const CARD_H = 476;
-  const LAND_W = CARD_H; // 476
-  const LAND_H = CARD_W; // 340
+  const LAND_W = CARD_H;
+  const LAND_H = CARD_W;
   const portX = (vw - CARD_W) / 2;
   const portY = (vh - CARD_H) / 2;
   const landX = (vw - LAND_W) / 2;
   const landY = (vh - LAND_H) / 2;
 
-  // Remember source positions so we can restore them
   const curParent = currentSource.parentNode;
-  const curNext = currentSource.nextSibling;
+  const curNext   = currentSource.nextSibling;
   const nxtParent = nextSource.parentNode;
-  const nxtNext = nextSource.nextSibling;
+  const nxtNext   = nextSource.nextSibling;
 
+  // Hide hero slogan/buttons so they don't show through the transparent overlay bg
+  const hero = document.querySelector('.ls-hero');
+  if (hero) hero.classList.add('tour-pending');
+
+  // Each chapter maps 1-to-1 with a ring card by index
+  const ringWrap     = document.querySelector('.hero-card-ring-wrap');
+  const ring         = document.querySelector('.hero-card-ring');
+  const aceEl        = document.querySelector('.hero-card-ring .rc-card:nth-child(1)');
+  const targetCardEl = document.querySelector(`.hero-card-ring .rc-card:nth-child(${nextIndex + 1})`);
+
+  // ── SETUP (synchronous — no paint yet) ────────────────────────
+
+  // Freeze all ring card animations at their standard orbit positions
+  document.querySelectorAll('.hero-card-ring .rc-card').forEach((card, i) => {
+    card.style.animation = 'none';
+    card.style.transform = `rotateY(${i * 45}deg) translateZ(210px) translateY(0px)`;
+  });
+
+  // Freeze ring at Ace-front position
+  if (ring) {
+    ring.getAnimations().forEach(a => a.cancel());
+    ring.style.animation = 'none';
+    ring.style.transform = 'rotateX(14deg) rotateY(0deg)';
+  }
+
+  // Pan ring to center (instant, no transition — ring wrap is opacity 0 below)
+  if (ringWrap) {
+    ringWrap.style.transition = 'none';
+    const rr = ringWrap.getBoundingClientRect();
+    const dx = vw / 2 - (rr.left + rr.width  / 2);
+    const dy = vh / 2 - (rr.top  + rr.height / 2);
+    ringWrap.style.transform = `translateY(-50%) translate(${dx}px, ${dy}px) scale(1.25)`;
+    ringWrap._bjDx = dx;
+    ringWrap._bjDy = dy;
+  }
+
+  // Read Ace size at pan scale (scale 1.25) to compute camera-zoom totalScale
+  void (ringWrap && ringWrap.offsetWidth);
+  const aceRect0   = aceEl ? aceEl.getBoundingClientRect() : null;
+  const totalScale = (aceRect0 && aceRect0.width > 0) ? 1.25 * (CARD_W / aceRect0.width) : 2;
+
+  // Apply camera zoom (snap — invisible, ring wrap hidden next)
+  if (ringWrap) {
+    ringWrap.style.transform = `translateY(-50%) translate(${ringWrap._bjDx || 0}px, ${ringWrap._bjDy || 0}px) scale(${totalScale})`;
+    ringWrap.style.opacity   = '0'; // revealed during Phase 1
+  }
+  if (aceEl) aceEl.style.opacity = '0';
+
+  // Build overlay: current content fullscreen, inner=180° (back/content showing), bg=1
   const overlay = buildFlipOverlay(currentSource);
-  const bg = overlay.querySelector('.ace-flip-bg');
-  const wrap = overlay.querySelector('.ace-flip-wrap');
-  const inner = overlay.querySelector('.ace-flip-inner');
+  const bg      = overlay.querySelector('.ace-flip-bg');
+  const wrap    = overlay.querySelector('.ace-flip-wrap');
+  const inner   = overlay.querySelector('.ace-flip-inner');
   const rotator = overlay.querySelector('.ace-flip-back-rotator');
 
-  // Start: wrap fills viewport, inner back-facing, rotator full-size horizontal
-  wrap.style.left = '0px';
-  wrap.style.top = '0px';
-  wrap.style.width = vw + 'px';
+  wrap.style.left   = '0px';
+  wrap.style.top    = '0px';
+  wrap.style.width  = vw + 'px';
   wrap.style.height = vh + 'px';
   inner.style.transform = 'rotateY(180deg)';
-  bg.style.opacity = '1';
-  stage.style.opacity = '0';
+  bg.style.opacity  = '1';
   setRotatorState(rotator, vw, vh, 0);
 
-  void wrap.offsetWidth;
+  stage.style.opacity = '0';
 
-  // STEP 1 — Zoom out: fullscreen horizontal → portrait vertical (620ms).
-  // Wrap and rotator animate simultaneously; the rotator shrinks from full
-  // viewport into LAND_W×LAND_H and rotates 0°→-90°, so the text smoothly
-  // turns vertical as the card shrinks into portrait.
-  wrap.style.transition = 'left 620ms cubic-bezier(.4,0,.2,1), top 620ms cubic-bezier(.4,0,.2,1), width 620ms cubic-bezier(.4,0,.2,1), height 620ms cubic-bezier(.4,0,.2,1)';
-  rotator.style.transition = 'transform 620ms cubic-bezier(.4,0,.2,1), width 620ms cubic-bezier(.4,0,.2,1), height 620ms cubic-bezier(.4,0,.2,1)';
+  void wrap.offsetWidth; // reflow — lock in all initial state
+
+  // ── PHASE 1: Zoom out + flip to Ace + ring fades in (~1000ms) ─
+
+  const ease1 = 'cubic-bezier(0.22,1,0.36,1)';
+  wrap.style.transition = `left 1000ms ${ease1}, top 1000ms ${ease1}, width 1000ms ${ease1}, height 1000ms ${ease1}`;
+  bg.style.transition   = 'opacity 700ms ease 100ms';
+  if (ringWrap) ringWrap.style.transition = 'opacity 700ms ease 200ms';
+
+  // Flip inner 180°→0° (content hides, Ace face reveals) with slight delay
+  const flipBackAnim = inner.animate(
+    [
+      { transform: 'rotateY(180deg)' },
+      { transform: 'rotateY(90deg)'  },
+      { transform: 'rotateY(0deg)'   }
+    ],
+    { duration: 700, fill: 'forwards', easing: 'cubic-bezier(0.4,0,0.6,1)', delay: 200 }
+  );
+
   requestAnimationFrame(() => {
-    wrap.style.left = portX + 'px';
-    wrap.style.top = portY + 'px';
-    wrap.style.width = CARD_W + 'px';
+    wrap.style.left   = portX + 'px';
+    wrap.style.top    = portY + 'px';
+    wrap.style.width  = CARD_W + 'px';
     wrap.style.height = CARD_H + 'px';
-    rotator.style.width = LAND_W + 'px';
-    rotator.style.height = LAND_H + 'px';
-    rotator.style.transform = 'translate(-50%, -50%) rotate(-90deg)';
+    bg.style.opacity  = '0';
+    if (ringWrap) ringWrap.style.opacity = '1';
   });
 
   setTimeout(() => {
-    // STEP 2 — Spin right: rotY 180 → 540 (full 360° turn, 900ms).
-    // Mid-point rotY=360 shows the Ace front face; back is hidden here via
-    // backface-visibility, so we can swap the rotator's content invisibly.
-    const spin = inner.animate(
-      [
-        { transform: 'rotateY(180deg)' },
-        { transform: 'rotateY(270deg)' },
-        { transform: 'rotateY(360deg)' },
-        { transform: 'rotateY(450deg)' },
-        { transform: 'rotateY(540deg)' }
-      ],
-      { duration: 900, fill: 'forwards', easing: 'cubic-bezier(.35,.05,.25,1)' }
-    );
+    // Phase 1 done: restore currentSource to DOM (stage still hidden)
+    if (rotator.contains(currentSource)) rotator.removeChild(currentSource);
+    currentSource.classList.remove('tour-page-active', 'zoom-in', 'zoom-out');
+    if (curNext) curParent.insertBefore(currentSource, curNext);
+    else curParent.appendChild(currentSource);
 
-    // Swap rotator content at ~50% (rotY = 360, front facing, back hidden)
-    setTimeout(() => {
-      if (rotator.contains(currentSource)) rotator.removeChild(currentSource);
-      currentSource.classList.remove('tour-page-active');
-      rotator.appendChild(nextSource);
-      nextSource.classList.add('tour-page-active');
-      nextSource.classList.remove('zoom-in', 'zoom-out');
-    }, 450);
+    inner.style.transform = 'rotateY(0deg)';
+    try { flipBackAnim.cancel(); } catch (e) { /* ignore */ }
+    wrap.style.transition    = '';
+    if (ringWrap) ringWrap.style.transition = '';
 
-    spin.onfinish = () => {
-      inner.style.transform = 'rotateY(540deg)';
-      try { spin.cancel(); } catch (e) { /* ignore */ }
+    // Pre-set rotator for the upcoming flip (content rotated -90° ready to unwind)
+    setRotatorState(rotator, LAND_W, LAND_H, -90);
 
-      // STEP 3 — Turn horizontal (650ms): same as reveal's Phase C.
-      wrap.style.transition = 'left 650ms cubic-bezier(.4,0,.2,1), top 650ms cubic-bezier(.4,0,.2,1), width 650ms cubic-bezier(.4,0,.2,1), height 650ms cubic-bezier(.4,0,.2,1)';
-      rotator.style.transition = 'transform 650ms cubic-bezier(.4,0,.2,1)';
+    // ── PHASE 2: Ring fast-spin to next chapter card (~950ms) ────
+    if (!ring) { if (hero) hero.classList.remove('tour-pending'); tourAnimating = false; return; }
+
+    // Swap overlay Ace → ring Ace at the same position (portrait card size, center screen).
+    // The ring Ace is camera-zoomed to exactly the same size/position as the overlay wrap.
+    if (aceEl) aceEl.style.opacity = '';  // restore ring Ace
+    wrap.style.opacity = '0';             // hide overlay — ring Ace takes over seamlessly
+
+    spinRingToCard(ring, nextIndex).then(() => {
+      // Ring stopped on target card. Update the overlay front face to match
+      // that card exactly (K♥, Q♠, etc.) so we never see "A♠" at this step.
+      const RING_CARD_DATA = [
+        { rank: 'A', suit: '♠', red: false },
+        { rank: 'K', suit: '♥', red: true  },
+        { rank: 'Q', suit: '♠', red: false },
+        { rank: 'J', suit: '♥', red: true  },
+      ];
+      const cd = RING_CARD_DATA[nextIndex] || RING_CARD_DATA[0];
+      const front = overlay.querySelector('.ace-flip-front');
+      if (front) {
+        front.className = 'ace-flip-front' + (cd.red ? ' suit-hearts' : '');
+        const tl = front.querySelector('.ace-rank-tl');
+        const s  = front.querySelector('.ace-suit');
+        const br = front.querySelector('.ace-rank-br');
+        if (tl) tl.textContent = cd.rank;
+        if (s)  s.textContent  = cd.suit;
+        if (br) br.textContent = cd.rank;
+      }
+
+      // Read exact visual position of the target ring card and snap overlay
+      // there — no transition, no jump.
+      const targetRect = targetCardEl ? targetCardEl.getBoundingClientRect() : null;
+      wrap.style.transition = 'none';
+      if (targetRect) {
+        wrap.style.left   = targetRect.left   + 'px';
+        wrap.style.top    = targetRect.top    + 'px';
+        wrap.style.width  = targetRect.width  + 'px';
+        wrap.style.height = targetRect.height + 'px';
+      }
+
+      // Instant swap: show overlay (now K♥), hide ring card — fully seamless
+      wrap.style.opacity = '';
+      if (targetCardEl) targetCardEl.style.opacity = '0';
+
+      void wrap.offsetWidth;
+
+      // Ease to exact portrait center (the target card is already ~portX/portY
+      // after camera-zoom, so this is a negligible correction, ~300ms).
+      wrap.style.transition = `left 300ms cubic-bezier(0.22,1,0.36,1), top 300ms cubic-bezier(0.22,1,0.36,1), width 300ms cubic-bezier(0.22,1,0.36,1), height 300ms cubic-bezier(0.22,1,0.36,1)`;
       requestAnimationFrame(() => {
-        wrap.style.left = landX + 'px';
-        wrap.style.top = landY + 'px';
-        wrap.style.width = LAND_W + 'px';
-        wrap.style.height = LAND_H + 'px';
-        rotator.style.transform = 'translate(-50%, -50%) rotate(0deg)';
+        wrap.style.left   = portX + 'px';
+        wrap.style.top    = portY + 'px';
+        wrap.style.width  = CARD_W + 'px';
+        wrap.style.height = CARD_H + 'px';
       });
 
       setTimeout(() => {
-        // STEP 4 — Seamless zoom landscape → fullscreen (680ms): same as reveal's Phase D.
-        wrap.style.transition = 'left 680ms cubic-bezier(.3,0,.2,1), top 680ms cubic-bezier(.3,0,.2,1), width 680ms cubic-bezier(.3,0,.2,1), height 680ms cubic-bezier(.3,0,.2,1)';
-        rotator.style.transition = 'width 680ms cubic-bezier(.3,0,.2,1), height 680ms cubic-bezier(.3,0,.2,1)';
-        requestAnimationFrame(() => {
-          wrap.style.left = '0px';
-          wrap.style.top = '0px';
-          wrap.style.width = vw + 'px';
-          wrap.style.height = vh + 'px';
-          rotator.style.width = vw + 'px';
-          rotator.style.height = vh + 'px';
-        });
+        wrap.style.transition = '';
 
-        setTimeout(() => {
-          // Restore both pages to their original DOM positions
-          tourIndex = nextIndex;
-          if (rotator.contains(nextSource)) rotator.removeChild(nextSource);
-          if (curNext) curParent.insertBefore(currentSource, curNext);
-          else curParent.appendChild(currentSource);
-          if (nxtNext) nxtParent.insertBefore(nextSource, nxtNext);
-          else nxtParent.appendChild(nextSource);
+        // Load next content into rotator
+        rotator.appendChild(nextSource);
 
-          showTourPage(nextIndex);
-          stage.style.opacity = '';
-          overlay.remove();
-          tourAnimating = false;
-        }, 700);
-      }, 670);
-    };
-  }, 650);
+        nextSource.classList.add('tour-page-active');
+        nextSource.classList.remove('zoom-in', 'zoom-out');
+
+        // ── PHASE 4: Flip Ace → content (rotY 0→180, 720ms) ─────
+        const flipAnim = inner.animate(
+          [
+            { transform: 'rotateY(0deg)'   },
+            { transform: 'rotateY(90deg)'  },
+            { transform: 'rotateY(180deg)' }
+          ],
+          { duration: 720, fill: 'forwards', easing: 'cubic-bezier(.5,.1,.3,1)' }
+        );
+
+        flipAnim.onfinish = () => {
+          inner.style.transform = 'rotateY(180deg)';
+          try { flipAnim.cancel(); } catch (e) { /* ignore */ }
+
+          // ── PHASE 5: Turn landscape (700ms) ──────────────────
+          wrap.style.transition    = `left 700ms cubic-bezier(0.22,1,0.36,1), top 700ms cubic-bezier(0.22,1,0.36,1), width 700ms cubic-bezier(0.22,1,0.36,1), height 700ms cubic-bezier(0.22,1,0.36,1)`;
+          rotator.style.transition = 'transform 700ms cubic-bezier(0.22,1,0.36,1)';
+          requestAnimationFrame(() => {
+            wrap.style.left   = landX + 'px';
+            wrap.style.top    = landY + 'px';
+            wrap.style.width  = LAND_W + 'px';
+            wrap.style.height = LAND_H + 'px';
+            rotator.style.transform = 'translate(-50%, -50%) rotate(0deg)';
+          });
+
+          setTimeout(() => {
+            // ── PHASE 6: Zoom fullscreen, bg fades in (~1100ms) ─
+            wrap.style.transition    = `left 1100ms cubic-bezier(0.2,0,0.1,1), top 1100ms cubic-bezier(0.2,0,0.1,1), width 1100ms cubic-bezier(0.2,0,0.1,1), height 1100ms cubic-bezier(0.2,0,0.1,1)`;
+            rotator.style.transition = 'width 1100ms cubic-bezier(0.2,0,0.1,1), height 1100ms cubic-bezier(0.2,0,0.1,1)';
+            bg.style.transition      = 'opacity 900ms ease';
+            requestAnimationFrame(() => {
+              wrap.style.left   = '0px';
+              wrap.style.top    = '0px';
+              wrap.style.width  = vw + 'px';
+              wrap.style.height = vh + 'px';
+              rotator.style.width  = vw + 'px';
+              rotator.style.height = vh + 'px';
+              bg.style.opacity  = '1'; // covers ring as card expands
+            });
+
+            setTimeout(() => {
+              tourIndex = nextIndex;
+
+              if (rotator.contains(nextSource)) rotator.removeChild(nextSource);
+              if (nxtNext) nxtParent.insertBefore(nextSource, nxtNext);
+              else nxtParent.appendChild(nextSource);
+
+              if (targetCardEl) targetCardEl.style.opacity = '';
+              if (aceEl) aceEl.style.opacity = '';
+              if (hero) hero.classList.remove('tour-pending');
+              resetHeroRing();
+
+              showTourPage(nextIndex);
+              stage.style.opacity = '';
+
+              requestAnimationFrame(() => requestAnimationFrame(() => {
+                overlay.remove();
+                tourAnimating = false;
+              }));
+            }, 1150);
+          }, 720);
+        };
+      }, 330);
+    });
+  }, 1020);
 }
 
 function tourNext() {
@@ -2796,6 +3042,9 @@ function exitTourToLanding() {
     stage.style.opacity = '';
     stage.style.transition = '';
     if (landing) landing.classList.remove('hidden');
+    // Restore the ring Ace that was hidden during the zoom-in reveal
+    const aceEl = document.querySelector('.hero-card-ring .rc-card:nth-child(1)');
+    if (aceEl) aceEl.style.opacity = '';
     resetHeroRing();
     updateSideArrows();
   }, 400);
@@ -3121,12 +3370,43 @@ document.getElementById('skill-back').addEventListener('click', phaseOutTrainer)
 const dashBack = document.getElementById('dashboard-back');
 if (dashBack) dashBack.addEventListener('click', goLanding);
 
-// Clickable brand logos — always go home (landing)
+// Clickable brand logos — always go home (landing), from any state
+function forceGoHome() {
+  // Cancel any in-flight tour animation so guards don't block cleanup
+  tourAnimating = false;
+
+  // Remove any ace-flip overlay that's still in the DOM (mid-animation)
+  document.querySelectorAll('.ace-flip-overlay').forEach(el => el.remove());
+
+  const stage = document.getElementById('tour-stage');
+  const stageWasOpen = stage && !stage.classList.contains('hidden');
+
+  if (stageWasOpen) {
+    // Close tour stage synchronously and reset the ring — only needed when
+    // coming FROM the tour. Calling resetHeroRing from landing would cancel
+    // the live CSS spin animation and cause a visible snap+restart.
+    TOUR_PAGE_IDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('tour-page-active', 'zoom-in', 'zoom-out');
+    });
+    stage.style.opacity = '';
+    stage.style.transition = '';
+    stage.classList.add('hidden');
+    stage.classList.remove('active');
+    // Restore ring Ace hidden during the zoom-in reveal
+    const aceEl = document.querySelector('.hero-card-ring .rc-card:nth-child(1)');
+    if (aceEl) aceEl.style.opacity = '';
+    resetHeroRing(); // hides, snaps, then fades ring back in
+  }
+
+  goLanding();
+}
+
 ['nav-brand-home', 'pipe-brand-home'].forEach(id => {
   const btn = document.getElementById(id);
   if (btn) btn.addEventListener('click', (e) => {
     e.preventDefault();
-    goLanding();
+    forceGoHome();
   });
 });
 

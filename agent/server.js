@@ -70,7 +70,54 @@ function buildUserMessage(event, payload, userMessage) {
     const s = payload.stats || { correct: 0, total: 0 };
     const pct = s.total > 0 ? Math.round((s.correct / s.total) * 100) : null;
     const statsStr = pct !== null ? `${s.correct}/${s.total} (${pct}%)` : 'no attempts yet';
-    return `User entered the ${payload.skillName} trainer. Stats: ${statsStr}. One short sentence — like a coach saying "let's go" with one specific focus for this session.`;
+    const lvl = payload.difficultyLevel || 1;
+    const lvlName = payload.difficultyName || 'Beginner';
+
+    const FOCUS = {
+      'basic-strategy': [
+        '', // unused
+        'hard totals only — focus on when to hit vs stand',
+        'hard and soft hands — watch the ace',
+        'all hand types — pairs are the new challenge',
+        'all hands, prioritize edge cases like 12-16 vs dealer 4-6',
+        'full range — razor-sharp on every cell of the chart',
+      ],
+      'keep-counting': [
+        '',
+        'one card at a time — build the habit',
+        'two cards — start tracking the delta',
+        'three cards with a countdown — stay calm under pressure',
+        'four cards, 6 seconds — maintain pace and accuracy',
+        'five cards, 4 seconds — casino speed',
+      ],
+      'deviations': [
+        '',
+        'the two most important: 16 vs 10 and 15 vs 10',
+        'top 7 deviations — the ones that matter most',
+        'top 9 — you know the basics, now drill the doubles',
+        'top 11 — the full Illustrious 18 is close',
+        'all 13 — every deviation, every count threshold',
+      ],
+      'true-count': [
+        '',
+        'small RC, whole-number decks — nail the formula first',
+        'slightly wider range — watch for the half-deck values',
+        'mid-range RC and decks — round to nearest 0.5 precisely',
+        'wide range — speed and accuracy together',
+        'full casino range — fast and exact',
+      ],
+      'full-training': [
+        '',
+        'play correct, count correct — one rep at a time',
+        'two skills together — play first, then confirm the count',
+        'bet sizing matters now — use the true count',
+        'stay sharp on both simultaneously',
+        'casino-speed full simulation',
+      ],
+    };
+
+    const focusLine = (FOCUS[payload.skillId] || ['','','','','',''])[lvl] || '';
+    return `User entered the ${payload.skillName} trainer at Level ${lvl}/5 (${lvlName}). Stats: ${statsStr}. Difficulty auto-set to ${lvlName}. One short sentence: energize them to start, mention the specific focus: "${focusLine}".`;
   }
 
   if (event === 'trainer_answer') {

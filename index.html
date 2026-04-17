@@ -6,7 +6,7 @@
   <title>Ben's Card Counting Trainer</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=GFS+Didot&family=Instrument+Serif:ital@0;1&family=Hanken+Grotesk:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=GFS+Didot&family=Instrument+Serif:ital@0;1&family=Hanken+Grotesk:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -287,17 +287,21 @@
     <!-- SECTION 3: WHAT IS BLACKJACK? -->
     <div class="ls ls-info" id="info-sections">
       <div class="ls-info-inner snap-reveal">
-        <div class="info-section-box">
-          <span class="info-modal-eyebrow">First things first</span>
-          <h2 class="info-modal-title">What is Blackjack?</h2>
-          <div class="info-modal-body">
-            <p>Blackjack is the most popular casino card game in the world — and one of the few where <strong>your decisions actually change the odds</strong>. You're not playing against other players. You're playing against the dealer.</p>
-            <p>The goal is to get a hand value closer to 21 than the dealer without going over. With perfect basic strategy — even without counting — the house edge is just <strong>0.5%</strong>, the lowest of most casino games. Card counting flips this edge and more, putting the advantage in your favor by as much as <strong>5%</strong>.</p>
-            <div class="bj-actions" style="margin-top:1.4rem">
-              <div class="bj-action"><span class="bj-action-name">Hit</span><span class="bj-action-desc">Take another card.</span></div>
-              <div class="bj-action"><span class="bj-action-name">Stand</span><span class="bj-action-desc">Keep your current hand.</span></div>
-              <div class="bj-action"><span class="bj-action-name">Double</span><span class="bj-action-desc">Double your bet, take exactly one more card.</span></div>
-              <div class="bj-action"><span class="bj-action-name">Split</span><span class="bj-action-desc">Split a pair into two separate hands.</span></div>
+        <div class="info-split">
+          <div class="info-split-left">
+            <span class="info-modal-eyebrow">First things first</span>
+            <h2 class="info-modal-title">What is<br>Blackjack?</h2>
+          </div>
+          <div class="info-split-right">
+            <div class="info-modal-body">
+              <p>Blackjack is the most popular casino card game in the world — and one of the few where <strong>your decisions actually change the odds</strong>. You're not playing against other players. You're playing against the dealer.</p>
+              <p>The goal is to get a hand value closer to 21 than the dealer without going over. With perfect basic strategy — even without counting — the house edge is just <strong>0.5%</strong>, the lowest of most casino games. Card counting flips this edge and more, putting the advantage in your favor by as much as <strong>5%</strong>.</p>
+              <div class="bj-actions">
+                <div class="bj-action"><span class="bj-action-name">Hit</span><span class="bj-action-desc">Take another card.</span></div>
+                <div class="bj-action"><span class="bj-action-name">Stand</span><span class="bj-action-desc">Keep your current hand.</span></div>
+                <div class="bj-action"><span class="bj-action-name">Double</span><span class="bj-action-desc">Double your bet, take exactly one more card.</span></div>
+                <div class="bj-action"><span class="bj-action-name">Split</span><span class="bj-action-desc">Split a pair into two separate hands.</span></div>
+              </div>
             </div>
           </div>
         </div>
@@ -307,47 +311,51 @@
     <!-- SECTION 4: WHAT IS CARD COUNTING? -->
     <div class="ls ls-info" id="info-counting">
       <div class="ls-info-inner snap-reveal">
-        <div class="info-section-box">
-          <span class="info-modal-eyebrow">The skill</span>
-          <h2 class="info-modal-title">What is Card Counting?</h2>
-          <div class="info-modal-body">
-            <p>Card counting tracks the <strong>ratio of high cards to low cards</strong> remaining in the shoe. The more high cards, the higher your edge. It's a simple running number — not memorization.</p>
-            <div class="myth-card" style="margin:1.25rem 0">
-              <h3>Common myths</h3>
-              <ul class="myth-list">
-                <li><span class="myth-label">❌ "It's illegal"</span><span class="myth-body">Perfectly legal. Casinos can ask you to leave, but no law is broken.</span></li>
-                <li><span class="myth-label">❌ "You need to be a genius"</span><span class="myth-body">The math is trivial. Discipline and preparation are the true skills.</span></li>
-                <li><span class="myth-label">❌ "It only works in movies"</span><span class="myth-body">The MIT Blackjack Team won millions. Real people, real money.</span></li>
-              </ul>
-            </div>
-            <p class="info-modal-sub">In the Hi-Lo system, every card shifts your count by +1, 0, or −1. Three values. That's the whole system.</p>
-            <div class="hilo-chart hilo-chart-compact">
-              <div class="hilo-group">
-                <div class="hilo-cards">
-                  <div class="card card-sm suit-hearts"><span class="rank tl">2</span><span class="suit-sym">♥</span><span class="rank br">2</span></div>
-                  <div class="card card-sm suit-clubs"><span class="rank tl">5</span><span class="suit-sym">♣</span><span class="rank br">5</span></div>
-                  <div class="card card-sm suit-diamonds"><span class="rank tl">6</span><span class="suit-sym">♦</span><span class="rank br">6</span></div>
-                </div>
-                <div class="hilo-value c-green">+1</div>
-                <div class="hilo-label">Low cards (2–6)</div>
+        <div class="info-split">
+          <div class="info-split-left">
+            <span class="info-modal-eyebrow">The skill</span>
+            <h2 class="info-modal-title">What is Card<br>Counting?</h2>
+          </div>
+          <div class="info-split-right">
+            <div class="info-modal-body">
+              <p>Card counting tracks the <strong>ratio of high cards to low cards</strong> remaining in the shoe. The more high cards, the higher your edge. It's a simple running number — not memorization.</p>
+              <div class="myth-card">
+                <h3>Common myths</h3>
+                <ul class="myth-list">
+                  <li><span class="myth-label">"It's illegal"</span><span class="myth-body">Perfectly legal. Casinos can ask you to leave, but no law is broken.</span></li>
+                  <li><span class="myth-label">"You need to be a genius"</span><span class="myth-body">The math is trivial. Discipline and preparation are the true skills.</span></li>
+                  <li><span class="myth-label">"It only works in movies"</span><span class="myth-body">The MIT Blackjack Team won millions. Real people, real money.</span></li>
+                </ul>
               </div>
-              <div class="hilo-group">
-                <div class="hilo-cards">
-                  <div class="card card-sm suit-clubs"><span class="rank tl">7</span><span class="suit-sym">♣</span><span class="rank br">7</span></div>
-                  <div class="card card-sm suit-diamonds"><span class="rank tl">8</span><span class="suit-sym">♦</span><span class="rank br">8</span></div>
-                  <div class="card card-sm suit-spades"><span class="rank tl">9</span><span class="suit-sym">♠</span><span class="rank br">9</span></div>
+              <p class="info-modal-sub">In the Hi-Lo system, every card shifts your count by +1, 0, or −1. Three values. That's the whole system.</p>
+              <div class="hilo-chart hilo-chart-compact">
+                <div class="hilo-group">
+                  <div class="hilo-cards">
+                    <div class="card card-sm suit-hearts"><span class="rank tl">2</span><span class="suit-sym">♥</span><span class="rank br">2</span></div>
+                    <div class="card card-sm suit-clubs"><span class="rank tl">5</span><span class="suit-sym">♣</span><span class="rank br">5</span></div>
+                    <div class="card card-sm suit-diamonds"><span class="rank tl">6</span><span class="suit-sym">♦</span><span class="rank br">6</span></div>
+                  </div>
+                  <div class="hilo-value c-green">+1</div>
+                  <div class="hilo-label">Low cards (2–6)</div>
                 </div>
-                <div class="hilo-value c-muted">0</div>
-                <div class="hilo-label">Mid cards (7–9)</div>
-              </div>
-              <div class="hilo-group">
-                <div class="hilo-cards">
-                  <div class="card card-sm suit-hearts"><span class="rank tl">10</span><span class="suit-sym">♥</span><span class="rank br">10</span></div>
-                  <div class="card card-sm suit-clubs"><span class="rank tl">J</span><span class="suit-sym">♣</span><span class="rank br">J</span></div>
-                  <div class="card card-sm suit-hearts"><span class="rank tl">A</span><span class="suit-sym">♥</span><span class="rank br">A</span></div>
+                <div class="hilo-group">
+                  <div class="hilo-cards">
+                    <div class="card card-sm suit-clubs"><span class="rank tl">7</span><span class="suit-sym">♣</span><span class="rank br">7</span></div>
+                    <div class="card card-sm suit-diamonds"><span class="rank tl">8</span><span class="suit-sym">♦</span><span class="rank br">8</span></div>
+                    <div class="card card-sm suit-spades"><span class="rank tl">9</span><span class="suit-sym">♠</span><span class="rank br">9</span></div>
+                  </div>
+                  <div class="hilo-value c-muted">0</div>
+                  <div class="hilo-label">Mid cards (7–9)</div>
                 </div>
-                <div class="hilo-value c-red">−1</div>
-                <div class="hilo-label">High cards (10–A)</div>
+                <div class="hilo-group">
+                  <div class="hilo-cards">
+                    <div class="card card-sm suit-hearts"><span class="rank tl">10</span><span class="suit-sym">♥</span><span class="rank br">10</span></div>
+                    <div class="card card-sm suit-clubs"><span class="rank tl">J</span><span class="suit-sym">♣</span><span class="rank br">J</span></div>
+                    <div class="card card-sm suit-hearts"><span class="rank tl">A</span><span class="suit-sym">♥</span><span class="rank br">A</span></div>
+                  </div>
+                  <div class="hilo-value c-red">−1</div>
+                  <div class="hilo-label">High cards (10–A)</div>
+                </div>
               </div>
             </div>
           </div>
@@ -383,15 +391,15 @@
               <h2 class="sk-title">Running<br>Count</h2>
               <p class="sk-desc">Every card that comes out is assigned a value — low cards count up, high cards count down. You'll train yourself to effortlessly keep a running tally in your head as each card is dealt.</p>
             </div>
-            <div class="sk-panel" data-panel="deviations">
-              <span class="sk-num">03</span>
-              <h2 class="sk-title">Deviations</h2>
-              <p class="sk-desc">Basic strategy assumes a neutral count — but as the true count shifts, the optimal play changes. Deviations are adjustments to basic strategy, squeezing out an additional edge.</p>
-            </div>
             <div class="sk-panel" data-panel="true-count">
-              <span class="sk-num">04</span>
+              <span class="sk-num">03</span>
               <h2 class="sk-title">True<br>Count</h2>
               <p class="sk-desc">Convert your running count to a true count. This adjusts for shoe size, so the count works across any number of decks. The true count is the number all exploitative strategy is based on.</p>
+            </div>
+            <div class="sk-panel" data-panel="deviations">
+              <span class="sk-num">04</span>
+              <h2 class="sk-title">Deviations</h2>
+              <p class="sk-desc">Basic strategy assumes a neutral count — but as the true count shifts, the optimal play changes. Deviations are adjustments to basic strategy, squeezing out an additional edge.</p>
             </div>
             <div class="sk-panel" data-panel="bet-spread">
               <span class="sk-num">05</span>
@@ -452,6 +460,21 @@
               </div>
             </div>
 
+            <div class="sk-visual" data-visual="true-count">
+              <div class="sv-window">
+                <div class="sv-win-bar"><span class="sv-win-dot"></span><span class="sv-win-dot"></span><span class="sv-win-dot"></span><span class="sv-win-title">True Count Trainer</span></div>
+                <div class="sv-content sv-tc-content">
+                  <div class="sv-tc-formula">
+                    <div class="sv-tc-row"><span class="sv-tc-lbl">Running Count</span><span class="sv-tc-num">+12</span></div>
+                    <div class="sv-tc-op">÷</div>
+                    <div class="sv-tc-row"><span class="sv-tc-lbl">Decks Remaining</span><span class="sv-tc-num">3.5</span></div>
+                    <div class="sv-tc-line"></div>
+                    <div class="sv-tc-result-row"><span class="sv-tc-lbl sv-tc-lbl-result">True Count</span><span class="sv-tc-num sv-tc-result-num">+3.5</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div class="sk-visual" data-visual="deviations">
               <div class="sv-window">
                 <div class="sv-win-bar"><span class="sv-win-dot"></span><span class="sv-win-dot"></span><span class="sv-win-dot"></span><span class="sv-win-title">Deviations Trainer</span></div>
@@ -472,21 +495,6 @@
                     </div>
                   </div>
                   <div class="sv-dev-note">Basic strategy says Hit — at TC +4, you Stand.</div>
-                </div>
-              </div>
-            </div>
-
-            <div class="sk-visual" data-visual="true-count">
-              <div class="sv-window">
-                <div class="sv-win-bar"><span class="sv-win-dot"></span><span class="sv-win-dot"></span><span class="sv-win-dot"></span><span class="sv-win-title">True Count Trainer</span></div>
-                <div class="sv-content sv-tc-content">
-                  <div class="sv-tc-formula">
-                    <div class="sv-tc-row"><span class="sv-tc-lbl">Running Count</span><span class="sv-tc-num">+12</span></div>
-                    <div class="sv-tc-op">÷</div>
-                    <div class="sv-tc-row"><span class="sv-tc-lbl">Decks Remaining</span><span class="sv-tc-num">3.5</span></div>
-                    <div class="sv-tc-line"></div>
-                    <div class="sv-tc-result-row"><span class="sv-tc-lbl sv-tc-lbl-result">True Count</span><span class="sv-tc-num sv-tc-result-num">+3.5</span></div>
-                  </div>
                 </div>
               </div>
             </div>

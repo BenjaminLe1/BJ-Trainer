@@ -52,7 +52,7 @@
    RESET & BASE
    ============================================================ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { overflow-x: hidden; }
+html, body { overflow: hidden; }
 html { scroll-behavior: smooth; }
 
 body {
@@ -2001,129 +2001,255 @@ h3 {
 
 /* Top bar */
 .ft-topbar {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0.75rem 1.25rem;
-  background: rgba(0,0,0,0.25);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: flex; align-items: flex-end; justify-content: space-around;
+  padding: 0.75rem 1.5rem 0.8rem;
+  background: rgba(0,0,0,0.3);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
   flex-shrink: 0;
 }
+
+/* Mini shoe and discard tray in topbar */
+.ft-tray-group, .ft-shoe-group {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.ft-mini-case {
+  width: 72px; height: 120px;
+  position: relative; overflow: hidden;
+  border-radius: 4px 4px 0 0;
+}
+.ft-shoe-case {
+  border: 1.5px solid rgba(255,255,255,0.18);
+  border-bottom: none;
+  /* Opaque shoe body — cards are inside, not visible */
+  background: linear-gradient(160deg, #2c2218 0%, #1a1510 60%, #221c14 100%);
+  box-shadow:
+    inset 2px 0 6px rgba(0,0,0,0.5),
+    inset -1px 0 4px rgba(255,255,255,0.04),
+    0 2px 8px rgba(0,0,0,0.4);
+}
+/* Hide card edges inside the shoe — shoe body is opaque */
+.ft-shoe-case .ft-mini-stack { display: none; }
+.ft-tray-case {
+  border: 1.5px solid rgba(255,255,255,0.12);
+  border-radius: 4px;
+  background: rgba(0,0,0,0.3);
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.4);
+}
+.ft-mini-shoe-slot {
+  position: absolute; top: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 62%; height: 8px;
+  background: rgba(0,0,0,0.9);
+  border-radius: 0 0 4px 4px;
+  z-index: 2;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);
+}
+/* Card-back peek visible just below the slot */
+.ft-mini-shoe-slot::after {
+  content: '';
+  position: absolute;
+  top: 100%; left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  height: 10px;
+  background: linear-gradient(180deg, #b5292a 0%, #8a1e1f 60%, transparent 100%);
+  border-radius: 0 0 2px 2px;
+  opacity: 0.85;
+}
+.ft-mini-stack {
+  position: absolute; bottom: 0; left: 4px; right: 4px;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  overflow: hidden;
+  transition: height 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ft-card-edge {
+  width: 100%; height: 2px;
+  background: #f0ece0;
+  border-bottom: 1px solid rgba(0,0,0,0.15);
+  flex-shrink: 0;
+}
+.ft-card-edge:nth-child(odd)  { background: #e8e2d4; }
+.ft-card-edge:nth-child(4n)   { background: #d8d2c4; }
+.ft-mini-shoe-base, .ft-tray-base {
+  width: calc(100% + 8px);
+  height: 6px;
+  background: linear-gradient(180deg, #2a2a2a, #1a1a1a);
+  border-radius: 0 0 4px 4px;
+  border: 1.5px solid rgba(255,255,255,0.12);
+  border-top: none;
+}
+.ft-tray-base {
+  width: 100%;
+}
+.ft-mini-lbl {
+  font-size: 0.6rem; text-transform: uppercase; letter-spacing: .1em;
+  color: rgba(255,255,255,0.35); margin-top: 2px;
+}
+/* Bankroll footer */
+.ft-bankroll-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.4rem 0 0;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  margin-top: 0.3rem;
+}
+.ft-bankroll-sublbl {
+  font-size: 0.58rem; text-transform: uppercase; letter-spacing: .1em;
+  color: rgba(255,255,255,0.3);
+}
 .ft-bankroll {
-  font-family: var(--font-serif); font-size: 1.3rem;
+  font-family: var(--font-serif); font-size: 1.2rem;
   color: #c9a84c; letter-spacing: 0.02em;
 }
-.ft-streak-bar {
-  display: flex; align-items: center; gap: 0.4rem;
-}
-.ft-streak-label {
-  font-size: 0.7rem; text-transform: uppercase; letter-spacing: .1em;
-  color: rgba(255,255,255,0.35);
-}
-.ft-streak-num {
-  font-family: var(--font-serif); font-size: 1.4rem; color: #c9a84c; line-height: 1;
-}
-.ft-streak-fire { font-size: 0.9rem; opacity: 0; transition: opacity .2s; }
 
 /* Dealer zone */
 .ft-dealer-zone {
   flex: 1; display: flex; flex-direction: column;
   align-items: center; justify-content: flex-end;
-  padding-bottom: 1.5rem;
+  padding-bottom: 1.25rem;
 }
 .ft-zone-lbl {
-  font-size: 0.65rem; text-transform: uppercase; letter-spacing: .14em;
-  color: rgba(255,255,255,0.3); margin-bottom: 0.75rem;
+  font-size: 0.62rem; text-transform: uppercase; letter-spacing: .14em;
+  color: rgba(255,255,255,0.28); margin-bottom: 0.6rem;
 }
 .ft-dealer-cards {
-  display: flex; gap: -8px;
+  display: flex; gap: 0;
 }
 .ft-dealer-cards .card { width: 76px; height: 108px; font-size: 1.1rem; }
 .ft-dealer-cards .card:not(:first-child) { margin-left: -10px; }
 
-/* Felt dividing line */
-.ft-table::after {
-  content: ''; display: block; flex-shrink: 0;
-  height: 1px; margin: 0 2rem;
-  background: rgba(255,255,255,0.08);
+/* Curved felt arc divider */
+.ft-felt-divider {
+  flex-shrink: 0; position: relative; height: 40px; overflow: visible;
+}
+.ft-felt-divider::before {
+  content: '';
+  position: absolute;
+  left: -10%; right: -10%; top: 10px;
+  height: 50px;
+  border-top: 1.5px solid rgba(201,168,76,0.22);
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
 }
 
 /* Player zone */
 .ft-player-zone {
   flex: 1; display: flex;
   align-items: flex-start; justify-content: center;
-  padding-top: 1.5rem;
+  padding-top: 0.75rem;
+}
+.ft-betting-area {
+  display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+}
+/* Betting circle on the felt */
+.ft-bet-circle {
+  width: 100px; height: 100px; border-radius: 50%;
+  border: 2px dashed rgba(201,168,76,0.35);
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+}
+.ft-bet-chips {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+/* Stacked chip tokens inside the circle */
+.ft-bet-chip-token {
+  position: absolute;
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.3);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
 }
 .ft-player-cards {
-  position: relative;
-  display: flex; align-items: flex-start;
+  position: relative; display: flex; align-items: flex-start;
 }
 .ft-player-cards .card { width: 88px; height: 124px; font-size: 1.2rem; }
-.ft-player-cards .card:nth-child(2) {
-  margin-left: -28px; margin-top: 12px;
-}
-.ft-player-cards .card:nth-child(3) {
-  margin-left: -28px; margin-top: 0;
-}
-.ft-player-cards .card:nth-child(4) {
-  margin-left: -28px; margin-top: 6px;
-}
+.ft-player-cards .card:nth-child(2) { margin-left: -28px; margin-top: 12px; }
+.ft-player-cards .card:nth-child(3) { margin-left: -28px; margin-top: 0; }
+.ft-player-cards .card:nth-child(4) { margin-left: -28px; margin-top: 6px; }
 
-/* Bottom panel */
+/* Bottom panel — compact */
 .ft-bottom-panel {
   flex-shrink: 0;
   background: rgba(0,0,0,0.35);
   border-top: 1px solid rgba(255,255,255,0.07);
-  padding: 1.25rem 1.5rem 1.5rem;
-  min-height: 200px;
+  padding: 0.7rem 1.1rem 0.8rem;
   display: flex; align-items: stretch;
 }
 .ft-phase {
-  width: 100%; display: flex; flex-direction: column; gap: 0.85rem;
+  width: 100%; display: flex; flex-direction: column; gap: 0.45rem;
 }
 
 /* Bet phase */
 .ft-bet-row {
-  display: flex; align-items: baseline; justify-content: space-between;
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(255,255,255,0.04);
+  border-radius: 7px; padding: 0.28rem 0.65rem;
 }
 .ft-bet-lbl {
-  font-size: 0.72rem; text-transform: uppercase; letter-spacing: .1em;
+  font-size: 0.65rem; text-transform: uppercase; letter-spacing: .12em;
   color: rgba(255,255,255,0.4);
 }
 .ft-bet-amount {
-  font-family: var(--font-serif); font-size: 1.6rem; color: #c9a84c;
+  font-family: var(--font-serif); font-size: 1.2rem; color: #c9a84c;
 }
 .ft-chips {
-  display: flex; gap: 0.6rem;
+  display: flex; gap: 0.45rem; justify-content: center;
 }
+
+/* Casino-style chips — compact size */
 .ft-chip {
-  flex: 1; padding: 0.6rem 0;
-  border-radius: 50%; width: 56px; height: 56px;
-  border: 2px solid;
-  font-size: 0.72rem; font-weight: 700; font-family: var(--font-sans);
-  cursor: pointer; transition: transform 0.1s, opacity 0.15s;
-  letter-spacing: 0.02em;
+  position: relative; width: 56px; height: 56px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; border: none; padding: 0; overflow: hidden;
+  font-family: var(--font-sans); font-weight: 800; font-size: 0.65rem;
+  letter-spacing: 0.03em; color: white;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.18);
+  transition: transform .12s ease, filter .12s ease;
+  z-index: 0; isolation: isolate;
 }
-.ft-chip:hover { transform: translateY(-3px); }
-.ft-chip:active { transform: scale(0.93); }
-.ft-chip-10  { background: #2e6b3e; border-color: #4ade80; color: #4ade80; }
-.ft-chip-25  { background: #5c2a2a; border-color: #f87171; color: #f87171; }
-.ft-chip-50  { background: #3a3200; border-color: #c9a84c; color: #c9a84c; }
-.ft-chip-100 { background: #1a1a4a; border-color: #818cf8; color: #818cf8; }
+.ft-chip::before {
+  content: ''; position: absolute; inset: 0; border-radius: 50%;
+  background: repeating-conic-gradient(rgba(255,255,255,0.52) 0deg 10deg, transparent 10deg 20deg);
+  -webkit-mask: radial-gradient(transparent 50%, black 50%, black 67%, transparent 67%);
+  mask: radial-gradient(transparent 50%, black 50%, black 67%, transparent 67%);
+  z-index: 1;
+}
+.ft-chip::after {
+  content: ''; position: absolute; inset: 7px; border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.32);
+  z-index: 2; pointer-events: none;
+}
+.ft-chip span { position: relative; z-index: 3; }
+.ft-chip:hover { transform: translateY(-4px) scale(1.07); filter: brightness(1.12); }
+.ft-chip:active { transform: scale(0.91); }
+
+/* Chip colors */
+.ft-chip-5   { background: radial-gradient(circle at 38% 35%, #ff7c72, #c0392b 58%, #922b21); }
+.ft-chip-25  { background: radial-gradient(circle at 38% 35%, #5de88a, #27ae60 58%, #1e8449); }
+.ft-chip-100 { background: radial-gradient(circle at 38% 35%, #777, #222 55%, #111); }
+.ft-chip-500 { background: radial-gradient(circle at 38% 35%, #c39bd3, #7d3c98 58%, #5b2c6f); }
+
+/* Chip token in bet circle */
+.ft-bet-chip-token.ft-chip-5   { background: #c0392b; }
+.ft-bet-chip-token.ft-chip-25  { background: #27ae60; }
+.ft-bet-chip-token.ft-chip-100 { background: #222; }
+.ft-bet-chip-token.ft-chip-500 { background: #7d3c98; }
 .ft-bet-btns {
-  display: flex; gap: 0.75rem;
+  display: flex; gap: 0.55rem;
 }
 .ft-ghost-btn {
-  flex: 0 0 auto; padding: 0.7rem 1.25rem;
+  flex: 0 0 auto; padding: 0.55rem 1rem;
   background: none; border: 1px solid rgba(255,255,255,0.18);
   border-radius: 8px; color: rgba(255,255,255,0.5);
-  font-size: 0.88rem; font-family: var(--font-sans);
+  font-size: 0.8rem; font-family: var(--font-sans);
   cursor: pointer; transition: border-color .15s, color .15s;
 }
 .ft-ghost-btn:hover { border-color: rgba(255,255,255,0.4); color: rgba(255,255,255,0.8); }
 .ft-deal-btn {
-  flex: 1; padding: 0.8rem;
+  flex: 1; padding: 0.65rem;
   background: #c9a84c; color: #1a0f00;
   border: none; border-radius: 8px;
-  font-size: 1rem; font-weight: 700; font-family: var(--font-sans);
+  font-size: 0.9rem; font-weight: 700; font-family: var(--font-sans);
   cursor: pointer; transition: background .15s, transform .1s;
 }
 .ft-deal-btn:hover:not(:disabled) { background: #d9b85c; }
@@ -2131,35 +2257,64 @@ h3 {
 
 /* Play phase */
 .ft-phase-label {
-  font-size: 0.75rem; text-transform: uppercase; letter-spacing: .1em;
+  font-size: 0.68rem; text-transform: uppercase; letter-spacing: .1em;
   color: rgba(255,255,255,0.38); text-align: center;
 }
 .ft-play-actions {
-  display: flex; gap: 0.6rem; justify-content: center;
+  display: flex; gap: 0.5rem; justify-content: center;
 }
 .ft-play-actions .sk-action-btn {
-  flex: 1; max-width: 96px;
+  flex: 1; max-width: 88px;
 }
 
-/* Result row */
-.ft-result-row {
-  display: flex; flex-direction: column; gap: 0.5rem;
+/* Hand value badge on player/dealer cards */
+.ft-hand-badge {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.55); color: #e8e2d4;
+  font-size: 0.7rem; font-weight: 700;
+  padding: 0.12rem 0.45rem; border-radius: 0 0 6px 6px;
+  pointer-events: none;
 }
-.ft-result-item {
-  display: flex; align-items: center; gap: 0.6rem;
-  font-size: 0.88rem; color: rgba(255,255,255,0.7);
+.ft-hand-bust { background: rgba(200,50,50,0.7) !important; color: #fff; }
+.ft-hand-bj   { background: rgba(201,168,76,0.8) !important; color: #1a0f00; }
+.ft-player-cards { position: relative; }
+
+/* Outcome rows in result phase */
+.ft-outcomes {
+  display: flex; flex-direction: column; gap: 0.3rem;
 }
-.ft-result-icon {
-  width: 22px; height: 22px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
+.ft-outcome-row {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 0.82rem;
 }
-.ft-result-good .ft-result-icon { background: rgba(74,222,128,0.18); color: #4ade80; }
-.ft-result-bad  .ft-result-icon { background: rgba(248,113,113,0.18); color: #f87171; }
-.ft-result-bet {
-  font-family: var(--font-serif); font-size: 1.4rem; text-align: center;
-  margin-top: 0.25rem;
+.ft-outcome-win   { color: #4ade80; }
+.ft-outcome-lose  { color: #f87171; }
+.ft-outcome-push  { color: #94a3b8; }
+.ft-outcome-amount {
+  font-family: var(--font-serif); font-size: 1.05rem; font-weight: 600;
 }
+.ft-bs-verdict {
+  font-size: 0.68rem; text-transform: uppercase; letter-spacing: .07em;
+  margin-top: 0.2rem; padding-top: 0.2rem;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+.ft-bs-ok   { color: #4ade80; }
+.ft-bs-wrong { color: #f87171; }
+
+/* Result row wrapper */
+.ft-result-row { display: flex; flex-direction: column; gap: 0.35rem; }
+
+/* Bankroll footer — compact + reset button */
+.ft-bankroll-left {
+  display: flex; flex-direction: column; gap: 1px;
+}
+.ft-reset-btn {
+  padding: 0.35rem 0.7rem !important;
+  font-size: 0.7rem !important;
+  border-radius: 6px !important;
+  opacity: 0.7;
+}
+.ft-reset-btn:hover { opacity: 1; }
 
 /* ============================================================
    SKILL INTRO SCREEN
@@ -2213,6 +2368,19 @@ h3 {
   position: absolute; left: 0.9rem;
   color: var(--accent); font-size: 0.78rem;
 }
+/* Difficulty level badge on intro screen */
+.skill-intro-level {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: rgba(196,101,58,0.1);
+  border: 1px solid rgba(196,101,58,0.25);
+  border-radius: 100px;
+  padding: 0.3rem 0.9rem;
+}
+
 .skill-intro-start {
   width: 100%; padding: 1rem;
   background: var(--accent);
@@ -2451,7 +2619,7 @@ h3 {
 .kc-xp-label { font-size: 0.65rem; color: var(--tr-dim); white-space: nowrap; }
 
 /* Count controls */
-.count-controls { display: flex; align-items: stretch; }
+.count-controls { display: flex; align-items: stretch; justify-content: center; }
 .stepper-btn {
   width: 56px; height: 60px;
   background: var(--tr-panel); border: 1px solid var(--tr-border);
@@ -2463,6 +2631,8 @@ h3 {
 .stepper-btn:last-child  { border-radius: 0 8px 8px 0; }
 .stepper-btn:hover  { background: rgba(255,255,255,0.07); }
 .stepper-btn:active { background: rgba(255,255,255,0.12); }
+.stepper-btn:disabled { opacity: 0.25; cursor: default; }
+.btn-primary:disabled, .btn-submit:disabled { opacity: 0.3 !important; cursor: default !important; pointer-events: none; }
 
 .count-display {
   width: 110px; height: 60px;
@@ -2962,34 +3132,67 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
 .shoe-stats strong { color: var(--tr-text); font-family: var(--font-serif); font-size: 1.1rem; display: block; }
 
 /* Speed slider (KeepCounting) */
-.kc-speed-wrap {
+/* speed slider removed — auto-difficulty controls speed now */
+
+/* 60-second drill ring timer */
+.drill-timer-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.25rem;
+}
+.drill-timer-ring {
+  position: relative;
+  width: 56px;
+  height: 56px;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  justify-content: center;
+}
+.drill-timer-svg {
+  position: absolute;
+  inset: 0;
   width: 100%;
-  max-width: 380px;
-  padding: 0.6rem 0.9rem;
-  background: var(--tr-panel);
-  border: 1px solid var(--tr-border);
-  border-radius: 8px;
+  height: 100%;
+  transform: rotate(-90deg);
 }
-.kc-speed-label {
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--tr-dim);
-  white-space: nowrap;
-  flex-shrink: 0;
+.drill-timer-track {
+  fill: none;
+  stroke: var(--tr-border);
+  stroke-width: 3;
 }
-.kc-speed-val {
-  font-size: 0.72rem;
-  color: var(--tr-muted);
-  white-space: nowrap;
-  flex-shrink: 0;
-  min-width: 50px;
-  text-align: right;
+.drill-timer-progress {
+  fill: none;
+  stroke: #4ade80;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 1s linear, stroke 0.5s ease;
 }
-#kc-speed { flex: 1; accent-color: var(--accent); }
+.drill-timer-num {
+  position: relative;
+  font-size: 1rem;
+  font-family: var(--font-serif);
+  color: var(--tr-text);
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* Countdown timer bar (KC levels 3-5) */
+#kc-timer-bar-wrap {
+  width: 100%;
+  height: 3px;
+  background: var(--tr-border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+#kc-timer-bar {
+  height: 100%;
+  width: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transform-origin: left;
+}
 
 /* ============================================================
    MOBILE
@@ -3757,7 +3960,7 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
 .ace-flip-bg {
   position: absolute;
   inset: 0;
-  background: #faf9f6;
+  background: #f3f7f2;
   z-index: 1;
 }
 .ace-flip-wrap {
@@ -3914,7 +4117,7 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
   inset: 0;
   z-index: 55; /* below hero-nav (z-index: 100) so nav stays visible */
   overflow: hidden;
-  background: #faf9f6;
+  background: #f3f7f2;
 }
 #tour-stage.hidden { display: none; }
 
@@ -3939,6 +4142,8 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
   display: none;
   min-height: 100vh;
   position: relative;
+  /* Match hero + tour-stage background so transparent nav color is consistent */
+  background: #f3f7f2 !important;
 }
 .tour-pages > .ls.tour-page-active {
   display: flex;
@@ -3976,12 +4181,15 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
   position: fixed;
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%);
+  /* Use margin instead of transform for centering so animation transform works cleanly */
+  margin-left: -130px;
+  margin-top: -170px;
   width: 260px;
   height: 340px;
   perspective: 900px;
-  z-index: 10;
+  z-index: 200;
   pointer-events: none;
+  opacity: 0;
 }
 .tour-ring-wrap.hidden { display: none; }
 .tour-ring {
@@ -4007,23 +4215,16 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
 .tour-ring .rc-card:nth-child(7) { transform: rotateY(270deg) translateZ(210px); }
 .tour-ring .rc-card:nth-child(8) { transform: rotateY(315deg) translateZ(210px); }
 
-/* Fast spin + zoom-through used between tour pages */
-@keyframes tourRingEnter {
-  from { opacity: 0; transform: rotateX(14deg) rotateY(0deg) scale(0.4); filter: blur(8px); }
-  to   { opacity: 1; transform: rotateX(14deg) rotateY(0deg) scale(1);   filter: blur(0); }
+/* Single combined animation: enter → spin → zoom out. No competing classes. */
+@keyframes tourTransition {
+  0%   { opacity: 0; transform: rotateX(14deg) rotateY(0deg)    scale(0.35); filter: blur(10px); }
+  10%  { opacity: 1; transform: rotateX(14deg) rotateY(0deg)    scale(1);    filter: blur(0);   }
+  84%  { opacity: 1; transform: rotateX(14deg) rotateY(1440deg) scale(1);    filter: blur(0);   }
+  100% { opacity: 0; transform: rotateX(14deg) rotateY(1440deg) scale(6);    filter: blur(12px); }
 }
-@keyframes tourRingFastSpin {
-  0%   { transform: rotateX(14deg) rotateY(0deg); filter: blur(2px); }
-  30%  { filter: blur(1px); }
-  100% { transform: rotateX(14deg) rotateY(1440deg); filter: blur(0); }
+.tour-ring-wrap.transitioning {
+  animation: tourTransition 2800ms cubic-bezier(0.12, 0, 0.28, 1) both;
 }
-@keyframes tourRingZoomThrough {
-  0%   { opacity: 1; transform: rotateX(14deg) rotateY(1440deg) scale(1); filter: blur(0); }
-  100% { opacity: 0; transform: rotateX(14deg) rotateY(1440deg) scale(7); filter: blur(14px); }
-}
-.tour-ring-wrap.enter      { animation: tourRingEnter 400ms cubic-bezier(.2,.8,.2,1) both; }
-.tour-ring.fast-spin       { animation: tourRingFastSpin 1800ms cubic-bezier(0.12, 0, 0.35, 1) both; }
-.tour-ring-wrap.zoom-through { animation: tourRingZoomThrough 900ms cubic-bezier(.15,0,.4,1) both; }
 
 /* Progress dots at bottom */
 .tour-progress {
@@ -4087,6 +4288,7 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
   .hero-card-ring-wrap.diving,
   .hero-card-ring-wrap,
   .tour-ring-wrap,
+  .tour-ring-wrap.transitioning,
   .tour-ring,
   .ls-hero.tour-pending .hero-body,
   .ls-hero.tour-pending .hero-explore,
@@ -4188,4 +4390,1097 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
 
 @media (prefers-reduced-motion: reduce) {
   .dealt-in { animation: none !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TASTE-SKILL REDESIGN — premium landing layer
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── 1. Navbar — fully transparent ───────────────────────────── */
+#hero-nav,
+.hero-nav {
+  background: transparent !important;
+  border-bottom: none;
+}
+
+.nav-brand-name {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(26,18,8,0.6);
+}
+
+/* ── 2. Buttons — ui-ux-pro-max redesign ────────────────────── */
+
+/* ── Hero CTA "Learn More" — accent pill ─ */
+.hero-main-cta {
+  background: var(--accent) !important;
+  border-radius: 100px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.18),
+    0 4px 16px rgba(196,101,58,0.45),
+    0 1px 4px  rgba(196,101,58,0.3) !important;
+  transition:
+    background 0.22s cubic-bezier(0.2,0.8,0.2,1),
+    box-shadow 0.22s cubic-bezier(0.2,0.8,0.2,1),
+    transform  0.22s cubic-bezier(0.34,1.56,0.64,1) !important;
+}
+.hero-main-cta:hover {
+  background: var(--accent-hover) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.2),
+    0 8px 24px rgba(196,101,58,0.55),
+    0 2px 6px  rgba(196,101,58,0.35) !important;
+  transform: translateY(-2px) !important;
+}
+.hero-main-cta:active {
+  background: #8e4426 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 2px 6px rgba(196,101,58,0.3) !important;
+  transform: translateY(1px) scale(0.984) !important;
+  opacity: 1 !important;
+}
+.hero-main-cta .hero-cta-arrow {
+  background: rgba(0,0,0,0.14) !important;
+  border-left: 1px solid rgba(0,0,0,0.12) !important;
+  transition: background 0.22s, transform 0.22s cubic-bezier(0.34,1.56,0.64,1) !important;
+}
+.hero-main-cta:hover .hero-cta-arrow {
+  background: rgba(0,0,0,0.2) !important;
+  transform: translateX(4px) !important;
+}
+.hero-main-cta:active .hero-cta-arrow {
+  transform: translateX(0) !important;
+}
+
+/* ── Nav "Start Training" — ghost outline ─ */
+.nav-start-btn {
+  background: transparent !important;
+  color: #1a1208 !important;
+  border: 1.5px solid rgba(26,18,8,0.55) !important;
+  border-radius: 100px !important;
+  box-shadow: none !important;
+  transition:
+    background  0.2s ease,
+    border-color 0.2s ease,
+    transform   0.2s cubic-bezier(0.34,1.56,0.64,1) !important;
+}
+.nav-start-btn:hover {
+  background: #1a1208 !important;
+  border-color: #1a1208 !important;
+  color: #fff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(26,18,8,0.22) !important;
+}
+.nav-start-btn:active {
+  transform: translateY(1px) scale(0.985) !important;
+  opacity: 1 !important;
+}
+.nav-start-btn .hero-cta-arrow {
+  background: transparent !important;
+  border-left: 1px solid rgba(26,18,8,0.2) !important;
+  transition: background 0.2s, transform 0.2s cubic-bezier(0.34,1.56,0.64,1) !important;
+}
+.nav-start-btn:hover .hero-cta-arrow {
+  background: rgba(255,255,255,0.1) !important;
+  border-left-color: rgba(255,255,255,0.2) !important;
+  transform: translateX(3px) !important;
+}
+.nav-start-btn:active .hero-cta-arrow { transform: translateX(0) !important; }
+
+/* ── Skills CTA — matches hero pill ─ */
+.sk-cta {
+  background: var(--accent) !important;
+  border-radius: 100px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.15),
+    0 4px 14px rgba(196,101,58,0.38) !important;
+  transition:
+    background 0.22s cubic-bezier(0.2,0.8,0.2,1),
+    box-shadow 0.22s cubic-bezier(0.2,0.8,0.2,1),
+    transform  0.22s cubic-bezier(0.34,1.56,0.64,1) !important;
+}
+.sk-cta:hover {
+  background: var(--accent-hover) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.18),
+    0 8px 20px rgba(196,101,58,0.48) !important;
+  transform: translateY(-2px) !important;
+}
+.sk-cta:active {
+  transform: translateY(1px) scale(0.984) !important;
+  opacity: 1 !important;
+}
+.sk-cta .hero-cta-arrow {
+  background: rgba(0,0,0,0.14) !important;
+  border-left: 1px solid rgba(0,0,0,0.12) !important;
+  transition: background 0.22s, transform 0.22s cubic-bezier(0.34,1.56,0.64,1) !important;
+}
+.sk-cta:hover .hero-cta-arrow {
+  background: rgba(0,0,0,0.2) !important;
+  transform: translateX(4px) !important;
+}
+.sk-cta:active .hero-cta-arrow { transform: translateX(0) !important; }
+
+.hero-main-cta .hero-cta-text,
+.nav-start-btn  .hero-cta-text {
+  letter-spacing: 0.11em;
+}
+
+/* ── 3. Info sections — editorial split layout ───────────────── */
+.ls-info {
+  background: #F9FAFB;
+  padding: 6rem 3.5rem;
+  align-items: flex-start;
+  justify-content: center;
+}
+.ls-info-inner {
+  max-width: 1060px;
+}
+.info-split {
+  display: grid;
+  grid-template-columns: 1fr 1.35fr;
+  gap: 6rem;
+  align-items: start;
+}
+.info-split-left {
+  position: sticky;
+  top: 6rem;
+}
+.ls-info .info-modal-eyebrow {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 1.5rem;
+  display: block;
+}
+.ls-info .info-modal-title {
+  font-family: 'GFS Didot', Georgia, serif;
+  font-size: clamp(2.6rem, 4vw, 3.5rem);
+  line-height: 1.0;
+  letter-spacing: -0.02em;
+  color: #18181B;
+  margin: 0;
+  font-weight: 400;
+}
+.ls-info .info-modal-body p {
+  font-size: 0.96rem;
+  color: rgba(26,18,8,0.58);
+  line-height: 1.78;
+  margin-bottom: 1.05rem;
+}
+.ls-info .info-modal-body p:last-child { margin-bottom: 0; }
+.ls-info .info-modal-body strong {
+  color: #18181B;
+  font-weight: 600;
+}
+.ls-info .info-modal-sub {
+  font-size: 0.85rem;
+  color: rgba(26,18,8,0.42);
+  line-height: 1.65;
+  margin-bottom: 0.75rem !important;
+}
+
+/* ── 4. BJ actions — editorial rule list ─────────────────────── */
+.bj-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border-top: 1px solid rgba(26,18,8,0.1);
+  margin-top: 1.75rem;
+}
+.bj-action {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(26,18,8,0.07);
+  background: none;
+  border-radius: 0;
+  border-left: none;
+}
+.bj-action:nth-child(odd) {
+  padding-right: 1.75rem;
+  border-right: 1px solid rgba(26,18,8,0.07);
+}
+.bj-action:nth-child(even) {
+  padding-left: 1.75rem;
+}
+.bj-action:nth-last-child(-n+2) { border-bottom: none; }
+.bj-action-name {
+  font-family: 'GFS Didot', Georgia, serif;
+  font-size: 1.05rem;
+  font-style: italic;
+  font-weight: 400;
+  color: #18181B;
+  letter-spacing: 0;
+}
+.bj-action-desc {
+  font-size: 0.8rem;
+  color: rgba(26,18,8,0.46);
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+/* ── 5. Myth card — open editorial list ──────────────────────── */
+.ls-info .myth-card {
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  border-top: 1px solid rgba(26,18,8,0.09);
+  padding-top: 1.25rem;
+  margin: 1.5rem 0 1.25rem;
+}
+.ls-info .myth-card h3 {
+  font-family: var(--font-sans);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(26,18,8,0.32);
+  margin-bottom: 0.85rem;
+}
+.ls-info .myth-list {
+  gap: 0;
+}
+.ls-info .myth-list li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1rem;
+  align-items: baseline;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid rgba(26,18,8,0.055);
+  flex-direction: row;
+}
+.ls-info .myth-list li:last-child { border-bottom: none; }
+.ls-info .myth-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #18181B;
+  white-space: nowrap;
+}
+.ls-info .myth-body {
+  font-size: 0.82rem;
+  color: rgba(26,18,8,0.5);
+  line-height: 1.55;
+}
+
+/* ── 6. Hi-Lo chart — refined grid ───────────────────────────── */
+.ls-info .hilo-chart-compact {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: rgba(26,18,8,0.08);
+  border: 1px solid rgba(26,18,8,0.08);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-top: 1.25rem;
+  flex-wrap: nowrap;
+}
+.ls-info .hilo-chart-compact .hilo-group {
+  background: #F9FAFB;
+  border-radius: 0;
+  padding: 1.25rem 0.75rem;
+  min-width: 0;
+  flex: none;
+}
+.ls-info .hilo-chart-compact .hilo-value {
+  font-size: 1.5rem;
+  font-family: 'GFS Didot', Georgia, serif;
+  font-weight: 400;
+  margin-bottom: 0.2rem;
+}
+.ls-info .hilo-chart-compact .hilo-label {
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(26,18,8,0.38);
+  margin-top: 0.25rem;
+}
+.ls-info .hilo-value.c-green { color: #16a34a; }
+.ls-info .hilo-value.c-muted { color: rgba(26,18,8,0.28); }
+.ls-info .hilo-value.c-red   { color: #dc2626; }
+
+/* ── 7. Skills section ────────────────────────────────────────── */
+.ls-skills { background: #F9FAFB; }
+
+.sk-tab {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(26,18,8,0.3);
+}
+.sk-tab.active { color: #18181B; }
+.sk-tab.active::after { background: #18181B; }
+.sk-tab:hover:not(.active) { color: rgba(26,18,8,0.6); }
+
+.sk-num {
+  font-family: 'GFS Didot', Georgia, serif;
+  font-size: 4rem;
+  font-style: italic;
+  color: rgba(196,101,58,0.18);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  margin-bottom: -0.75rem;
+}
+.sk-title {
+  color: #18181B;
+  letter-spacing: -0.025em;
+}
+.sk-desc {
+  color: rgba(26,18,8,0.5);
+  font-size: 0.96rem;
+  line-height: 1.74;
+}
+.sk-right {
+  background: linear-gradient(145deg, #edeae0 0%, #f5f2e9 55%, #e9e5da 100%);
+}
+
+/* ── 8. Responsive ───────────────────────────────────────────── */
+@media (max-width: 800px) {
+  .info-split {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  .info-split-left { position: static; }
+  .ls-info { padding: 4.5rem 1.75rem; }
+  .ls-info .info-modal-title {
+    font-size: clamp(2rem, 9vw, 2.8rem);
+  }
+  .bj-actions { grid-template-columns: 1fr; }
+  .bj-action:nth-child(odd),
+  .bj-action:nth-child(even) {
+    border-right: none;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .bj-action:last-child { border-bottom: none; }
+}
+
+/* ============================================================
+   UI-UX PRO MAX — TRAINER SUITE REFINEMENT
+   Glassmorphism panels · spring buttons · premium shadows
+   ============================================================ */
+
+/* ── 1. Trainer body & wrapper ───────────────────────────── */
+#skill-trainer .skill-body {
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+/* ── 2. Count controls — premium glass ──────────────────── */
+.count-controls {
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.07);
+}
+.stepper-btn {
+  width: 64px !important;
+  height: 66px !important;
+  background: rgba(255,255,255,0.06) !important;
+  border-color: rgba(255,255,255,0.1) !important;
+  font-size: 1.75rem !important;
+  transition: background 180ms ease, transform 180ms cubic-bezier(0.34,1.56,0.64,1) !important;
+}
+.stepper-btn:hover  { background: rgba(255,255,255,0.1) !important; }
+.stepper-btn:active { transform: scale(0.93) !important; background: rgba(255,255,255,0.15) !important; }
+.stepper-btn:first-child { border-radius: 14px 0 0 14px !important; }
+.stepper-btn:last-child  { border-radius: 0 14px 14px 0 !important; }
+
+.count-display {
+  width: 120px !important;
+  height: 66px !important;
+  font-size: 2.6rem !important;
+  background: rgba(255,255,255,0.04) !important;
+  border-color: rgba(255,255,255,0.08) !important;
+  letter-spacing: -0.02em;
+}
+
+/* ── 3. Primary button — pill + spring ──────────────────── */
+.btn-primary {
+  border-radius: 100px !important;
+  padding: 0.82rem 1.9rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em !important;
+  box-shadow: 0 2px 12px rgba(196,101,58,0.28), inset 0 1px 0 rgba(255,255,255,0.15) !important;
+  transition: background 200ms ease,
+              box-shadow 200ms ease,
+              transform 200ms cubic-bezier(0.34,1.56,0.64,1) !important;
+}
+.btn-primary:hover  {
+  box-shadow: 0 6px 20px rgba(196,101,58,0.35), inset 0 1px 0 rgba(255,255,255,0.18) !important;
+  transform: translateY(-1px) !important;
+}
+.btn-primary:active {
+  transform: translateY(1.5px) scale(0.980) !important;
+  box-shadow: 0 1px 6px rgba(196,101,58,0.2) !important;
+}
+.btn-submit {
+  border-radius: 100px !important;
+}
+
+/* ── 4. Action buttons (Hit / Stand / Double / Split) ───── */
+.sk-action-btn {
+  border-radius: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.03em !important;
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.06) !important;
+  transition: background 180ms ease,
+              border-color 180ms ease,
+              transform 180ms cubic-bezier(0.34,1.56,0.64,1),
+              box-shadow 180ms ease !important;
+}
+.sk-action-btn:hover {
+  background: rgba(255,255,255,0.1) !important;
+  border-color: rgba(255,255,255,0.22) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.35) !important;
+}
+.sk-action-btn:active {
+  transform: translateY(1px) scale(0.975) !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2) !important;
+}
+.sk-action-btn.correct {
+  background: rgba(22,163,74,0.14) !important;
+  border-color: rgba(74,222,128,0.45) !important;
+  box-shadow: 0 0 18px rgba(74,222,128,0.18), inset 0 1px 0 rgba(74,222,128,0.1) !important;
+}
+.sk-action-btn.wrong {
+  background: rgba(220,38,38,0.12) !important;
+  border-color: rgba(248,113,113,0.45) !important;
+  box-shadow: 0 0 18px rgba(248,113,113,0.18), inset 0 1px 0 rgba(248,113,113,0.08) !important;
+}
+
+/* ── 5. Skill intro screen ───────────────────────────────── */
+.skill-intro-bullets {
+  background: rgba(255,255,255,0.04) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06) !important;
+}
+.skill-intro-bullets li {
+  border-bottom-color: rgba(255,255,255,0.06) !important;
+}
+.skill-intro-start {
+  border-radius: 100px !important;
+  font-size: 0.82rem !important;
+  padding: 1.05rem !important;
+  box-shadow: 0 4px 18px rgba(196,101,58,0.3) !important;
+  transition: background 200ms ease, transform 200ms cubic-bezier(0.34,1.56,0.64,1), box-shadow 200ms ease !important;
+}
+.skill-intro-start:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 24px rgba(196,101,58,0.38) !important;
+}
+.skill-intro-start:active {
+  transform: translateY(1.5px) scale(0.980) !important;
+}
+.skill-intro-howto {
+  border-radius: 100px !important;
+  transition: border-color 200ms ease, color 200ms ease, transform 180ms cubic-bezier(0.34,1.56,0.64,1) !important;
+}
+.skill-intro-howto:hover { transform: translateY(-1px) !important; }
+.skill-intro-howto:active { transform: scale(0.976) !important; }
+
+/* ── 6. SK Feedback panel ────────────────────────────────── */
+.sk-feedback {
+  background: rgba(255,255,255,0.04) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3) !important;
+}
+.sk-feedback.correct {
+  border-color: rgba(74,222,128,0.25) !important;
+  box-shadow: 0 0 28px rgba(74,222,128,0.1), 0 8px 24px rgba(0,0,0,0.3) !important;
+}
+.sk-feedback.wrong {
+  border-color: rgba(248,113,113,0.25) !important;
+  box-shadow: 0 0 28px rgba(248,113,113,0.1), 0 8px 24px rgba(0,0,0,0.3) !important;
+}
+
+/* ── 7. Hi-Lo reference strip ────────────────────────────── */
+.hilo-ref-strip {
+  background: rgba(255,255,255,0.04) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25) !important;
+}
+
+/* ── 8. Dashboard cards & panels ─────────────────────────── */
+.dash-global-stats {
+  background: rgba(255,255,255,0.04) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06) !important;
+  padding: 1.5rem 1.75rem !important;
+}
+.dash-global-num {
+  font-size: 2rem !important;
+  letter-spacing: -0.02em !important;
+}
+.dash-skill-card {
+  background: rgba(255,255,255,0.04) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.05) !important;
+  transition: transform 200ms ease, box-shadow 200ms ease !important;
+}
+.dash-skill-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.35) !important;
+}
+.dash-weakness-box {
+  border-radius: 14px !important;
+  background: rgba(220,38,38,0.06) !important;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.2) !important;
+}
+.dash-strong-box {
+  border-radius: 14px !important;
+  background: rgba(74,222,128,0.05) !important;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.2) !important;
+}
+.dash-train-btn {
+  border-radius: 100px !important;
+  font-size: 0.82rem !important;
+}
+
+/* ── 9. Card stage ───────────────────────────────────────── */
+.sk-card-stage {
+  padding: 0.5rem 0 !important;
+}
+#skill-trainer .card {
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5), 0 2px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.5) !important;
+  border-radius: 8px !important;
+}
+
+/* ── 10. Deviations felt table ───────────────────────────── */
+.felt-table {
+  border-radius: 20px !important;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.04) !important;
+}
+
+/* ── 11. kc-wrapper inner panels ─────────────────────────── */
+#kc-input-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+#kc-input-section > div:first-child {
+  margin-bottom: 0.75rem !important;
+}
+
+/* ── 12. Drill complete screen numbers ───────────────────── */
+#kc-restart, #tc-restart {
+  border-radius: 100px !important;
+  box-shadow: 0 4px 18px rgba(196,101,58,0.3) !important;
+  transition: transform 200ms cubic-bezier(0.34,1.56,0.64,1), box-shadow 200ms ease !important;
+}
+#kc-restart:hover, #tc-restart:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 24px rgba(196,101,58,0.38) !important;
+}
+#kc-restart:active, #tc-restart:active {
+  transform: translateY(1.5px) scale(0.980) !important;
+}
+
+/* ── 13. Full training table — enhanced chips & panel ───── */
+.ft-bottom-panel {
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+.ft-deal-btn {
+  border-radius: 100px !important;
+  font-size: 0.9rem !important;
+  box-shadow: 0 4px 16px rgba(201,168,76,0.25) !important;
+  transition: background 200ms ease,
+              transform 200ms cubic-bezier(0.34,1.56,0.64,1),
+              box-shadow 200ms ease !important;
+}
+.ft-deal-btn:hover:not(:disabled) {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 24px rgba(201,168,76,0.32) !important;
+}
+.ft-deal-btn:active:not(:disabled) {
+  transform: translateY(1.5px) scale(0.980) !important;
+}
+.ft-ghost-btn {
+  border-radius: 100px !important;
+  transition: border-color 180ms ease, color 180ms ease,
+              transform 180ms cubic-bezier(0.34,1.56,0.64,1) !important;
+}
+.ft-ghost-btn:active { transform: scale(0.975) !important; }
+
+/* ── 14. Keyboard hint ───────────────────────────────────── */
+kbd {
+  border-radius: 5px !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3), inset 0 -1px 0 rgba(0,0,0,0.2) !important;
+}
+
+/* ── 15. Score elements ──────────────────────────────────── */
+.sk-score-num {
+  font-size: 1.65rem !important;
+  letter-spacing: -0.02em !important;
+}
+
+/* ── 16. Cormorant Garamond for premium display numbers ──── */
+.count-display,
+.ft-bankroll,
+#tc-rc,
+.dash-global-num,
+.skill-intro-headline,
+.drill-timer-num {
+  font-family: 'Cormorant Garamond', 'Instrument Serif', Georgia, serif !important;
+}
+.count-display { font-size: 2.8rem !important; }
+
+/* ── Bet spread reference dropdown ───────────────────────── */
+.ft-spread-ref {
+  width: 100%;
+  background: rgba(201,168,76,0.08);
+  border: 1px solid rgba(201,168,76,0.28);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.ft-spread-ref-toggle {
+  list-style: none; cursor: pointer;
+  font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .1em;
+  color: #c9a84c;
+  display: flex; align-items: center; gap: 0.5rem;
+  user-select: none;
+  padding: 0.65rem 0.9rem;
+  transition: background 180ms ease;
+}
+.ft-spread-ref-toggle:hover { background: rgba(201,168,76,0.08); }
+.ft-spread-ref-toggle::marker,
+.ft-spread-ref-toggle::-webkit-details-marker { display: none; }
+.ft-spread-ref-toggle::before {
+  content: '▸';
+  transition: transform 180ms ease;
+  display: inline-block;
+  font-size: 0.65rem;
+}
+.ft-spread-ref[open] .ft-spread-ref-toggle { border-bottom: 1px solid rgba(201,168,76,0.18); }
+.ft-spread-ref[open] .ft-spread-ref-toggle::before { transform: rotate(90deg); }
+
+.ft-spread-ref-body { padding: 0.25rem 0; }
+.ft-spread-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 0.82rem;
+}
+.ft-spread-table td {
+  padding: 0.35rem 0.9rem;
+  color: rgba(255,255,255,0.55);
+}
+.ft-spread-table td:last-child { text-align: right; color: #c9a84c; font-family: var(--font-serif); }
+.ft-spread-active td { color: rgba(255,255,255,0.9) !important; background: rgba(201,168,76,0.1); }
+.ft-spread-active td:last-child { color: #f0c84a !important; font-size: 0.95rem; }
+.ft-spread-active td:first-child::after { content: ' ◀'; color: rgba(201,168,76,0.5); font-size: 0.6rem; }
+
+/* Bet mismatch warning */
+.ft-bet-warning {
+  font-size: 0.75rem; color: #fb923c;
+  text-align: center; padding: 0.35rem 0.75rem;
+  background: rgba(251,146,60,0.1);
+  border: 1px solid rgba(251,146,60,0.25);
+  border-radius: 100px;
+  transition: opacity 200ms ease;
+}
+.ft-bet-warning.hidden { display: none; }
+
+/* ============================================================
+   UI-UX PRO MAX — FULL TRAINER SUITE VISUAL OVERHAUL
+   Premium dark-nav · depth backgrounds · premium transitions
+   ============================================================ */
+
+/* ── 1. Trainer & dashboard background with depth vignette ── */
+#skill-trainer {
+  background:
+    radial-gradient(ellipse 100% 55% at 50% 0%,
+      rgba(28,72,40,0.4) 0%, transparent 70%),
+    var(--tr-bg) !important;
+}
+#dashboard {
+  background:
+    radial-gradient(ellipse 100% 45% at 50% 0%,
+      rgba(28,72,40,0.22) 0%, transparent 65%),
+    var(--tr-bg) !important;
+}
+
+/* ── 2. Dark nav — true glassmorphism ────────────────────── */
+.dark-nav {
+  background: rgba(8,14,10,0.86) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+  height: 60px !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.04),
+              0 4px 24px rgba(0,0,0,0.35) !important;
+}
+
+/* ── 3. Nav buttons — pill + spring ─────────────────────── */
+.dark-nav-back {
+  border-radius: 100px !important;
+  font-size: 0.8rem !important;
+  letter-spacing: 0.02em !important;
+  transition: color 180ms ease,
+              border-color 180ms ease,
+              background 180ms ease,
+              transform 180ms cubic-bezier(0.34,1.56,0.64,1) !important;
+}
+.dark-nav-back:hover {
+  background: rgba(255,255,255,0.05) !important;
+  transform: translateX(-2px) !important;
+}
+.dark-nav-back:active { transform: scale(0.95) !important; }
+
+.dark-nav-account {
+  border-radius: 100px !important;
+  font-size: 0.78rem !important;
+  transition: color 180ms ease,
+              border-color 180ms ease,
+              background 180ms ease,
+              transform 180ms cubic-bezier(0.34,1.56,0.64,1) !important;
+}
+.dark-nav-account:hover {
+  background: rgba(255,255,255,0.05) !important;
+  transform: scale(1.03) !important;
+}
+.dark-nav-account:active { transform: scale(0.96) !important; }
+
+/* ── 4. Nav title ────────────────────────────────────────── */
+.dark-nav-title {
+  font-family: 'Cormorant Garamond', var(--font-serif), Georgia, serif !important;
+  font-size: 1.05rem !important;
+  font-weight: 400 !important;
+  letter-spacing: 0.06em !important;
+  color: rgba(240,236,224,0.75) !important;
+}
+
+/* ── 5. Score display in nav ─────────────────────────────── */
+.skill-nav-score {
+  font-family: 'Cormorant Garamond', var(--font-serif), Georgia, serif !important;
+  font-size: 1rem !important;
+  color: #c9a84c !important;
+  letter-spacing: 0.04em !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+}
+
+/* ── 6. Skill body — subtle texture overlay ─────────────── */
+.skill-body {
+  position: relative !important;
+}
+.skill-body::before {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 50% 110%,
+      rgba(12,30,16,0.6) 0%, transparent 70%);
+}
+.skill-body > * { position: relative; z-index: 1; }
+
+/* ── 7. Playing cards — deeper, more premium shadows ─────── */
+#skill-trainer .card {
+  border-radius: 10px !important;
+  box-shadow:
+    0 12px 32px rgba(0,0,0,0.65),
+    0 4px 8px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.55),
+    inset 0 -1px 0 rgba(0,0,0,0.15) !important;
+}
+
+/* ── 8. Felt table (Deviations) — richer ─────────────────── */
+.felt-table {
+  border: none !important;
+  box-shadow:
+    0 16px 56px rgba(0,0,0,0.65),
+    0 4px 16px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    0 0 0 1px rgba(255,255,255,0.05) !important;
+}
+
+/* ── 9. Dealer label & hand-info ─────────────────────────── */
+.sk-hand-group-label {
+  font-family: 'Cormorant Garamond', var(--font-serif), Georgia, serif !important;
+  font-size: 0.72rem !important;
+  letter-spacing: 0.12em !important;
+}
+
+/* ── 10. Input fields — glass-themed ────────────────────── */
+.sk-input {
+  background: rgba(255,255,255,0.04) !important;
+  backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.05) !important;
+  transition: border-color 200ms ease, box-shadow 200ms ease !important;
+}
+.sk-input:focus {
+  border-color: rgba(196,101,58,0.5) !important;
+  box-shadow: 0 0 0 3px rgba(196,101,58,0.12), 0 4px 16px rgba(0,0,0,0.25) !important;
+}
+
+/* ── 11. Radio buttons (Bet Spread) ─────────────────────── */
+.sk-radio-btn {
+  background: rgba(255,255,255,0.03) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 10px !important;
+  transition: all 200ms ease !important;
+}
+.sk-radio-btn:hover { background: rgba(255,255,255,0.07) !important; }
+.sk-radio-btn.selected {
+  background: rgba(196,101,58,0.12) !important;
+  border-color: rgba(196,101,58,0.4) !important;
+  box-shadow: 0 0 16px rgba(196,101,58,0.12) !important;
+}
+
+/* ── 12. Skill table (Bet Spread results) ────────────────── */
+.sk-table {
+  background: rgba(255,255,255,0.02) !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+.sk-table th {
+  background: rgba(255,255,255,0.03) !important;
+  border-bottom-color: rgba(255,255,255,0.07) !important;
+}
+.sk-table td { border-bottom-color: rgba(255,255,255,0.04) !important; }
+
+/* ── 13. Drill complete screen ───────────────────────────── */
+.kc-wrapper > div[style*="gap:1.25rem"] {
+  backdrop-filter: none;
+}
+
+/* ── 14. Score numbers ───────────────────────────────────── */
+.sk-score-num {
+  font-family: 'Cormorant Garamond', var(--font-serif), Georgia, serif !important;
+  font-size: 1.8rem !important;
+  letter-spacing: -0.02em !important;
+}
+
+/* ── 15. HiLo ref strip ─────────────────────────────────── */
+.hilo-ref-strip .ref-val {
+  font-family: 'Cormorant Garamond', var(--font-serif), Georgia, serif !important;
+  font-size: 1.1rem !important;
+}
+
+/* ── 16. Pipe account dropdown ───────────────────────────── */
+.pipe-account-dropdown {
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  background: rgba(15,22,17,0.95) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.6) !important;
+}
+
+/* ── 17. Skill intro screen headline ─────────────────────── */
+.skill-intro-headline {
+  font-size: 2.25rem !important;
+  letter-spacing: -0.02em !important;
+}
+.skill-intro-icon {
+  box-shadow: 0 0 40px rgba(201,168,76,0.18), inset 0 1px 0 rgba(255,255,255,0.1) !important;
+}
+
+/* ============================================================
+   TRAINER-SPECIFIC VISUAL POLISH
+   ============================================================ */
+
+/* ── Felt table — match full-training aesthetic ──────────── */
+.felt-table {
+  background: #163320 !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%23163320'/%3E%3Crect x='0' y='0' width='1' height='1' fill='rgba(255,255,255,0.012)'/%3E%3Crect x='2' y='2' width='1' height='1' fill='rgba(255,255,255,0.012)'/%3E%3C/svg%3E") !important;
+  border: 1.5px solid rgba(201,168,76,0.18) !important;
+  border-radius: 24px !important;
+  box-shadow:
+    0 20px 60px rgba(0,0,0,0.7),
+    0 4px 12px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    0 0 0 4px rgba(0,0,0,0.4) !important;
+}
+
+/* Gold arc divider between dealer and player zones */
+.felt-divider {
+  border: none !important;
+  border-top: 1px solid rgba(201,168,76,0.2) !important;
+  width: 85% !important;
+  margin: 0.25rem auto !important;
+}
+
+/* Zone labels on felt */
+.felt-zone-label {
+  font-family: 'Cormorant Garamond', var(--font-serif), Georgia, serif !important;
+  font-size: 0.65rem !important;
+  letter-spacing: 0.18em !important;
+  color: rgba(255,255,255,0.3) !important;
+}
+
+/* Basic note on felt */
+.felt-basic-note {
+  font-size: 0.78rem !important;
+  color: rgba(255,255,255,0.35) !important;
+  background: rgba(0,0,0,0.25) !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  border-radius: 8px !important;
+  padding: 0.35rem 0.85rem !important;
+  width: 100% !important;
+  text-align: center !important;
+}
+.felt-basic-note strong { color: #c9a84c !important; }
+
+/* ── Card stage background glass ─────────────────────────── */
+.sk-card-stage {
+  background: rgba(255,255,255,0.02) !important;
+  border: 1px solid rgba(255,255,255,0.05) !important;
+  border-radius: 16px !important;
+  padding: 1rem !important;
+  min-height: 120px !important;
+  box-shadow: inset 0 2px 12px rgba(0,0,0,0.3) !important;
+}
+
+/* ── TC input field ──────────────────────────────────────── */
+#tc-input {
+  background: rgba(255,255,255,0.05) !important;
+  backdrop-filter: blur(8px) !important;
+  border: 2px solid rgba(255,255,255,0.1) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06) !important;
+  transition: border-color 200ms ease, box-shadow 200ms ease !important;
+}
+#tc-input:focus {
+  border-color: rgba(201,168,76,0.45) !important;
+  box-shadow: 0 0 0 3px rgba(201,168,76,0.1), 0 4px 20px rgba(0,0,0,0.3) !important;
+  outline: none !important;
+}
+#tc-submit {
+  border-radius: 100px !important;
+}
+
+/* ── RC display in TC trainer ─────────────────────────────── */
+#tc-rc {
+  font-family: 'Cormorant Garamond', var(--font-serif), Georgia, serif !important;
+  font-size: 3.5rem !important;
+  letter-spacing: -0.03em !important;
+}
+
+/* ── TC + KC panel surrounding the shoe ─────────────────── */
+.shoe-visual-wrap {
+  gap: 0.6rem !important;
+}
+.shoe-body {
+  box-shadow:
+    inset 2px 0 8px rgba(255,255,255,0.03),
+    inset -2px 0 8px rgba(255,255,255,0.03),
+    0 0 0 1px rgba(255,255,255,0.04),
+    0 8px 24px rgba(0,0,0,0.5) !important;
+}
+
+/* ── Dashboard refined ───────────────────────────────────── */
+.dash-container { gap: 1.25rem !important; }
+.dash-user-header { gap: 1.25rem !important; }
+.dash-avatar {
+  background: linear-gradient(135deg, #c4653a, #a8532e) !important;
+  box-shadow: 0 4px 14px rgba(196,101,58,0.3) !important;
+  font-family: 'Cormorant Garamond', var(--font-serif), Georgia, serif !important;
+  font-size: 1.2rem !important;
+}
+.dash-username {
+  font-family: 'Cormorant Garamond', var(--font-serif), Georgia, serif !important;
+  font-size: 1.2rem !important;
+  letter-spacing: 0.02em !important;
+}
+.dash-bar-track { height: 4px !important; border-radius: 4px !important; }
+.dash-bar-fill  { border-radius: 4px !important; }
+.dash-global-item:nth-child(odd) .dash-global-num {
+  font-size: 2.2rem !important;
+}
+.dash-skill-name {
+  font-family: 'Cormorant Garamond', var(--font-serif), Georgia, serif !important;
+  font-size: 0.95rem !important;
+  letter-spacing: 0.02em !important;
+}
+.dash-skill-pct {
+  font-family: 'Cormorant Garamond', var(--font-serif), Georgia, serif !important;
+  font-size: 1.15rem !important;
+}
+.dash-signout { border-radius: 100px !important; font-size: 0.75rem !important; }
+
+/* ── Skill score bar numbers ─────────────────────────────── */
+.sk-score-num {
+  font-family: 'Cormorant Garamond', var(--font-serif), Georgia, serif !important;
+  font-size: 1.85rem !important;
+  letter-spacing: -0.03em !important;
+}
+
+/* ── Keyboard hint & kbd ─────────────────────────────────── */
+.keyboard-hint {
+  font-size: 0.7rem !important;
+  letter-spacing: 0.02em !important;
+  opacity: 0.65 !important;
+}
+
+/* ── Deviations TC badge ─────────────────────────────────── */
+#dev-tc {
+  font-family: 'Cormorant Garamond', var(--font-serif), Georgia, serif !important;
+  font-size: 1.85rem !important;
+  letter-spacing: -0.02em !important;
+}
+
+/* ── Drill complete — big score number ───────────────────── */
+/* KC and TC end screens inject inline font-family:var(--font-serif)
+   on the large score div — upgrade to Cormorant */
+.kc-wrapper [style*="3.5rem"] {
+  font-family: 'Cormorant Garamond', var(--font-serif), Georgia, serif !important;
+  font-weight: 400 !important;
+}
+
+/* ── Colin chat panel — glassmorphism ────────────────────── */
+#colin-panel {
+  background: rgba(10,18,13,0.82) !important;
+  backdrop-filter: blur(28px) !important;
+  -webkit-backdrop-filter: blur(28px) !important;
+  border: 1px solid rgba(255,255,255,0.09) !important;
+  box-shadow:
+    0 24px 64px rgba(0,0,0,0.7),
+    0 8px 24px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.05) !important;
+}
+.colin-panel-header {
+  background: rgba(255,255,255,0.025) !important;
+  border-bottom-color: rgba(255,255,255,0.06) !important;
+}
+
+/* ── TC trainer RC display number ─────────────────────────── */
+#tc-rc {
+  font-family: 'Cormorant Garamond', var(--font-serif), Georgia, serif !important;
+  font-size: 3.5rem !important;
+  font-weight: 400 !important;
+  letter-spacing: -0.04em !important;
+}
+
+/* ── Hint text under TC input ─────────────────────────────── */
+.kc-wrapper > p {
+  font-size: 0.78rem !important;
+  color: rgba(255,255,255,0.28) !important;
+  letter-spacing: 0.01em !important;
 }

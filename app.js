@@ -80,13 +80,14 @@ const AppState = {
     'true-count':      { done: false, correct: 0, total: 0 },
     'bet-spread':      { done: false },
     'full-training':   { done: false, correct: 0, total: 0 },
-  }
+  },
+  currentDifficulty: {}, // skillId → { level 1-5, name, cardCount, delayMs, timerMs, ... }
 };
 
 // ============================================================
 // ACCOUNT SYSTEM (localStorage)
 // ============================================================
-const SKILL_IDS = ['basic-strategy','keep-counting','deviations','true-count','bet-spread'];
+const SKILL_IDS = ['basic-strategy','keep-counting','true-count','deviations','bet-spread'];
 const SKILL_NAMES = {
   'basic-strategy': 'Basic Strategy',
   'keep-counting': 'Running Count',
@@ -180,6 +181,12 @@ function goLanding()  {
   if (hn) hn.classList.remove('hidden');
 }
 function goPipeline() {
+  // Close tour stage if open
+  const _ts = document.getElementById('tour-stage');
+  if (_ts && !_ts.classList.contains('hidden')) {
+    _ts.classList.add('hidden');
+    _ts.classList.remove('active', 'entering', 'leaving');
+  }
   showView('pipeline');
   renderBJTable();
   renderPipelineStatus();
@@ -276,18 +283,19 @@ function renderDashboard() {
 
   const stats = data.stats || {};
   let totalCorrect = 0, totalAttempts = 0;
-  SKILL_IDS.forEach(id => {
+  const DRILL_IDS = SKILL_IDS.filter(id => id !== 'bet-spread');
+  DRILL_IDS.forEach(id => {
     const s = stats[id] || { correct: 0, total: 0 };
     totalCorrect += s.correct;
     totalAttempts += s.total;
   });
   const globalPct = totalAttempts > 0 ? Math.round(totalCorrect / totalAttempts * 100) : 0;
 
-  const weaknesses = SKILL_IDS.filter(id => {
+  const weaknesses = DRILL_IDS.filter(id => {
     const s = stats[id] || { correct: 0, total: 0 };
     return s.total >= 10 && (s.correct / s.total) < 0.75;
   });
-  const strengths = SKILL_IDS.filter(id => {
+  const strengths = DRILL_IDS.filter(id => {
     const s = stats[id] || { correct: 0, total: 0 };
     return s.total >= 10 && (s.correct / s.total) >= 0.85;
   });
@@ -312,6 +320,37 @@ function renderDashboard() {
     <div class="dash-section-title">Skill Breakdown</div>
     <div class="dash-skills-grid">
       ${SKILL_IDS.map(id => {
+        if (id === 'bet-spread') {
+          const savedBankroll = localStorage.getItem('bj_configured_bankroll');
+          const savedRisk     = localStorage.getItem('bj_configured_risk');
+          const CFGS = {
+            conservative: { divisor:500, spread:[1,1,2,4,8],   label:'1–8x' },
+            moderate:     { divisor:300, spread:[1,2,4,8,12],  label:'1–12x' },
+            aggressive:   { divisor:200, spread:[1,2,6,12,20], label:'1–20x' },
+          };
+          if (savedBankroll && savedRisk && CFGS[savedRisk]) {
+            const cfg     = CFGS[savedRisk];
+            const bankroll = parseInt(savedBankroll);
+            const minBet  = Math.max(5, Math.round(bankroll / cfg.divisor / 5) * 5);
+            const maxBet  = minBet * cfg.spread[4];
+            const riskLabel = savedRisk.charAt(0).toUpperCase() + savedRisk.slice(1);
+            return `<div class="dash-skill-card">
+              <div class="dash-skill-top">
+                <div class="dash-skill-name">${SKILL_NAMES[id]}</div>
+                <div class="dash-skill-pct" style="color:var(--accent)">${cfg.label}</div>
+              </div>
+              <div class="dash-skill-detail">$${bankroll.toLocaleString()} bankroll · ${riskLabel}</div>
+              <div class="dash-skill-detail" style="margin-top:.2rem;color:var(--tr-text)">$${minBet} → $${maxBet.toLocaleString()} per hand</div>
+            </div>`;
+          }
+          return `<div class="dash-skill-card">
+            <div class="dash-skill-top">
+              <div class="dash-skill-name">${SKILL_NAMES[id]}</div>
+              <div class="dash-skill-pct">—</div>
+            </div>
+            <div class="dash-skill-detail">Not configured yet</div>
+          </div>`;
+        }
         const s = stats[id] || { correct: 0, total: 0 };
         const pct = s.total > 0 ? Math.round(s.correct / s.total * 100) : 0;
         const cls = s.total < 5 ? 'dash-bar-neutral' : pct >= 85 ? 'dash-bar-good' : pct >= 65 ? 'dash-bar-ok' : 'dash-bar-bad';
@@ -856,6 +895,60 @@ const SKILL_INTROS = {
   },
 };
 
+// ============================================================
+// DYNAMIC DIFFICULTY
+// ============================================================
+// Levels 1–5 derived from the user's accuracy on that skill.
+// New/untrained users always start at Level 1.
+function computeDifficulty(skillId) {
+  const data = Account.getStats();
+  const s = data ? (data.stats[skillId] || { correct: 0, total: 0 }) : { correct: 0, total: 0 };
+  const pct = s.total >= 5 ? Math.round((s.correct / s.total) * 100) : 0;
+
+  let level;
+  if (s.total < 5)   level = 1;
+  else if (pct < 55) level = 1;
+  else if (pct < 68) level = 2;
+  else if (pct < 80) level = 3;
+  else if (pct < 90) level = 4;
+  else               level = 5;
+
+  const NAMES = ['', 'Beginner', 'Developing', 'Intermediate', 'Advanced', 'Expert'];
+
+  // KC: cards shown + reveal speed + countdown timer
+  const KC_PARAMS = [
+    null,
+    { cardCount: 1, delayMs: 1200, timerMs: null  },
+    { cardCount: 2, delayMs: 1000, timerMs: null  },
+    { cardCount: 3, delayMs: 800,  timerMs: 9000  },
+    { cardCount: 4, delayMs: 600,  timerMs: 6000  },
+    { cardCount: 5, delayMs: 450,  timerMs: 4000  },
+  ];
+
+  // Deviations: how many from the ordered list to include
+  const DEV_COUNT = [0, 5, 7, 9, 11, 13];
+
+  // TrueCount: RC range and deck options
+  const TC_PARAMS = [
+    null,
+    { rcRange: 6,  deckOpts: [1, 1.5, 2, 2.5, 3]                         },
+    { rcRange: 10, deckOpts: [1, 1.5, 2, 2.5, 3, 3.5]                    },
+    { rcRange: 14, deckOpts: [1, 1.5, 2, 2.5, 3, 3.5, 4]                 },
+    { rcRange: 20, deckOpts: [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]        },
+    { rcRange: 25, deckOpts: [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6] },
+  ];
+
+  return {
+    level,
+    name: NAMES[level],
+    pct,
+    total: s.total,
+    kc: KC_PARAMS[level],
+    devCount: DEV_COUNT[level],
+    tc: TC_PARAMS[level],
+  };
+}
+
 function showSkillIntro(skillId, bodyEl, scoreEl, skill) {
   const intro = SKILL_INTROS[skillId];
   if (!intro) {
@@ -863,10 +956,14 @@ function showSkillIntro(skillId, bodyEl, scoreEl, skill) {
     return;
   }
 
+  const diff = computeDifficulty(skillId);
+  AppState.currentDifficulty[skillId] = diff;
+
   bodyEl.innerHTML = `
     <div class="skill-intro-wrap">
       <div class="skill-intro-icon">${intro.icon}</div>
       <h2 class="skill-intro-headline">${intro.headline}</h2>
+      <div class="skill-intro-level">Level ${diff.level} · ${diff.name}</div>
       <button class="skill-intro-start" id="skill-intro-start-btn">${intro.startLabel || 'Start Training →'}</button>
     </div>
   `;
@@ -875,7 +972,7 @@ function showSkillIntro(skillId, bodyEl, scoreEl, skill) {
   const skillStats = data ? (data.stats[skillId] || { correct: 0, total: 0 }) : { correct: 0, total: 0 };
   window.dispatchEvent(new CustomEvent('colin:event', { detail: {
     event: 'trainer_enter',
-    payload: { skillId, skillName: skill.name, stats: skillStats }
+    payload: { skillId, skillName: skill.name, stats: skillStats, difficultyLevel: diff.level, difficultyName: diff.name }
   }}));
 
   bodyEl.querySelector('#skill-intro-start-btn').addEventListener('click', () => {
@@ -989,15 +1086,16 @@ function bsLookup(hand, dealerIdx) {
   return (BS_HARD[hand.total] || 'SSSSSSSSSS')[dealerIdx];
 }
 
-function randomHand() {
+// level 1 = hard only, 2 = hard+soft, 3+ = all types
+function randomHand(level = 5) {
   const r = Math.random();
-  if (r < 0.15) {
+  if (level >= 3 && r < 0.15) {
     // Pair
     const pairs = ['AA','22','33','44','55','66','77','88','99','TT'];
     const p = pairs[Math.floor(Math.random()*pairs.length)];
     return { type:'pair', pairKey:p, label: p[0]==='T'?'10-10':p[0]+'-'+p[0], soft:false };
   }
-  if (r < 0.35) {
+  if (level >= 2 && r < 0.35) {
     // Soft hand A2-A9
     const x = Math.floor(Math.random()*8)+2; // 2..9
     const total = x + 11; // ace=11
@@ -1012,6 +1110,8 @@ const BasicStrategy = {
   name: 'Basic Strategy',
   start(body, scoreEl, skillId) {
     let correct=0, total=0, phase='question', hand, dealerIdx, correctAction;
+    const diff = AppState.currentDifficulty[skillId] || computeDifficulty(skillId);
+    const level = diff.level;
 
     const wrap = document.createElement('div');
     wrap.className = 'kc-wrapper';
@@ -1049,7 +1149,7 @@ const BasicStrategy = {
 
     function renderQuestion() {
       phase = 'question';
-      hand = randomHand();
+      hand = randomHand(level);
       dealerIdx = Math.floor(Math.random()*10);
       correctAction = bsLookup(hand, dealerIdx);
 
@@ -1168,35 +1268,46 @@ const KeepCounting = {
   name: 'Running Count',
   start(body, scoreEl, skillId) {
     let deck=[], deckIdx=0, runningCount=0, playerCount=0;
-    let score=0;
+    let score=0, roundsTotal=0;
     let phase='dealing', revealTimers=[], currentCards=[];
+    let countdownTimer = null;
+    // 60-second drill timer
+    let drillSecondsLeft = 60;
+    let drillInterval = null;
+    let drillActive = false;
+    let autoAdvanceTimer = null;
+
+    const diff = AppState.currentDifficulty[skillId] || computeDifficulty(skillId);
+    const { cardCount, delayMs, timerMs } = diff.kc;
 
     body.innerHTML = `
       <div class="kc-wrapper">
-        <div class="kc-speed-wrap">
-          <span class="kc-speed-label">Slow</span>
-          <input type="range" id="kc-speed" min="400" max="3000" step="200" value="1800">
-          <span class="kc-speed-label">Fast</span>
+        <div class="drill-timer-wrap">
+          <div class="drill-timer-ring">
+            <svg viewBox="0 0 44 44" class="drill-timer-svg">
+              <circle cx="22" cy="22" r="18" class="drill-timer-track"/>
+              <circle cx="22" cy="22" r="18" class="drill-timer-progress" id="kc-ring-progress"/>
+            </svg>
+            <span class="drill-timer-num" id="kc-drill-secs">60</span>
+          </div>
         </div>
 
         <div class="sk-card-stage" id="kc-stage" style="min-height:130px">
           <div style="text-align:center;color:var(--tr-dim);opacity:.5">♠ ♥ ♦ ♣</div>
         </div>
 
-        <div id="kc-input-section" class="hidden">
-          <div style="font-size:.82rem;color:var(--tr-muted);text-align:center;margin-bottom:.5rem">What is the running count?</div>
+        <div id="kc-input-section">
+          ${timerMs ? `<div id="kc-timer-bar-wrap"><div id="kc-timer-bar"></div></div>` : ''}
           <div class="count-controls">
-            <button class="stepper-btn" id="kc-minus">−</button>
+            <button class="stepper-btn" id="kc-minus" disabled>−</button>
             <div class="count-display" id="kc-display">0</div>
-            <button class="stepper-btn" id="kc-plus">+</button>
+            <button class="stepper-btn" id="kc-plus" disabled>+</button>
           </div>
           <div style="display:flex;justify-content:center;margin-top:1rem">
-            <button class="btn-primary btn-submit" id="kc-submit">Submit Count</button>
+            <button class="btn-primary btn-submit" id="kc-submit" disabled>Submit Count</button>
           </div>
           <p class="keyboard-hint" style="margin-top:.5rem">or press <kbd>Enter</kbd> · <kbd>↑</kbd><kbd>↓</kbd> to adjust</p>
         </div>
-
-        <button class="btn-primary sk-next-btn" id="kc-next">Next Round →</button>
 
       </div>
     `;
@@ -1204,14 +1315,23 @@ const KeepCounting = {
     const stageEl  = body.querySelector('#kc-stage');
     const inputSec = body.querySelector('#kc-input-section');
     const displayEl= body.querySelector('#kc-display');
-    const nextEl   = body.querySelector('#kc-next');
     const minusBtn = body.querySelector('#kc-minus');
     const plusBtn  = body.querySelector('#kc-plus');
     const submitBtn= body.querySelector('#kc-submit');
-    const speedSlider = body.querySelector('#kc-speed');
+    const timerBarEl = body.querySelector('#kc-timer-bar');
+    const drillSecsEl = body.querySelector('#kc-drill-secs');
+    const ringProgress = body.querySelector('#kc-ring-progress');
 
-    // Slider left = slow (large delay), right = fast (small delay)
-    function getSpeedMs() { return 3400 - parseInt(speedSlider.value); }
+    // SVG circle circumference for r=18
+    const CIRC = 2 * Math.PI * 18; // ≈113.1
+    if (ringProgress) ringProgress.style.strokeDasharray = CIRC;
+
+    function updateRing() {
+      if (!ringProgress) return;
+      const frac = drillSecondsLeft / 60;
+      ringProgress.style.strokeDashoffset = CIRC * (1 - frac);
+      ringProgress.style.stroke = drillSecondsLeft <= 10 ? '#f87171' : drillSecondsLeft <= 20 ? '#fb923c' : '#4ade80';
+    }
 
     function initDeck() {
       deck = shuffle(buildDeck());
@@ -1221,6 +1341,20 @@ const KeepCounting = {
     function drawCards(n) {
       if (deckIdx + n * 4 >= deck.length) { deck = shuffle(buildDeck()); deckIdx=0; }
       return deck.slice(deckIdx, deckIdx += n);
+    }
+
+    function clearCountdown() {
+      if (countdownTimer) { clearTimeout(countdownTimer); countdownTimer = null; }
+      if (timerBarEl) { timerBarEl.style.transition = 'none'; timerBarEl.style.width = '100%'; }
+    }
+
+    function startCountdown() {
+      if (!timerMs || !timerBarEl) return;
+      clearCountdown();
+      void timerBarEl.offsetWidth;
+      timerBarEl.style.transition = `width ${timerMs}ms linear`;
+      timerBarEl.style.width = '0%';
+      countdownTimer = setTimeout(() => { submitCount(); }, timerMs);
     }
 
     function updateDisplay() {
@@ -1234,21 +1368,63 @@ const KeepCounting = {
       revealTimers = [];
     }
 
-    function dealRound() {
+    function endDrill() {
+      drillActive = false;
+      if (drillInterval) { clearInterval(drillInterval); drillInterval = null; }
+      if (autoAdvanceTimer) { clearTimeout(autoAdvanceTimer); autoAdvanceTimer = null; }
       clearRevealTimers();
+      clearCountdown();
+      phase = 'done';
+
+      const pct = roundsTotal > 0 ? Math.round((score / roundsTotal) * 100) : 0;
+      body.innerHTML = `
+        <div class="kc-wrapper" style="gap:1.25rem;align-items:center;text-align:center">
+          <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;color:var(--accent)">Drill Complete</div>
+          <div style="font-size:3.5rem;font-family:var(--font-serif);line-height:1;color:var(--tr-text)">${score}<span style="font-size:1.5rem;color:var(--tr-muted)"> / ${roundsTotal}</span></div>
+          <div style="font-size:.9rem;color:var(--tr-muted)">${pct}% accuracy · ${roundsTotal} rounds</div>
+          <button class="btn-primary" id="kc-restart" style="margin-top:.5rem">Run Again →</button>
+        </div>
+      `;
+      body.querySelector('#kc-restart').addEventListener('click', () => {
+        KeepCounting.start(body, scoreEl, skillId);
+      });
+    }
+
+    function startDrillTimer() {
+      drillActive = true;
+      drillSecondsLeft = 60;
+      updateRing();
+      drillInterval = setInterval(() => {
+        drillSecondsLeft--;
+        if (drillSecsEl) drillSecsEl.textContent = drillSecondsLeft;
+        updateRing();
+        if (drillSecondsLeft <= 0) {
+          clearInterval(drillInterval);
+          drillInterval = null;
+          endDrill();
+        }
+      }, 1000);
+    }
+
+    function dealRound() {
+      if (!drillActive) return;
+      clearRevealTimers();
+      clearCountdown();
+      if (autoAdvanceTimer) { clearTimeout(autoAdvanceTimer); autoAdvanceTimer = null; }
       phase = 'dealing';
       playerCount = 0;
       updateDisplay();
 
-      currentCards = drawCards(5);
+      currentCards = drawCards(cardCount);
       const delta = currentCards.reduce((s,c)=>s+c.value,0);
       runningCount += delta;
 
       stageEl.innerHTML = '';
-      inputSec.classList.add('hidden');
-      nextEl.classList.remove('visible');
+      minusBtn.disabled = true;
+      plusBtn.disabled  = true;
+      submitBtn.disabled = true;
+      displayEl.style.opacity = '0.4';
 
-      const ms = getSpeedMs();
       currentCards.forEach((c, i) => {
         const t = setTimeout(() => {
           const el = cardEl(c);
@@ -1256,24 +1432,31 @@ const KeepCounting = {
           stageEl.appendChild(el);
           if (i === currentCards.length - 1) {
             const t2 = setTimeout(() => {
+              if (!drillActive) return;
               phase = 'awaiting';
-              inputSec.classList.remove('hidden');
-            }, Math.min(ms, 600));
+              minusBtn.disabled  = false;
+              plusBtn.disabled   = false;
+              submitBtn.disabled = false;
+              displayEl.style.opacity = '';
+              startCountdown();
+            }, Math.min(delayMs, 600));
             revealTimers.push(t2);
           }
-        }, i * ms);
+        }, i * delayMs);
         revealTimers.push(t);
       });
     }
 
     function submitCount() {
       if (phase !== 'awaiting') return;
+      clearCountdown();
       phase = 'feedback';
+      roundsTotal++;
 
       const isCorrect = playerCount === runningCount;
       if (isCorrect) score++;
 
-      markScore(scoreEl, score, score + (AppState.skillStatus[skillId].total||0));
+      markScore(scoreEl, score, roundsTotal);
       Account.addResult(skillId, isCorrect);
       if (isCorrect) AppState.skillStatus[skillId].done = true;
       window.dispatchEvent(new CustomEvent('colin:event', { detail: {
@@ -1287,14 +1470,18 @@ const KeepCounting = {
         }
       }}));
 
-      inputSec.classList.add('hidden');
-      nextEl.classList.add('visible');
+      minusBtn.disabled  = true;
+      plusBtn.disabled   = true;
+      submitBtn.disabled = true;
+
+      if (drillActive) {
+        autoAdvanceTimer = setTimeout(() => { dealRound(); }, 900);
+      }
     }
 
     minusBtn.addEventListener('click', ()=>{ if(phase==='awaiting'){playerCount--;updateDisplay();} });
     plusBtn.addEventListener('click',  ()=>{ if(phase==='awaiting'){playerCount++;updateDisplay();} });
     submitBtn.addEventListener('click', submitCount);
-    nextEl.addEventListener('click', ()=>{ dealRound(); });
 
     const keyHandler = (e) => {
       if (document.getElementById('skill-trainer').classList.contains('hidden')) return;
@@ -1302,17 +1489,20 @@ const KeepCounting = {
         if (e.key==='ArrowUp'||e.key==='ArrowRight'){e.preventDefault();playerCount++;updateDisplay();}
         if (e.key==='ArrowDown'||e.key==='ArrowLeft'){e.preventDefault();playerCount--;updateDisplay();}
         if (e.key==='Enter') submitCount();
-      } else if (phase==='feedback') {
-        if (e.key==='Enter'||e.key===' '){e.preventDefault();dealRound();}
       }
     };
     document.addEventListener('keydown', keyHandler);
 
     initDeck();
+    startDrillTimer();
     dealRound();
 
     return () => {
+      drillActive = false;
       clearRevealTimers();
+      clearCountdown();
+      if (drillInterval) { clearInterval(drillInterval); drillInterval = null; }
+      if (autoAdvanceTimer) { clearTimeout(autoAdvanceTimer); autoAdvanceTimer = null; }
       document.removeEventListener('keydown', keyHandler);
     };
   }
@@ -1341,6 +1531,8 @@ const Deviations = {
   name: 'Deviations',
   start(body, scoreEl, skillId) {
     let correct=0, total=0, phase='question', currentDev, givenTC, shouldDeviate;
+    const diff = AppState.currentDifficulty[skillId] || computeDifficulty(skillId);
+    const activeDeviations = DEVIATIONS_LIST.slice(0, diff.devCount);
 
     const wrap = document.createElement('div');
     wrap.className = 'kc-wrapper';
@@ -1362,7 +1554,6 @@ const Deviations = {
           <span class="felt-zone-label">You</span>
           <div class="felt-hand" id="dev-player-hand"></div>
         </div>
-        <div class="felt-basic-note">Basic strategy: <strong id="dev-basic">Hit</strong></div>
       </div>
 
       <div class="sk-actions sk-actions-vertical" id="dev-actions"></div>
@@ -1371,7 +1562,7 @@ const Deviations = {
     body.appendChild(wrap);
 
     const tcEl         = wrap.querySelector('#dev-tc');
-    const basicEl      = wrap.querySelector('#dev-basic');
+    const basicEl      = null;
     const dealerHandEl = wrap.querySelector('#dev-dealer-hand');
     const playerHandEl = wrap.querySelector('#dev-player-hand');
     const actionsEl    = wrap.querySelector('#dev-actions');
@@ -1387,7 +1578,7 @@ const Deviations = {
 
     function renderQuestion() {
       phase = 'question';
-      currentDev = DEVIATIONS_LIST[Math.floor(Math.random()*DEVIATIONS_LIST.length)];
+      currentDev = activeDeviations[Math.floor(Math.random()*activeDeviations.length)];
 
       const triggers = Math.random() < 0.5;
       if (triggers) {
@@ -1404,7 +1595,6 @@ const Deviations = {
 
       tcEl.textContent = givenTC >= 0 ? `+${givenTC}` : String(givenTC);
       tcEl.style.color = givenTC > 0 ? '#4ade80' : givenTC < 0 ? '#f87171' : 'var(--tr-text)';
-      basicEl.textContent = ACTION_FULL[currentDev.basic] || currentDev.basic;
 
       // Build cards, then deal in casino order:
       // player1 → dealer-up → player2 → dealer-hole
@@ -1505,27 +1695,43 @@ const TrueCount = {
   name: 'True Count',
   start(body, scoreEl, skillId) {
     let correct=0, total=0, phase='question', trueCount;
+    const diff = AppState.currentDifficulty[skillId] || computeDifficulty(skillId);
+    const { rcRange, deckOpts } = diff.tc;
     const SHOE_HEIGHT = 180;
     const CARD_EDGE_PX = 3;
+    // 60-second drill
+    let drillSecondsLeft = 60;
+    let drillInterval = null;
+    let drillActive = false;
+    let autoAdvanceTimer = null;
 
     body.innerHTML = `
       <div class="kc-wrapper" style="max-width:400px;width:100%">
-        <div class="shoe-visual-wrap">
-          <div class="shoe-outer">
-            <div class="shoe-body">
-              <div class="shoe-slot"></div>
-              <div class="shoe-cards-stack" id="tc-stack"></div>
-            </div>
-            <div class="shoe-base"></div>
-          </div>
-          <div style="text-align:center;margin-top:.5rem;font-size:.78rem;color:var(--tr-muted)">
-            <strong id="tc-decks-label" style="color:var(--tr-text);font-size:1rem">3</strong> decks remaining
+        <div class="drill-timer-wrap">
+          <div class="drill-timer-ring">
+            <svg viewBox="0 0 44 44" class="drill-timer-svg">
+              <circle cx="22" cy="22" r="18" class="drill-timer-track"/>
+              <circle cx="22" cy="22" r="18" class="drill-timer-progress" id="tc-ring-progress"/>
+            </svg>
+            <span class="drill-timer-num" id="tc-drill-secs">60</span>
           </div>
         </div>
 
-        <div style="background:var(--tr-panel);border:1px solid var(--tr-border);border-radius:12px;padding:1rem 1.5rem;text-align:center;width:100%">
-          <div style="font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--tr-dim);margin-bottom:.3rem">Running Count</div>
-          <div style="font-size:3rem;font-family:var(--font-serif);line-height:1" id="tc-rc">+8</div>
+        <div style="display:flex;align-items:flex-end;gap:1.5rem;justify-content:center;width:100%">
+          <div class="shoe-visual-wrap" style="margin:0">
+            <div class="shoe-outer">
+              <div class="shoe-body">
+                <div class="shoe-slot"></div>
+                <div class="shoe-cards-stack" id="tc-stack"></div>
+              </div>
+              <div class="shoe-base"></div>
+            </div>
+          </div>
+
+          <div style="background:var(--tr-panel);border:1px solid var(--tr-border);border-radius:12px;padding:1rem 1.5rem;text-align:center;flex:1">
+            <div style="font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--tr-dim);margin-bottom:.3rem">Running Count</div>
+            <div style="font-size:3rem;font-family:var(--font-serif);line-height:1" id="tc-rc">+8</div>
+          </div>
         </div>
 
         <p style="text-align:center;font-size:.82rem;color:var(--tr-muted);margin:0">RC ÷ decks remaining = true count (round to nearest 0.5)</p>
@@ -1536,43 +1742,101 @@ const TrueCount = {
             placeholder="0">
           <button class="btn-primary" id="tc-submit">Submit</button>
         </div>
-        <button class="btn-primary sk-next-btn" id="tc-next">Next →</button>
       </div>
     `;
 
     const rcEl      = body.querySelector('#tc-rc');
     const stackEl   = body.querySelector('#tc-stack');
-    const decksLbl  = body.querySelector('#tc-decks-label');
     const inputEl   = body.querySelector('#tc-input');
-    const nextEl    = body.querySelector('#tc-next');
+    const drillSecsEl = body.querySelector('#tc-drill-secs');
+    const ringProgress = body.querySelector('#tc-ring-progress');
 
-    function buildCardEdges(remaining) {
+    const CIRC = 2 * Math.PI * 18;
+    if (ringProgress) ringProgress.style.strokeDasharray = CIRC;
+
+    function updateRing() {
+      if (!ringProgress) return;
+      const frac = drillSecondsLeft / 60;
+      ringProgress.style.strokeDashoffset = CIRC * (1 - frac);
+      ringProgress.style.stroke = drillSecondsLeft <= 10 ? '#f87171' : drillSecondsLeft <= 20 ? '#fb923c' : '#4ade80';
+    }
+
+    function buildCardEdges(decksRemaining) {
       stackEl.innerHTML = '';
-      const maxVisible = Math.min(remaining, SHOE_HEIGHT / CARD_EDGE_PX);
-      for (let i = 0; i < maxVisible; i++) {
+      const MAX_DECKS = 6;
+      const fraction = Math.min(decksRemaining / MAX_DECKS, 1);
+      const stackHeight = Math.round(fraction * SHOE_HEIGHT);
+      const numEdges = Math.floor(stackHeight / CARD_EDGE_PX);
+      for (let i = 0; i < numEdges; i++) {
         const edge = document.createElement('div');
         edge.className = 'shoe-card-edge';
         stackEl.appendChild(edge);
       }
-      stackEl.style.height = Math.min(SHOE_HEIGHT, maxVisible * CARD_EDGE_PX) + 'px';
+      stackEl.style.height = (numEdges * CARD_EDGE_PX) + 'px';
+    }
+
+    function endDrill() {
+      drillActive = false;
+      if (drillInterval) { clearInterval(drillInterval); drillInterval = null; }
+      if (autoAdvanceTimer) { clearTimeout(autoAdvanceTimer); autoAdvanceTimer = null; }
+      phase = 'done';
+
+      const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+      body.innerHTML = `
+        <div class="kc-wrapper" style="gap:1.25rem;align-items:center;text-align:center">
+          <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;color:var(--accent)">Drill Complete</div>
+          <div style="font-size:3.5rem;font-family:var(--font-serif);line-height:1;color:var(--tr-text)">${correct}<span style="font-size:1.5rem;color:var(--tr-muted)"> / ${total}</span></div>
+          <div style="font-size:.9rem;color:var(--tr-muted)">${pct}% accuracy · ${total} rounds</div>
+          <button class="btn-primary" id="tc-restart" style="margin-top:.5rem">Run Again →</button>
+        </div>
+      `;
+      body.querySelector('#tc-restart').addEventListener('click', () => {
+        TrueCount.start(body, scoreEl, skillId);
+      });
+    }
+
+    function startDrillTimer() {
+      drillActive = true;
+      drillSecondsLeft = 60;
+      updateRing();
+      drillInterval = setInterval(() => {
+        drillSecondsLeft--;
+        if (drillSecsEl) drillSecsEl.textContent = drillSecondsLeft;
+        updateRing();
+        if (drillSecondsLeft <= 0) {
+          clearInterval(drillInterval);
+          drillInterval = null;
+          endDrill();
+        }
+      }, 1000);
     }
 
     function renderQuestion() {
+      if (!drillActive) return;
       phase = 'question';
       inputEl.value = '';
       inputEl.disabled = false;
 
-      const rc = Math.floor(Math.random()*25) - 12;
-      const decksOpts = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
-      const decks = decksOpts[Math.floor(Math.random()*decksOpts.length)];
-      trueCount = Math.round(rc / decks * 2) / 2;
+      // Build all (rc, decks) pairs where rc/decks is exactly a 0.5 multiple
+      const candidates = [];
+      for (const d of deckOpts) {
+        for (let r = -rcRange; r <= rcRange; r++) {
+          if (r === 0) continue;
+          const tc = r / d;
+          if (Math.abs(tc - Math.round(tc * 2) / 2) < 0.0001) {
+            candidates.push({ rc: r, decks: d, tc: Math.round(tc * 2) / 2 });
+          }
+        }
+      }
+      const pick = candidates[Math.floor(Math.random() * candidates.length)];
+      const rc = pick.rc;
+      const decks = pick.decks;
+      trueCount = pick.tc;
 
       rcEl.textContent = rc >= 0 ? `+${rc}` : String(rc);
       rcEl.style.color = rc > 0 ? '#4ade80' : rc < 0 ? '#f87171' : 'var(--tr-text)';
-      decksLbl.textContent = decks % 1 === 0 ? String(decks) : decks.toFixed(1);
-      buildCardEdges(Math.round(decks * 52));
+      buildCardEdges(6 - decks);
 
-      nextEl.classList.remove('visible');
       inputEl.focus();
     }
 
@@ -1583,8 +1847,8 @@ const TrueCount = {
       phase = 'feedback';
       inputEl.disabled = true;
       total++;
-      const playerTC = Math.round(val * 2) / 2;
-      const isCorrect = playerTC === trueCount;
+      const playerTC = val;
+      const isCorrect = Math.abs(playerTC - trueCount) < 0.01;
       if (isCorrect) correct++;
 
       markScore(scoreEl, correct, total);
@@ -1599,14 +1863,22 @@ const TrueCount = {
           correctAnswer: trueCount
         }
       }}));
-      nextEl.classList.add('visible');
+
+      if (drillActive) {
+        autoAdvanceTimer = setTimeout(() => { renderQuestion(); }, 900);
+      }
     }
 
     inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') submitAnswer(); });
     body.querySelector('#tc-submit').addEventListener('click', submitAnswer);
-    nextEl.addEventListener('click', renderQuestion);
+
+    startDrillTimer();
     renderQuestion();
-    return ()=>{};
+    return () => {
+      drillActive = false;
+      if (drillInterval) { clearInterval(drillInterval); drillInterval = null; }
+      if (autoAdvanceTimer) { clearTimeout(autoAdvanceTimer); autoAdvanceTimer = null; }
+    };
   }
 };
 
@@ -1727,6 +1999,9 @@ const BetSpread = {
     doneBtn.addEventListener('click', ()=>{
       AppState.skillStatus[skillId].done = true;
       Account.markSession();
+      // Persist bankroll + risk for full training
+      localStorage.setItem('bj_configured_bankroll', String(bankroll));
+      localStorage.setItem('bj_configured_risk', risk);
       scoreEl.textContent = 'Configured ✓';
       goPipeline();
     });
@@ -1741,25 +2016,67 @@ const BetSpread = {
 const FullTraining = {
   name: 'Full Training',
   start(body, scoreEl, skillId) {
-    // Session state
-    let deck = shuffle(buildDeck()), deckIdx = 0;
-    let runningCount = 0, playerCount = 0;
-    let correct = 0;
-    let bankroll = 1000, currentBet = 0;
-    let phase = 'bet'; // 'bet' | 'play' | 'count' | 'feedback'
-    let correctPlay, playWasCorrect;
-    let visibleCards = []; // all cards shown this round (for count tracking)
+    const TOTAL_SHOE = 312; // 6 decks
+    const MINI_H = 120;
+    const EDGE_PX = 2;
 
-    // Activate full-table layout on the skill-trainer wrapper
+    // Load bankroll + bet-spread config
+    const savedBankroll = parseInt(localStorage.getItem('bj_configured_bankroll') || '0') || 5000;
+    const savedRisk     = localStorage.getItem('bj_configured_risk') || 'moderate';
+    const SPREAD_CONFIGS = {
+      conservative: { divisor:500, spread:[1,1,2,4,8]   },
+      moderate:     { divisor:300, spread:[1,2,4,8,12]  },
+      aggressive:   { divisor:200, spread:[1,2,6,12,20] },
+    };
+    const spreadCfg = SPREAD_CONFIGS[savedRisk] || SPREAD_CONFIGS.moderate;
+    const minBet    = Math.max(5, Math.round(savedBankroll / spreadCfg.divisor / 5) * 5);
+    const spreadBets = spreadCfg.spread.map(m => minBet * m);
+    const TC_LABELS  = ['≤ 0','+1','+2','+3','+4+'];
+
+    function buildShoe() { return shuffle(Array.from({length: 6}, buildDeck).flat()); }
+
+    let deck = buildShoe(), deckIdx = 0;
+    let runningCount = 0;
+    let correct = 0;
+    // Load persisted bankroll, fall back to configured starting amount
+    let bankroll = parseInt(localStorage.getItem('ft_bankroll') || '0') || savedBankroll;
+    let currentBet = 0;
+
+    // Hand state
+    let playerHands = [[]];
+    let playerHandBets = [0];
+    let activeHandIdx = 0;
+    let dealerHandCards = [];
+    let dealerUpCardObj = null;
+    let dealerHoleCardObj = null;
+    let firstActionCorrectPlay = null;
+    let firstActionWasCorrect = false;
+    let firstActionTaken = false;
+
     const trainerEl = document.getElementById('skill-trainer');
     if (trainerEl) trainerEl.classList.add('ft-active');
 
     body.innerHTML = `
       <div class="ft-table">
 
-        <!-- Top bar: bankroll -->
+        <!-- Top bar: discard | shoe -->
         <div class="ft-topbar">
-          <div class="ft-bankroll">$<span id="ft-bankroll">1,000</span></div>
+          <div class="ft-tray-group">
+            <div class="ft-mini-case ft-tray-case">
+              <div class="ft-mini-stack" id="ft-tray-stack"></div>
+            </div>
+            <div class="ft-mini-shoe-base ft-tray-base"></div>
+            <div class="ft-mini-lbl">Discard</div>
+          </div>
+
+          <div class="ft-shoe-group">
+            <div class="ft-mini-case ft-shoe-case">
+              <div class="ft-mini-shoe-slot"></div>
+              <div class="ft-mini-stack" id="ft-shoe-stack"></div>
+            </div>
+            <div class="ft-mini-shoe-base"></div>
+            <div class="ft-mini-lbl">Shoe</div>
+          </div>
         </div>
 
         <!-- Dealer zone -->
@@ -1768,25 +2085,38 @@ const FullTraining = {
           <div class="ft-dealer-cards" id="ft-dealer-cards"></div>
         </div>
 
-        <!-- Player zone -->
+        <!-- Felt arc divider -->
+        <div class="ft-felt-divider"></div>
+
+        <!-- Player zone: betting circle + cards -->
         <div class="ft-player-zone">
-          <div class="ft-player-cards" id="ft-player-cards"></div>
+          <div class="ft-betting-area">
+            <div class="ft-bet-circle" id="ft-bet-circle">
+              <div class="ft-bet-chips" id="ft-bet-chips"></div>
+            </div>
+            <div class="ft-player-cards" id="ft-player-cards"></div>
+          </div>
         </div>
 
-        <!-- Bottom panel — swaps between phases -->
+        <!-- Bottom panel -->
         <div class="ft-bottom-panel">
 
           <!-- BET PHASE -->
           <div id="ft-phase-bet" class="ft-phase">
+            <details class="ft-spread-ref">
+              <summary class="ft-spread-ref-toggle">▸ Bet Spread Reference</summary>
+              <div class="ft-spread-ref-body" id="ft-spread-body"></div>
+            </details>
+            <div id="ft-bet-warning" class="ft-bet-warning hidden"></div>
             <div class="ft-bet-row">
-              <span class="ft-bet-lbl">Place your bet</span>
+              <span class="ft-bet-lbl">Bet</span>
               <span class="ft-bet-amount">$<span id="ft-bet-amount">0</span></span>
             </div>
             <div class="ft-chips" id="ft-chips">
-              <button class="ft-chip ft-chip-10"  data-val="10">$10</button>
-              <button class="ft-chip ft-chip-25"  data-val="25">$25</button>
-              <button class="ft-chip ft-chip-50"  data-val="50">$50</button>
-              <button class="ft-chip ft-chip-100" data-val="100">$100</button>
+              <button class="ft-chip ft-chip-5"   data-val="5"  ><span>$5</span></button>
+              <button class="ft-chip ft-chip-25"  data-val="25" ><span>$25</span></button>
+              <button class="ft-chip ft-chip-100" data-val="100"><span>$100</span></button>
+              <button class="ft-chip ft-chip-500" data-val="500"><span>$500</span></button>
             </div>
             <div class="ft-bet-btns">
               <button class="ft-ghost-btn" id="ft-clear-bet">Clear</button>
@@ -1796,61 +2126,136 @@ const FullTraining = {
 
           <!-- PLAY PHASE -->
           <div id="ft-phase-play" class="ft-phase hidden">
-            <div class="ft-phase-label">What's your play?</div>
+            <div class="ft-phase-label" id="ft-play-label">What's your play?</div>
             <div class="ft-play-actions" id="ft-play-actions"></div>
           </div>
 
-          <!-- COUNT PHASE -->
-          <div id="ft-phase-count" class="ft-phase hidden">
-            <div class="ft-phase-label">Running count of all visible cards?</div>
-            <div class="count-controls">
-              <button class="stepper-btn" id="ft-minus">−</button>
-              <div class="count-display" id="ft-display">0</div>
-              <button class="stepper-btn" id="ft-plus">+</button>
-            </div>
-            <div style="display:flex;justify-content:center;margin-top:.85rem">
-              <button class="btn-primary" id="ft-count-submit">Submit Count</button>
-            </div>
-          </div>
-
-          <!-- FEEDBACK PHASE -->
-          <div id="ft-phase-feedback" class="ft-phase hidden">
+          <!-- RESULT PHASE -->
+          <div id="ft-phase-result" class="ft-phase hidden">
             <div class="ft-result-row" id="ft-result-row"></div>
             <button class="ft-deal-btn" id="ft-next-btn">Next Hand →</button>
           </div>
 
-        </div><!-- end ft-bottom-panel -->
-      </div><!-- end ft-table -->
+          <!-- Bankroll — persistent footer -->
+          <div class="ft-bankroll-footer">
+            <div class="ft-bankroll-left">
+              <span class="ft-bankroll-sublbl">Bankroll</span>
+              <span class="ft-bankroll">$<span id="ft-bankroll">${bankroll.toLocaleString()}</span></span>
+            </div>
+            <button class="ft-ghost-btn ft-reset-btn" id="ft-reset-bankroll">Reset</button>
+          </div>
+
+        </div>
+      </div>
     `;
 
     // Element refs
-    const bankrollEl  = body.querySelector('#ft-bankroll');
-    const dealerCards = body.querySelector('#ft-dealer-cards');
-    const playerCards = body.querySelector('#ft-player-cards');
-    const betAmountEl = body.querySelector('#ft-bet-amount');
-    const dealBtn     = body.querySelector('#ft-deal-btn');
-    const clearBtn    = body.querySelector('#ft-clear-bet');
-    const actionsEl   = body.querySelector('#ft-play-actions');
-    const displayEl   = body.querySelector('#ft-display');
-    const nextBtn     = body.querySelector('#ft-next-btn');
-    const resultRow   = body.querySelector('#ft-result-row');
+    const bankrollEl    = body.querySelector('#ft-bankroll');
+    const dealerCardsEl = body.querySelector('#ft-dealer-cards');
+    const playerCardsEl = body.querySelector('#ft-player-cards');
+    const betAmountEl   = body.querySelector('#ft-bet-amount');
+    const dealBtn       = body.querySelector('#ft-deal-btn');
+    const clearBtn      = body.querySelector('#ft-clear-bet');
+    const actionsEl     = body.querySelector('#ft-play-actions');
+    const playLabelEl   = body.querySelector('#ft-play-label');
+    const nextBtn       = body.querySelector('#ft-next-btn');
+    const resultRow     = body.querySelector('#ft-result-row');
+    const betChipsEl    = body.querySelector('#ft-bet-chips');
+    const shoeStackEl   = body.querySelector('#ft-shoe-stack');
+    const trayStackEl   = body.querySelector('#ft-tray-stack');
+    const betWarningEl  = body.querySelector('#ft-bet-warning');
+    const spreadBodyEl  = body.querySelector('#ft-spread-body');
+    const resetBtn      = body.querySelector('#ft-reset-bankroll');
 
-    const phaseBet      = body.querySelector('#ft-phase-bet');
-    const phasePlay     = body.querySelector('#ft-phase-play');
-    const phaseCount    = body.querySelector('#ft-phase-count');
-    const phaseFeedback = body.querySelector('#ft-phase-feedback');
+    const phaseBet    = body.querySelector('#ft-phase-bet');
+    const phasePlay   = body.querySelector('#ft-phase-play');
+    const phaseResult = body.querySelector('#ft-phase-result');
 
     function fmtMoney(n) { return n.toLocaleString(); }
 
     function showPhase(name) {
-      [phaseBet, phasePlay, phaseCount, phaseFeedback].forEach(el => el.classList.add('hidden'));
-      ({ bet: phaseBet, play: phasePlay, count: phaseCount, feedback: phaseFeedback })[name].classList.remove('hidden');
-      phase = name;
+      [phaseBet, phasePlay, phaseResult].forEach(el => el.classList.add('hidden'));
+      ({ bet: phaseBet, play: phasePlay, result: phaseResult })[name].classList.remove('hidden');
     }
 
-    function draw(n = 1) {
-      if (deckIdx + n + 4 >= deck.length) { deck = shuffle(buildDeck()); deckIdx = 0; }
-      return deck.slice(deckIdx, deckIdx += n);
+    // ── Hand value helpers ──
+    function handValue(cards) {
+      let total = 0, aces = 0;
+      for (const c of cards) {
+        if (c.rank === 'A') { total += 11; aces++; }
+        else if (['10','J','Q','K'].includes(c.rank)) total += 10;
+        else total += parseInt(c.rank) || 0;
+      }
+      while (total > 21 && aces > 0) { total -= 10; aces--; }
+      return total;
+    }
+    function isBusted(cards) { return handValue(cards) > 21; }
+    function isNaturalBJ(cards) { return cards.length === 2 && handValue(cards) === 21; }
+
+    // ── Bet spread reference & warning ──
+    function getRecommendedBet() {
+      const decksRem = Math.max(0.5, (deck.length - deckIdx) / 52);
+      const tc = Math.round(runningCount / decksRem * 2) / 2;
+      const idx = tc <= 0 ? 0 : tc >= 4 ? 4 : Math.min(4, Math.ceil(tc));
+      return spreadBets[idx];
+    }
+
+    function updateBetWarning() {
+      if (!betWarningEl || currentBet === 0) { betWarningEl.classList.add('hidden'); return; }
+      const rec = getRecommendedBet();
+      betWarningEl.classList.toggle('hidden', currentBet === rec);
+      if (currentBet !== rec) betWarningEl.textContent = `Spread says $${rec.toLocaleString()} at current count`;
+    }
+
+    function refreshSpreadTable() {
+      if (!spreadBodyEl) return;
+      const decksRem = Math.max(0.5, (deck.length - deckIdx) / 52);
+      const tc = Math.round(runningCount / decksRem * 2) / 2;
+      const ai = tc <= 0 ? 0 : tc >= 4 ? 4 : Math.min(4, Math.ceil(tc));
+      spreadBodyEl.innerHTML = `<table class="ft-spread-table">${
+        TC_LABELS.map((lbl, i) => `<tr class="${i===ai?'ft-spread-active':''}">
+          <td>${lbl}</td><td>$${spreadBets[i].toLocaleString()}</td>
+        </tr>`).join('')
+      }</table>`;
+    }
+
+    // ── Shoe / discard visual ──
+    function renderMiniStack(el, count, total) {
+      if (!el) return;
+      const visible = Math.max(0, Math.round(Math.min(count / total, 1) * (MINI_H / EDGE_PX)));
+      el.innerHTML = '';
+      for (let i = 0; i < visible; i++) {
+        const e = document.createElement('div');
+        e.className = 'ft-card-edge';
+        el.appendChild(e);
+      }
+      el.style.height = (visible * EDGE_PX) + 'px';
+    }
+
+    function updateShoeVisual() {
+      const remaining = TOTAL_SHOE - (deckIdx % TOTAL_SHOE);
+      renderMiniStack(shoeStackEl, remaining, TOTAL_SHOE);
+      renderMiniStack(trayStackEl, deckIdx % TOTAL_SHOE, TOTAL_SHOE);
+    }
+
+    // ── Bet chips visual ──
+    const CHIP_VALS = [[500,'ft-chip-500'],[100,'ft-chip-100'],[25,'ft-chip-25'],[5,'ft-chip-5']];
+    function renderBetChips(amount) {
+      if (!betChipsEl) return;
+      if (amount === 0) { betChipsEl.innerHTML = ''; return; }
+      let rem = amount;
+      const chips = [];
+      for (const [v, cls] of CHIP_VALS) { while (rem >= v) { chips.push(cls); rem -= v; } }
+      betChipsEl.innerHTML = chips.slice(0, 6).map((cls, i) =>
+        `<div class="ft-bet-chip-token ${cls}" style="bottom:${i*4}px;left:${i*1.5}px"></div>`
+      ).join('');
+    }
+
+    function drawCards(n = 1) {
+      if (deckIdx + n + 4 >= deck.length) { deck = buildShoe(); deckIdx = 0; }
+      const cards = deck.slice(deckIdx, deckIdx += n);
+      updateShoeVisual();
+      return cards;
     }
 
     function cardBackEl() {
@@ -1859,74 +2264,113 @@ const FullTraining = {
       return el;
     }
 
-    function updateCountDisplay() {
-      displayEl.textContent = playerCount > 0 ? `+${playerCount}` : String(playerCount);
-      displayEl.classList.toggle('positive', playerCount > 0);
-      displayEl.classList.toggle('negative', playerCount < 0);
-    }
-
     function updateBankrollDisplay() {
       bankrollEl.textContent = fmtMoney(bankroll);
+      localStorage.setItem('ft_bankroll', bankroll.toString());
     }
 
-    // ── BET PHASE ──
+    // Render a hand's cards with optional value badge
+    function renderHand(cards, container, showValue = true) {
+      container.innerHTML = '';
+      cards.forEach((c, i) => {
+        const el = cardEl(c);
+        el.style.animationDelay = (i * 80) + 'ms';
+        el.classList.add('dealing');
+        container.appendChild(el);
+      });
+      if (showValue && cards.length > 0) {
+        const val = handValue(cards);
+        const bust = val > 21;
+        const bj   = isNaturalBJ(cards);
+        const badge = document.createElement('div');
+        badge.className = 'ft-hand-badge' + (bust ? ' ft-hand-bust' : bj ? ' ft-hand-bj' : '');
+        badge.textContent = bj ? 'BJ' : val;
+        container.appendChild(badge);
+      }
+    }
+
+    // ── Bet phase ──
     body.querySelectorAll('.ft-chip').forEach(chip => {
       chip.addEventListener('click', () => {
         const val = parseInt(chip.dataset.val);
         if (currentBet + val > bankroll) return;
         currentBet += val;
         betAmountEl.textContent = fmtMoney(currentBet);
+        renderBetChips(currentBet);
         dealBtn.disabled = false;
+        updateBetWarning();
       });
     });
+
     clearBtn.addEventListener('click', () => {
       currentBet = 0;
       betAmountEl.textContent = '0';
+      renderBetChips(0);
+      betWarningEl.classList.add('hidden');
       dealBtn.disabled = true;
+    });
+
+    resetBtn.addEventListener('click', () => {
+      bankroll = savedBankroll;
+      updateBankrollDisplay();
     });
 
     dealBtn.addEventListener('click', dealHand);
 
+    // ── Deal ──
     function dealHand() {
-      visibleCards = [];
-      playerCount = 0;
-      updateCountDisplay();
+      updateBetWarning();
 
-      // Deal: dealer back + upcard; player 2 cards
-      const dealerUp = draw(1)[0];
-      const p1 = draw(1)[0];
-      const p2 = draw(1)[0];
+      const p1        = drawCards(1)[0];
+      const dealerUp  = drawCards(1)[0];
+      const p2        = drawCards(1)[0];
+      const dealerHole = drawCards(1)[0];
 
-      visibleCards = [dealerUp, p1, p2]; // hole card hidden — not counted
-      const delta = visibleCards.reduce((s, c) => s + c.value, 0);
-      runningCount += delta;
+      dealerUpCardObj   = dealerUp;
+      dealerHoleCardObj = dealerHole;
+      dealerHandCards   = [dealerHole, dealerUp]; // hole first
+      playerHands       = [[p1, p2]];
+      playerHandBets    = [currentBet];
+      activeHandIdx     = 0;
+      firstActionTaken  = false;
 
-      // Render dealer
-      dealerCards.innerHTML = '';
+      // Count visible cards
+      [p1, p2, dealerUp].forEach(c => { runningCount += c.value; });
+
+      // Render dealer (hole = back, up = face)
+      dealerCardsEl.innerHTML = '';
       const backEl = cardBackEl();
       backEl.classList.add('dealing');
-      dealerCards.appendChild(backEl);
+      dealerCardsEl.appendChild(backEl);
       const upEl = cardEl(dealerUp);
       upEl.style.animationDelay = '80ms';
       upEl.classList.add('dealing');
-      dealerCards.appendChild(upEl);
+      dealerCardsEl.appendChild(upEl);
 
-      // Render player (overlapping)
-      playerCards.innerHTML = '';
-      [p1, p2].forEach((c, i) => {
-        const el = cardEl(c);
-        el.style.animationDelay = (160 + i * 100) + 'ms';
-        el.classList.add('dealing');
-        playerCards.appendChild(el);
-      });
+      // Render player
+      renderHand([p1, p2], playerCardsEl);
 
-      // Determine correct BS play
-      correctPlay = calcCorrectPlay([p1, p2], dealerUp);
+      // Natural BJ — skip to dealer reveal
+      if (isNaturalBJ([p1, p2])) {
+        firstActionCorrectPlay = 'S';
+        firstActionWasCorrect  = true;
+        firstActionTaken       = true;
+        setTimeout(() => runDealerAndResolve(), 700);
+        return;
+      }
 
-      // Build play buttons
+      firstActionCorrectPlay = calcCorrectPlay([p1, p2], dealerUp);
+      buildPlayActions([p1, p2], true);
+      showPhase('play');
+    }
+
+    // ── Build action buttons ──
+    function buildPlayActions(hand, isFirst) {
       actionsEl.innerHTML = '';
-      const isPair = p1.rank === p2.rank;
-      (isPair ? ['H','S','D','P'] : ['H','S','D']).forEach(a => {
+      playLabelEl.textContent = "What's your play?";
+      const isPair = isFirst && hand.length === 2 && hand[0].rank === hand[1].rank;
+      const actions = isFirst ? (isPair ? ['H','S','D','P'] : ['H','S','D']) : ['H','S'];
+      actions.forEach(a => {
         const b = document.createElement('button');
         b.className = 'sk-action-btn';
         b.textContent = ACTION_LABELS[a];
@@ -1934,22 +2378,203 @@ const FullTraining = {
         b.addEventListener('click', () => choosePlay(a));
         actionsEl.appendChild(b);
       });
+    }
 
+    // ── Player action ──
+    function choosePlay(action) {
+      const hand = playerHands[activeHandIdx];
+      const isFirst = !firstActionTaken;
+
+      // Track correctness of first decision for training feedback
+      if (isFirst) {
+        firstActionWasCorrect  = (action === firstActionCorrectPlay);
+        firstActionTaken = true;
+        // Briefly highlight correct/wrong
+        actionsEl.querySelectorAll('.sk-action-btn').forEach(b => {
+          b.disabled = true;
+          if (b.dataset.action === firstActionCorrectPlay) b.classList.add('correct');
+          if (b.dataset.action === action && !firstActionWasCorrect) b.classList.add('wrong');
+        });
+        Account.addResult(skillId, firstActionWasCorrect);
+        if (firstActionWasCorrect) correct++;
+        if (correct >= 5) AppState.skillStatus[skillId].done = true;
+        markScore(scoreEl, correct, 0);
+      } else {
+        actionsEl.querySelectorAll('.sk-action-btn').forEach(b => b.disabled = true);
+      }
+
+      if (action === 'S') {
+        // Stand
+        setTimeout(() => runDealerAndResolve(), 300);
+        return;
+      }
+
+      if (action === 'D') {
+        // Double down — one card, double bet
+        playerHandBets[activeHandIdx] *= 2;
+        const [newCard] = drawCards(1);
+        runningCount += newCard.value;
+        hand.push(newCard);
+        renderHand(hand, playerCardsEl);
+        setTimeout(() => runDealerAndResolve(), 500);
+        return;
+      }
+
+      if (action === 'P') {
+        // Split — draw a card for each split hand
+        const [c1] = drawCards(1);
+        const [c2] = drawCards(1);
+        runningCount += c1.value + c2.value;
+        playerHands = [[hand[0], c1], [hand[1], c2]];
+        playerHandBets = [currentBet, currentBet];
+        activeHandIdx = 0;
+        firstActionTaken = true; // no D/P after split
+        renderHand(playerHands[0], playerCardsEl);
+        firstActionCorrectPlay = calcCorrectPlay(playerHands[0], dealerUpCardObj);
+        buildPlayActions(playerHands[0], false);
+        showPhase('play');
+        return;
+      }
+
+      // Hit
+      const [newCard] = drawCards(1);
+      runningCount += newCard.value;
+      hand.push(newCard);
+      renderHand(hand, playerCardsEl);
+
+      if (isBusted(hand)) {
+        // Bust on this hand — move to next split hand or dealer
+        setTimeout(() => advanceAfterBust(), 400);
+        return;
+      }
+
+      if (handValue(hand) === 21) {
+        // Auto-stand on 21
+        setTimeout(() => advanceToNextHandOrDealer(), 400);
+        return;
+      }
+
+      // Offer H/S again
+      buildPlayActions(hand, false);
+    }
+
+    function advanceAfterBust() {
+      if (activeHandIdx < playerHands.length - 1) {
+        activeHandIdx++;
+        renderHand(playerHands[activeHandIdx], playerCardsEl);
+        buildPlayActions(playerHands[activeHandIdx], false);
+        showPhase('play');
+      } else {
+        runDealerAndResolve();
+      }
+    }
+
+    function advanceToNextHandOrDealer() {
+      if (activeHandIdx < playerHands.length - 1) {
+        activeHandIdx++;
+        renderHand(playerHands[activeHandIdx], playerCardsEl);
+        buildPlayActions(playerHands[activeHandIdx], false);
+        showPhase('play');
+      } else {
+        runDealerAndResolve();
+      }
+    }
+
+    // ── Dealer plays ──
+    function runDealerAndResolve() {
+      // Disable play buttons, show dealer turn label
+      actionsEl.innerHTML = '';
+      playLabelEl.textContent = "Dealer's turn...";
       showPhase('play');
+
+      // Reveal hole card
+      const backEl = dealerCardsEl.querySelector('.card-back');
+      if (backEl) {
+        runningCount += dealerHoleCardObj.value;
+        const faceEl = cardEl(dealerHoleCardObj);
+        faceEl.classList.add('dealing');
+        backEl.replaceWith(faceEl);
+      }
+
+      // Dealer draws to 17 with delay
+      function dealerDrawNext() {
+        const dv = handValue(dealerHandCards);
+        if (dv >= 17) { setTimeout(resolveResult, 400); return; }
+        setTimeout(() => {
+          const [card] = drawCards(1);
+          runningCount += card.value;
+          dealerHandCards.push(card);
+          const el = cardEl(card);
+          el.classList.add('dealing');
+          dealerCardsEl.appendChild(el);
+          dealerDrawNext();
+        }, 420);
+      }
+      setTimeout(dealerDrawNext, 350);
+    }
+
+    // ── Resolve and pay out ──
+    function resolveResult() {
+      const dv  = handValue(dealerHandCards);
+      const dBJ = isNaturalBJ(dealerHandCards);
+
+      let totalDelta = 0;
+      const outcomes = playerHands.map((hand, i) => {
+        const pv  = handValue(hand);
+        const pBJ = isNaturalBJ(hand) && playerHands.length === 1;
+        const bet = playerHandBets[i];
+
+        if (pv > 21)       return { label: `Bust (${pv})`, delta: -bet };
+        if (pBJ && dBJ)    return { label: 'Push — both Blackjack', delta: 0 };
+        if (pBJ)           return { label: 'Blackjack! (3:2)', delta: Math.floor(bet * 1.5) };
+        if (dBJ)           return { label: 'Dealer Blackjack', delta: -bet };
+        if (dv > 21)       return { label: `Win — Dealer bust (${dv})`, delta: bet };
+        if (pv > dv)       return { label: `Win (${pv} vs ${dv})`, delta: bet };
+        if (pv === dv)     return { label: `Push (${pv})`, delta: 0 };
+        return               { label: `Lose (${pv} vs ${dv})`, delta: -bet };
+      });
+
+      outcomes.forEach(o => { totalDelta += o.delta; });
+      bankroll += totalDelta;
+      if (bankroll < 0) bankroll = 0;
+      updateBankrollDisplay();
+
+      const bsCorrect = firstActionWasCorrect;
+      const bsLabel   = bsCorrect ? '✓ Correct play' : `✗ Should: ${ACTION_LABELS[firstActionCorrectPlay]}`;
+
+      resultRow.innerHTML = `
+        <div class="ft-outcomes">
+          ${outcomes.map(o => `
+            <div class="ft-outcome-row">
+              <span class="ft-outcome-label ${o.delta > 0 ? 'ft-outcome-win' : o.delta < 0 ? 'ft-outcome-lose' : 'ft-outcome-push'}">${o.label}</span>
+              <span class="ft-outcome-amount ${o.delta > 0 ? 'ft-outcome-win' : o.delta < 0 ? 'ft-outcome-lose' : 'ft-outcome-push'}">${o.delta >= 0 ? '+' : ''}$${Math.abs(o.delta).toLocaleString()}</span>
+            </div>
+          `).join('')}
+          <div class="ft-bs-verdict ${bsCorrect ? 'ft-bs-ok' : 'ft-bs-wrong'}">${bsLabel}</div>
+        </div>
+      `;
+
+      window.dispatchEvent(new CustomEvent('colin:event', { detail: {
+        event: 'trainer_answer',
+        payload: { skillId: 'full-training', isCorrect: bsCorrect, playWasCorrect: bsCorrect,
+                   correctPlay: firstActionCorrectPlay, runningCount, bankroll }
+      }}));
+
+      showPhase('result');
     }
 
     function calcCorrectPlay(pCards, dCard) {
       const pTotal = pCards.reduce((s, c) => {
-        const v = c.rank==='A' ? 11 : (c.rank==='10'||c.rank==='J'||c.rank==='Q'||c.rank==='K') ? 10 : parseInt(c.rank)||10;
+        const v = c.rank==='A' ? 11 : (['10','J','Q','K'].includes(c.rank)) ? 10 : parseInt(c.rank)||0;
         return s + v;
       }, 0);
-      const isAce = pCards.some(c => c.rank === 'A');
+      const isAce  = pCards.some(c => c.rank === 'A');
       const isPair = pCards[0].rank === pCards[1].rank;
-      const dLabel = (dCard.rank==='10'||dCard.rank==='J'||dCard.rank==='Q'||dCard.rank==='K') ? '10' : dCard.rank;
+      const dLabel = (['10','J','Q','K'].includes(dCard.rank)) ? '10' : dCard.rank;
       const dI = Math.max(0, DEALER_LABELS.indexOf(dLabel));
       if (isPair) {
-        const r = pCards[0].rank;
-        const key = (r==='10'||r==='J'||r==='Q'||r==='K') ? 'TT' : (r+r);
+        const r   = pCards[0].rank;
+        const key = (['10','J','Q','K'].includes(r)) ? 'TT' : (r+r);
         return (BS_PAIRS[key]||'SSSSSSSSSS')[dI] || 'S';
       }
       if (isAce && pTotal <= 21) {
@@ -1961,86 +2586,24 @@ const FullTraining = {
       return (BS_HARD[Math.min(16, Math.max(8, hard))]||'SSSSSSSSSS')[dI] || 'H';
     }
 
-    function choosePlay(action) {
-      playWasCorrect = (action === correctPlay);
-      actionsEl.querySelectorAll('.sk-action-btn').forEach(b => {
-        b.disabled = true;
-        if (b.dataset.action === correctPlay) b.classList.add('correct');
-        if (b.dataset.action === action && !playWasCorrect) b.classList.add('wrong');
-      });
-      showPhase('count');
-    }
-
-    function submitCount() {
-      if (phase !== 'count') return;
-      const countIsCorrect = playerCount === runningCount;
-      const bothCorrect = playWasCorrect && countIsCorrect;
-
-      if (bothCorrect) correct++;
-
-      // Update bankroll
-      if (playWasCorrect) { bankroll += currentBet; }
-      else                { bankroll -= currentBet; }
-      if (bankroll < 0) bankroll = 0;
-      updateBankrollDisplay();
-
-      // Build result row
-      const rcStr = runningCount >= 0 ? `+${runningCount}` : String(runningCount);
-      const guessStr = playerCount >= 0 ? `+${playerCount}` : String(playerCount);
-      const betChange = playWasCorrect ? `+$${fmtMoney(currentBet)}` : `-$${fmtMoney(currentBet)}`;
-      const betColor  = playWasCorrect ? '#4ade80' : '#f87171';
-      resultRow.innerHTML = `
-        <div class="ft-result-item ${playWasCorrect?'ft-result-good':'ft-result-bad'}">
-          <span class="ft-result-icon">${playWasCorrect?'✓':'✗'}</span>
-          <span>${playWasCorrect ? 'Correct play' : `Should ${ACTION_LABELS[correctPlay]}`}</span>
-        </div>
-        <div class="ft-result-item ${countIsCorrect?'ft-result-good':'ft-result-bad'}">
-          <span class="ft-result-icon">${countIsCorrect?'✓':'✗'}</span>
-          <span>${countIsCorrect ? `Count ${rcStr}` : `Count: ${rcStr}, you said ${guessStr}`}</span>
-        </div>
-        <div class="ft-result-bet" style="color:${betColor}">${betChange}</div>
-      `;
-
-      Account.addResult(skillId, bothCorrect);
-      if (correct >= 5) AppState.skillStatus[skillId].done = true;
-      markScore(scoreEl, correct, 0);
-      window.dispatchEvent(new CustomEvent('colin:event', { detail: {
-        event: 'trainer_answer',
-        payload: {
-          skillId: 'full-training',
-          isCorrect: bothCorrect,
-          playWasCorrect,
-          countWasCorrect: countIsCorrect,
-          correctPlay,
-          chosenPlay: playWasCorrect ? correctPlay : (actionsEl.querySelector('.wrong') ? actionsEl.querySelector('.wrong').dataset.action : '?'),
-          runningCount,
-          playerCount,
-          bankroll
-        }
-      }}));
-
-      currentBet = 0;
-      showPhase('feedback');
-    }
-
     nextBtn.addEventListener('click', () => {
+      if (bankroll <= 0) { bankroll = savedBankroll; updateBankrollDisplay(); }
+      currentBet = 0;
       betAmountEl.textContent = '0';
+      renderBetChips(0);
       dealBtn.disabled = true;
-      dealerCards.innerHTML = '';
-      playerCards.innerHTML = '';
+      dealerCardsEl.innerHTML = '';
+      playerCardsEl.innerHTML = '';
+      refreshSpreadTable();
+      betWarningEl.classList.add('hidden');
       showPhase('bet');
     });
 
-    body.querySelector('#ft-minus').addEventListener('click', () => { if(phase==='count'){playerCount--;updateCountDisplay();} });
-    body.querySelector('#ft-plus').addEventListener('click',  () => { if(phase==='count'){playerCount++;updateCountDisplay();} });
-    body.querySelector('#ft-count-submit').addEventListener('click', submitCount);
-    function ftKey(e) { if (phase === 'count' && e.key === 'Enter') submitCount(); }
-    document.addEventListener('keydown', ftKey);
-
+    refreshSpreadTable();
+    updateShoeVisual();
     showPhase('bet');
     return () => {
       if (trainerEl) trainerEl.classList.remove('ft-active');
-      document.removeEventListener('keydown', ftKey);
     };
   }
 };
@@ -2256,7 +2819,11 @@ function resetHeroRing() {
   if (ring) {
     ring.getAnimations().forEach(a => a.cancel());
     ring.style.transform = '';
-    ring.style.animation = '';
+    // Clear then force-reflow so the browser treats this as a fresh start,
+    // but use 0s delay so the spin resumes immediately instead of waiting 4.2s.
+    ring.style.animation = 'none';
+    void ring.offsetWidth;
+    ring.style.animation = 'cardRingSpin 40s linear 0s infinite';
   }
 
   // Fade back in after the snap settles (ring wrap is inside #landing so
@@ -2499,15 +3066,7 @@ function spinRingToAce(ring) {
 
 // Entry point: "Learn More" clicked on landing.
 //
-// Cinematic flow — NO view switch, landing stays visible throughout:
-//   Phase 1 — Pan ring to center + spin to Ace (existing)
-//   Phase 2 — Camera zoom: scale ring wrap so Ace appears portrait-card sized
-//             (other ring cards visible receding to the edges)
-//   Phase 3 — Float: small portrait Ace card bobs gently at center
-//   Phase 4 — Flip: rotY 0 → 180 (ring still visible around the card)
-//   Phase 5 — Turn landscape (portrait → landscape)
-//   Phase 6 — Slow zoom to fullscreen: bg fades in, covering ring
-//   At end: tour-stage shown (under overlay), overlay removed. Landing never hidden.
+// Ring spin → card zooms fullscreen (no flip, no turn).
 function startLearnMore() {
   initTourPages();
   const landing = document.getElementById('landing');
@@ -2519,27 +3078,23 @@ function startLearnMore() {
     tourIndex = 0;
     showTourPage(0);
     if (landing) landing.classList.add('hidden');
-    if (stage) {
-      stage.classList.remove('hidden');
-      stage.classList.add('active');
-    }
+    if (stage) { stage.classList.remove('hidden'); stage.classList.add('active'); }
     updateSideArrows();
     return;
   }
 
-  // Snap all ring cards to their final drop positions immediately
+  // Snap all ring cards to their final drop positions
   document.querySelectorAll('.hero-card-ring .rc-card').forEach((card, i) => {
     card.style.animation = 'none';
     card.style.transform = `rotateY(${i * 45}deg) translateZ(210px) translateY(0px)`;
   });
 
-  // Phase 1: fade hero text, pan ring to center, spin to Ace
+  // Fade hero text, pan ring to center, spin to Ace
   if (hero) hero.classList.add('tour-pending');
-  const pan = panHeroRingToCenter(); // returns { wrap, dx, dy }
+  const pan = panHeroRingToCenter();
 
   if (!ring) return;
   spinRingToAce(ring).then(() => {
-    // Brief pause after spin
     setTimeout(() => {
       const aceEl = document.querySelector('.hero-card-ring .rc-card:nth-child(1)');
       if (!aceEl || !pan) return;
@@ -2548,15 +3103,10 @@ function startLearnMore() {
       const vh = window.innerHeight;
       const CARD_W = 340;
       const CARD_H = 476;
-      const LAND_W = CARD_H; // 476
-      const LAND_H = CARD_W; // 340
       const portX = (vw - CARD_W) / 2;
       const portY = (vh - CARD_H) / 2;
-      const landX = (vw - LAND_W) / 2;
-      const landY = (vh - LAND_H) / 2;
 
-      // Phase 2 — Camera zoom: scale ring wrap until Ace = portrait card size.
-      // Read Ace's current visual width (at scale 1.25), compute target scale.
+      // Camera zoom: scale ring wrap until Ace = portrait card size
       const aceRect0 = aceEl.getBoundingClientRect();
       const totalScale = 1.25 * (CARD_W / aceRect0.width);
       pan.wrap.style.transition = 'transform 950ms cubic-bezier(0.2, 0, 0.1, 1)';
@@ -2565,10 +3115,9 @@ function startLearnMore() {
       setTimeout(() => {
         pan.wrap.style.transition = '';
 
-        // Read Ace's zoomed position — overlay will sit exactly on top of it
         const aceRect = aceEl.getBoundingClientRect();
 
-        // Pre-activate tour stage (hidden) so restored DOM has a home
+        // Setup tour stage hidden behind overlay
         tourIndex = 0;
         if (stage) {
           stage.classList.remove('hidden');
@@ -2577,156 +3126,74 @@ function startLearnMore() {
         }
         showTourPage(0);
 
-        const source = document.getElementById('info-sections');
-        if (!source) return;
-        const sourceParent = source.parentNode;
-        const sourceNext = source.nextSibling;
+        // Build overlay at Ace position
+        const overlay = document.createElement('div');
+        overlay.className = 'ace-flip-overlay';
+        overlay.innerHTML = `
+          <div class="ace-flip-bg"></div>
+          <div class="ace-flip-wrap">
+            <div class="ace-flip-inner">
+              <div class="ace-flip-front">
+                <span class="ace-rank-tl">A</span>
+                <span class="ace-suit">♠</span>
+                <span class="ace-rank-br">A</span>
+              </div>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(overlay);
 
-        // Build overlay: Ace front visible, bg transparent so ring shows behind
-        const overlay = buildFlipOverlay(source);
         const bg   = overlay.querySelector('.ace-flip-bg');
         const wrap = overlay.querySelector('.ace-flip-wrap');
-        const inner  = overlay.querySelector('.ace-flip-inner');
-        const rotator = overlay.querySelector('.ace-flip-back-rotator');
 
-        wrap.style.left   = aceRect.left + 'px';
-        wrap.style.top    = aceRect.top + 'px';
-        wrap.style.width  = aceRect.width + 'px';
+        wrap.style.left   = aceRect.left   + 'px';
+        wrap.style.top    = aceRect.top    + 'px';
+        wrap.style.width  = aceRect.width  + 'px';
         wrap.style.height = aceRect.height + 'px';
-        inner.style.transform = 'rotateY(0deg)';
-        bg.style.opacity  = '0'; // transparent — ring visible behind overlay
-        setRotatorState(rotator, LAND_W, LAND_H, -90);
+        bg.style.opacity  = '0';
 
-        // Hide the ring Ace — the overlay is now on top of it
+        // Hide ring Ace — overlay replaces it
         aceEl.style.opacity = '0';
 
         void wrap.offsetWidth;
 
-        // Snap to exact portrait-card center (tiny correction if needed)
-        wrap.style.transition = 'left 400ms cubic-bezier(0.22,1,0.36,1), top 400ms cubic-bezier(0.22,1,0.36,1), width 400ms cubic-bezier(0.22,1,0.36,1), height 400ms cubic-bezier(0.22,1,0.36,1)';
+        // Grow to portrait card center (400ms), bg fades in
+        wrap.style.transition = `left 400ms cubic-bezier(0.22,1,0.36,1), top 400ms cubic-bezier(0.22,1,0.36,1), width 400ms cubic-bezier(0.22,1,0.36,1), height 400ms cubic-bezier(0.22,1,0.36,1)`;
+        bg.style.transition   = 'opacity 400ms ease';
         requestAnimationFrame(() => {
           wrap.style.left   = portX + 'px';
           wrap.style.top    = portY + 'px';
           wrap.style.width  = CARD_W + 'px';
           wrap.style.height = CARD_H + 'px';
+          bg.style.opacity  = '1';
         });
 
-        // Phase 3 — Float: card gently bobs while the viewer appreciates the scene
         setTimeout(() => {
-          wrap.style.animation = 'aceCardFloat 1.6s ease-in-out infinite';
+          // Zoom portrait → fullscreen (600ms)
+          wrap.style.transition = `left 600ms cubic-bezier(0.2,0,0.1,1), top 600ms cubic-bezier(0.2,0,0.1,1), width 600ms cubic-bezier(0.2,0,0.1,1), height 600ms cubic-bezier(0.2,0,0.1,1)`;
+          requestAnimationFrame(() => {
+            wrap.style.left   = '0px';
+            wrap.style.top    = '0px';
+            wrap.style.width  = vw + 'px';
+            wrap.style.height = vh + 'px';
+          });
 
-          // Phase 4 — Flip: rotY 0 → 180 (ring still visible around card)
           setTimeout(() => {
-            wrap.style.animation = ''; // stop float cleanly before flip
-
-            const flipAnim = inner.animate(
-              [
-                { transform: 'rotateY(0deg)' },
-                { transform: 'rotateY(90deg)' },
-                { transform: 'rotateY(180deg)' }
-              ],
-              { duration: 720, fill: 'forwards', easing: 'cubic-bezier(.5,.1,.3,1)' }
-            );
-
-            flipAnim.onfinish = () => {
-              inner.style.transform = 'rotateY(180deg)';
-              try { flipAnim.cancel(); } catch (e) { /* ignore */ }
-
-              // Phase 5 — Turn horizontal (700ms)
-              wrap.style.transition = 'left 700ms cubic-bezier(0.22,1,0.36,1), top 700ms cubic-bezier(0.22,1,0.36,1), width 700ms cubic-bezier(0.22,1,0.36,1), height 700ms cubic-bezier(0.22,1,0.36,1)';
-              rotator.style.transition = 'transform 700ms cubic-bezier(0.22,1,0.36,1)';
-              requestAnimationFrame(() => {
-                wrap.style.left   = landX + 'px';
-                wrap.style.top    = landY + 'px';
-                wrap.style.width  = LAND_W + 'px';
-                wrap.style.height = LAND_H + 'px';
-                rotator.style.transform = 'translate(-50%, -50%) rotate(0deg)';
-              });
-
-              setTimeout(() => {
-                // Phase 6 — Slow zoom: landscape → fullscreen (1100ms).
-                // bg fades in NOW (covering ring as card expands to fill viewport).
-                wrap.style.transition = 'left 1100ms cubic-bezier(0.2,0,0.1,1), top 1100ms cubic-bezier(0.2,0,0.1,1), width 1100ms cubic-bezier(0.2,0,0.1,1), height 1100ms cubic-bezier(0.2,0,0.1,1)';
-                rotator.style.transition = 'width 1100ms cubic-bezier(0.2,0,0.1,1), height 1100ms cubic-bezier(0.2,0,0.1,1)';
-                bg.style.transition = 'opacity 900ms ease';
-                requestAnimationFrame(() => {
-                  wrap.style.left   = '0px';
-                  wrap.style.top    = '0px';
-                  wrap.style.width  = vw + 'px';
-                  wrap.style.height = vh + 'px';
-                  rotator.style.width  = vw + 'px';
-                  rotator.style.height = vh + 'px';
-                  bg.style.opacity = '1';
-                });
-
-                setTimeout(() => {
-                  // Restore source to its DOM home
-                  if (sourceNext) sourceParent.insertBefore(source, sourceNext);
-                  else sourceParent.appendChild(source);
-
-                  const activeEl = document.getElementById(TOUR_PAGE_IDS[0]);
-                  if (activeEl) activeEl.classList.remove('zoom-in', 'zoom-out');
-                  if (hero) hero.classList.remove('tour-pending');
-
-                  // Reset ring (snap hidden: ring is behind opaque overlay + stage)
-                  resetHeroRing();
-
-                  // Reveal tour stage, remove overlay — landing remains visible beneath
-                  if (stage) stage.style.opacity = '';
-                  if (overlay) overlay.remove();
-                }, 1150);
-              }, 720);
-            };
-          }, 500); // float duration before flip
-        }, 430);   // pause after position snap before float starts
-      }, 1000);    // ring zoom duration
-    }, 450);       // pause after spinRingToAce
+            if (stage) stage.style.opacity = '';
+            if (landing) landing.classList.add('hidden');
+            if (hero) hero.classList.remove('tour-pending');
+            resetHeroRing();
+            overlay.remove();
+            updateSideArrows();
+          }, 640);
+        }, 430);
+      }, 1000);
+    }, 450);
   });
 }
 
-// ── Tour transition ring (between chapters) ──
-function playTourRingTransition(onMid, onDone) {
-  const wrap = document.getElementById('tour-ring-wrap');
-  const ring = document.getElementById('tour-ring');
-  if (!wrap || !ring) { onMid && onMid(); onDone && onDone(); return; }
-
-  // Reset any prior state
-  wrap.classList.remove('hidden', 'enter', 'zoom-through');
-  ring.classList.remove('fast-spin');
-  void wrap.offsetWidth;
-
-  // Phase A: ring fades in at center
-  wrap.classList.add('enter');
-  setTimeout(() => {
-    // Phase B: slow spin
-    ring.classList.add('fast-spin');
-  }, 400);
-
-  // Mid-point: swap page content (at ~halfway through spin)
-  setTimeout(() => { if (onMid) onMid(); }, 1400);
-
-  // Phase C: ring zooms through (after spin completes)
-  setTimeout(() => {
-    wrap.classList.add('zoom-through');
-  }, 2300);
-
-  // Phase D: cleanup
-  setTimeout(() => {
-    wrap.classList.add('hidden');
-    wrap.classList.remove('enter', 'zoom-through');
-    ring.classList.remove('fast-spin');
-    if (onDone) onDone();
-  }, 3200);
-}
-
-// Navigate to a new tour card — full cinematic reverse + forward of startLearnMore:
-//   Phase 1 (~1000ms) — Fullscreen card zooms out + flips to Ace face + ring fades in
-//   Phase 2 (~950ms)  — Ring fast-spins to next chapter's card (chapter index = ring card index)
-//   Phase 3 (~500ms)  — Float at card position
-//   Phase 4 (~720ms)  — Flip: Ace → new content (rotY 0→180)
-//   Phase 5 (~700ms)  — Turn landscape
-//   Phase 6 (~1100ms) — Zoom fullscreen, bg fades in over ring
-function goTourCard(nextIndex /*, direction */) {
+// Navigate to a new tour card: zoom out → ring spin → zoom in (mirrors startLearnMore).
+function goTourCard(nextIndex) {
   if (tourAnimating) return;
   if (nextIndex < 0 || nextIndex >= TOUR_PAGE_IDS.length) return;
 
@@ -2736,269 +3203,92 @@ function goTourCard(nextIndex /*, direction */) {
     return;
   }
 
-  const curId         = TOUR_PAGE_IDS[tourIndex];
-  const nextId        = TOUR_PAGE_IDS[nextIndex];
-  const currentSource = document.getElementById(curId);
-  const nextSource    = document.getElementById(nextId);
-  const stage         = document.getElementById('tour-stage');
-  if (!currentSource || !nextSource || !stage) return;
-
   tourAnimating = true;
 
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  const CARD_W = 340;
-  const CARD_H = 476;
-  const LAND_W = CARD_H;
-  const LAND_H = CARD_W;
-  const portX = (vw - CARD_W) / 2;
-  const portY = (vh - CARD_H) / 2;
-  const landX = (vw - LAND_W) / 2;
-  const landY = (vh - LAND_H) / 2;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const CW = 154, CH = 216;
+  const portX = (vw - CW) / 2, portY = (vh - CH) / 2;
+  const SPIN_MS  = 4200; // ring spin duration
+  const ZOOM_OUT = 380;  // card zoom-out ms
+  const ZOOM_IN  = 520;  // card zoom-in ms
 
-  const curParent = currentSource.parentNode;
-  const curNext   = currentSource.nextSibling;
-  const nxtParent = nextSource.parentNode;
-  const nxtNext   = nextSource.nextSibling;
+  // ── 1. Overlay that covers the current tour page (looks like the ace card) ──
+  const overlay = document.createElement('div');
+  overlay.className = 'ace-flip-overlay';
+  overlay.style.zIndex = '500';
+  overlay.innerHTML = `
+    <div class="ace-flip-bg" style="opacity:1"></div>
+    <div class="ace-flip-wrap">
+      <div class="ace-flip-inner">
+        <div class="ace-flip-front">
+          <span class="ace-rank-tl">A</span>
+          <span class="ace-suit">♠</span>
+          <span class="ace-rank-br">A</span>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
 
-  // Hide hero slogan/buttons so they don't show through the transparent overlay bg
-  const hero = document.querySelector('.ls-hero');
-  if (hero) hero.classList.add('tour-pending');
+  const cardWrap = overlay.querySelector('.ace-flip-wrap');
+  cardWrap.style.cssText = `position:absolute;left:0;top:0;width:${vw}px;height:${vh}px;`;
+  void cardWrap.offsetWidth;
 
-  // Each chapter maps 1-to-1 with a ring card by index
-  const ringWrap     = document.querySelector('.hero-card-ring-wrap');
-  const ring         = document.querySelector('.hero-card-ring');
-  const aceEl        = document.querySelector('.hero-card-ring .rc-card:nth-child(1)');
-  const targetCardEl = document.querySelector(`.hero-card-ring .rc-card:nth-child(${nextIndex + 1})`);
-
-  // ── SETUP (synchronous — no paint yet) ────────────────────────
-
-  // Freeze all ring card animations at their standard orbit positions
-  document.querySelectorAll('.hero-card-ring .rc-card').forEach((card, i) => {
-    card.style.animation = 'none';
-    card.style.transform = `rotateY(${i * 45}deg) translateZ(210px) translateY(0px)`;
-  });
-
-  // Freeze ring at Ace-front position
-  if (ring) {
-    ring.getAnimations().forEach(a => a.cancel());
-    ring.style.animation = 'none';
-    ring.style.transform = 'rotateX(14deg) rotateY(0deg)';
-  }
-
-  // Pan ring to center (instant, no transition — ring wrap is opacity 0 below)
-  if (ringWrap) {
-    ringWrap.style.transition = 'none';
-    const rr = ringWrap.getBoundingClientRect();
-    const dx = vw / 2 - (rr.left + rr.width  / 2);
-    const dy = vh / 2 - (rr.top  + rr.height / 2);
-    ringWrap.style.transform = `translateY(-50%) translate(${dx}px, ${dy}px) scale(1.25)`;
-    ringWrap._bjDx = dx;
-    ringWrap._bjDy = dy;
-  }
-
-  // Read Ace size at pan scale (scale 1.25) to compute camera-zoom totalScale
-  void (ringWrap && ringWrap.offsetWidth);
-  const aceRect0   = aceEl ? aceEl.getBoundingClientRect() : null;
-  const totalScale = (aceRect0 && aceRect0.width > 0) ? 1.25 * (CARD_W / aceRect0.width) : 2;
-
-  // Apply camera zoom (snap — invisible, ring wrap hidden next)
-  if (ringWrap) {
-    ringWrap.style.transform = `translateY(-50%) translate(${ringWrap._bjDx || 0}px, ${ringWrap._bjDy || 0}px) scale(${totalScale})`;
-    ringWrap.style.opacity   = '0'; // revealed during Phase 1
-  }
-  if (aceEl) aceEl.style.opacity = '0';
-
-  // Build overlay: current content fullscreen, inner=180° (back/content showing), bg=1
-  const overlay = buildFlipOverlay(currentSource);
-  const bg      = overlay.querySelector('.ace-flip-bg');
-  const wrap    = overlay.querySelector('.ace-flip-wrap');
-  const inner   = overlay.querySelector('.ace-flip-inner');
-  const rotator = overlay.querySelector('.ace-flip-back-rotator');
-
-  wrap.style.left   = '0px';
-  wrap.style.top    = '0px';
-  wrap.style.width  = vw + 'px';
-  wrap.style.height = vh + 'px';
-  inner.style.transform = 'rotateY(180deg)';
-  bg.style.opacity  = '1';
-  setRotatorState(rotator, vw, vh, 0);
-
-  stage.style.opacity = '0';
-
-  void wrap.offsetWidth; // reflow — lock in all initial state
-
-  // ── PHASE 1: Zoom out + flip to Ace + ring fades in (~1000ms) ─
-
-  const ease1 = 'cubic-bezier(0.22,1,0.36,1)';
-  wrap.style.transition = `left 1000ms ${ease1}, top 1000ms ${ease1}, width 1000ms ${ease1}, height 1000ms ${ease1}`;
-  bg.style.transition   = 'opacity 700ms ease 100ms';
-  if (ringWrap) ringWrap.style.transition = 'opacity 700ms ease 200ms';
-
-  // Flip inner 180°→0° (content hides, Ace face reveals) with slight delay
-  const flipBackAnim = inner.animate(
-    [
-      { transform: 'rotateY(180deg)' },
-      { transform: 'rotateY(90deg)'  },
-      { transform: 'rotateY(0deg)'   }
-    ],
-    { duration: 700, fill: 'forwards', easing: 'cubic-bezier(0.4,0,0.6,1)', delay: 200 }
-  );
-
+  // ── 2. Zoom OUT: fullscreen → card size ──
+  cardWrap.style.transition = `left ${ZOOM_OUT}ms cubic-bezier(0.4,0,0.8,1),top ${ZOOM_OUT}ms cubic-bezier(0.4,0,0.8,1),width ${ZOOM_OUT}ms cubic-bezier(0.4,0,0.8,1),height ${ZOOM_OUT}ms cubic-bezier(0.4,0,0.8,1)`;
   requestAnimationFrame(() => {
-    wrap.style.left   = portX + 'px';
-    wrap.style.top    = portY + 'px';
-    wrap.style.width  = CARD_W + 'px';
-    wrap.style.height = CARD_H + 'px';
-    bg.style.opacity  = '0';
-    if (ringWrap) ringWrap.style.opacity = '1';
+    cardWrap.style.left   = portX + 'px';
+    cardWrap.style.top    = portY + 'px';
+    cardWrap.style.width  = CW + 'px';
+    cardWrap.style.height = CH + 'px';
   });
 
   setTimeout(() => {
-    // Phase 1 done: restore currentSource to DOM (stage still hidden)
-    if (rotator.contains(currentSource)) rotator.removeChild(currentSource);
-    currentSource.classList.remove('tour-page-active', 'zoom-in', 'zoom-out');
-    if (curNext) curParent.insertBefore(currentSource, curNext);
-    else curParent.appendChild(currentSource);
+    // ── 3. Ring spin — move ring to body so it renders above everything ──
+    const ringWrap = document.getElementById('tour-ring-wrap');
+    const tourStage = document.getElementById('tour-stage');
+    if (ringWrap) {
+      document.body.appendChild(ringWrap); // escape tour-stage stacking context
+      ringWrap.classList.remove('hidden', 'transitioning');
+      ringWrap.style.zIndex = '501';
+      void ringWrap.offsetWidth;
+      ringWrap.style.animationDuration = SPIN_MS + 'ms';
+      ringWrap.classList.add('transitioning');
+    }
 
-    inner.style.transform = 'rotateY(0deg)';
-    try { flipBackAnim.cancel(); } catch (e) { /* ignore */ }
-    wrap.style.transition    = '';
-    if (ringWrap) ringWrap.style.transition = '';
+    // Swap page content at spin midpoint
+    setTimeout(() => {
+      tourIndex = nextIndex;
+      showTourPage(nextIndex);
+    }, SPIN_MS / 2);
 
-    // Pre-set rotator for the upcoming flip (content rotated -90° ready to unwind)
-    setRotatorState(rotator, LAND_W, LAND_H, -90);
-
-    // ── PHASE 2: Ring fast-spin to next chapter card (~950ms) ────
-    if (!ring) { if (hero) hero.classList.remove('tour-pending'); tourAnimating = false; return; }
-
-    // Swap overlay Ace → ring Ace at the same position (portrait card size, center screen).
-    // The ring Ace is camera-zoomed to exactly the same size/position as the overlay wrap.
-    if (aceEl) aceEl.style.opacity = '';  // restore ring Ace
-    wrap.style.opacity = '0';             // hide overlay — ring Ace takes over seamlessly
-
-    spinRingToCard(ring, nextIndex).then(() => {
-      // Ring stopped on target card. Update the overlay front face to match
-      // that card exactly (K♥, Q♠, etc.) so we never see "A♠" at this step.
-      const RING_CARD_DATA = [
-        { rank: 'A', suit: '♠', red: false },
-        { rank: 'K', suit: '♥', red: true  },
-        { rank: 'Q', suit: '♠', red: false },
-        { rank: 'J', suit: '♥', red: true  },
-      ];
-      const cd = RING_CARD_DATA[nextIndex] || RING_CARD_DATA[0];
-      const front = overlay.querySelector('.ace-flip-front');
-      if (front) {
-        front.className = 'ace-flip-front' + (cd.red ? ' suit-hearts' : '');
-        const tl = front.querySelector('.ace-rank-tl');
-        const s  = front.querySelector('.ace-suit');
-        const br = front.querySelector('.ace-rank-br');
-        if (tl) tl.textContent = cd.rank;
-        if (s)  s.textContent  = cd.suit;
-        if (br) br.textContent = cd.rank;
+    setTimeout(() => {
+      // Cleanup ring, move back inside tour-stage
+      if (ringWrap) {
+        ringWrap.classList.add('hidden');
+        ringWrap.classList.remove('transitioning');
+        ringWrap.style.animationDuration = '';
+        ringWrap.style.zIndex = '';
+        if (tourStage) tourStage.appendChild(ringWrap);
       }
 
-      // Read exact visual position of the target ring card and snap overlay
-      // there — no transition, no jump.
-      const targetRect = targetCardEl ? targetCardEl.getBoundingClientRect() : null;
-      wrap.style.transition = 'none';
-      if (targetRect) {
-        wrap.style.left   = targetRect.left   + 'px';
-        wrap.style.top    = targetRect.top    + 'px';
-        wrap.style.width  = targetRect.width  + 'px';
-        wrap.style.height = targetRect.height + 'px';
-      }
-
-      // Instant swap: show overlay (now K♥), hide ring card — fully seamless
-      wrap.style.opacity = '';
-      if (targetCardEl) targetCardEl.style.opacity = '0';
-
-      void wrap.offsetWidth;
-
-      // Ease to exact portrait center (the target card is already ~portX/portY
-      // after camera-zoom, so this is a negligible correction, ~300ms).
-      wrap.style.transition = `left 300ms cubic-bezier(0.22,1,0.36,1), top 300ms cubic-bezier(0.22,1,0.36,1), width 300ms cubic-bezier(0.22,1,0.36,1), height 300ms cubic-bezier(0.22,1,0.36,1)`;
+      // ── 4. Zoom IN: card size → fullscreen ──
+      cardWrap.style.transition = `left ${ZOOM_IN}ms cubic-bezier(0.2,0,0.1,1),top ${ZOOM_IN}ms cubic-bezier(0.2,0,0.1,1),width ${ZOOM_IN}ms cubic-bezier(0.2,0,0.1,1),height ${ZOOM_IN}ms cubic-bezier(0.2,0,0.1,1)`;
       requestAnimationFrame(() => {
-        wrap.style.left   = portX + 'px';
-        wrap.style.top    = portY + 'px';
-        wrap.style.width  = CARD_W + 'px';
-        wrap.style.height = CARD_H + 'px';
+        cardWrap.style.left   = '0px';
+        cardWrap.style.top    = '0px';
+        cardWrap.style.width  = vw + 'px';
+        cardWrap.style.height = vh + 'px';
       });
 
       setTimeout(() => {
-        wrap.style.transition = '';
+        overlay.remove();
+        tourAnimating = false;
+        updateSideArrows();
+      }, ZOOM_IN + 40);
 
-        // Load next content into rotator
-        rotator.appendChild(nextSource);
+    }, SPIN_MS);
 
-        nextSource.classList.add('tour-page-active');
-        nextSource.classList.remove('zoom-in', 'zoom-out');
-
-        // ── PHASE 4: Flip Ace → content (rotY 0→180, 720ms) ─────
-        const flipAnim = inner.animate(
-          [
-            { transform: 'rotateY(0deg)'   },
-            { transform: 'rotateY(90deg)'  },
-            { transform: 'rotateY(180deg)' }
-          ],
-          { duration: 720, fill: 'forwards', easing: 'cubic-bezier(.5,.1,.3,1)' }
-        );
-
-        flipAnim.onfinish = () => {
-          inner.style.transform = 'rotateY(180deg)';
-          try { flipAnim.cancel(); } catch (e) { /* ignore */ }
-
-          // ── PHASE 5: Turn landscape (700ms) ──────────────────
-          wrap.style.transition    = `left 700ms cubic-bezier(0.22,1,0.36,1), top 700ms cubic-bezier(0.22,1,0.36,1), width 700ms cubic-bezier(0.22,1,0.36,1), height 700ms cubic-bezier(0.22,1,0.36,1)`;
-          rotator.style.transition = 'transform 700ms cubic-bezier(0.22,1,0.36,1)';
-          requestAnimationFrame(() => {
-            wrap.style.left   = landX + 'px';
-            wrap.style.top    = landY + 'px';
-            wrap.style.width  = LAND_W + 'px';
-            wrap.style.height = LAND_H + 'px';
-            rotator.style.transform = 'translate(-50%, -50%) rotate(0deg)';
-          });
-
-          setTimeout(() => {
-            // ── PHASE 6: Zoom fullscreen, bg fades in (~1100ms) ─
-            wrap.style.transition    = `left 1100ms cubic-bezier(0.2,0,0.1,1), top 1100ms cubic-bezier(0.2,0,0.1,1), width 1100ms cubic-bezier(0.2,0,0.1,1), height 1100ms cubic-bezier(0.2,0,0.1,1)`;
-            rotator.style.transition = 'width 1100ms cubic-bezier(0.2,0,0.1,1), height 1100ms cubic-bezier(0.2,0,0.1,1)';
-            bg.style.transition      = 'opacity 900ms ease';
-            requestAnimationFrame(() => {
-              wrap.style.left   = '0px';
-              wrap.style.top    = '0px';
-              wrap.style.width  = vw + 'px';
-              wrap.style.height = vh + 'px';
-              rotator.style.width  = vw + 'px';
-              rotator.style.height = vh + 'px';
-              bg.style.opacity  = '1'; // covers ring as card expands
-            });
-
-            setTimeout(() => {
-              tourIndex = nextIndex;
-
-              if (rotator.contains(nextSource)) rotator.removeChild(nextSource);
-              if (nxtNext) nxtParent.insertBefore(nextSource, nxtNext);
-              else nxtParent.appendChild(nextSource);
-
-              if (targetCardEl) targetCardEl.style.opacity = '';
-              if (aceEl) aceEl.style.opacity = '';
-              if (hero) hero.classList.remove('tour-pending');
-              resetHeroRing();
-
-              showTourPage(nextIndex);
-              stage.style.opacity = '';
-
-              requestAnimationFrame(() => requestAnimationFrame(() => {
-                overlay.remove();
-                tourAnimating = false;
-              }));
-            }, 1150);
-          }, 720);
-        };
-      }, 330);
-    });
-  }, 1020);
+  }, ZOOM_OUT + 20);
 }
 
 function tourNext() {
@@ -3053,12 +3343,18 @@ function exitTourToLanding() {
 // "Start Training" — fast-path straight to the pipeline (skips the tour).
 // Used by the top-right nav button for returning users who already know the app.
 function startTraining() {
+  // Close tour stage if open
+  const stage = document.getElementById('tour-stage');
+  if (stage && !stage.classList.contains('hidden')) {
+    stage.classList.add('hidden');
+    stage.classList.remove('active', 'entering', 'leaving');
+  }
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
     goPipeline();
     return;
   }
   const landing = document.getElementById('landing');
-  if (!landing) { goPipeline(); return; }
+  if (!landing || landing.classList.contains('hidden')) { goPipeline(); return; }
   landing.classList.add('leaving');
   setTimeout(() => {
     landing.classList.remove('leaving');
@@ -3368,7 +3664,7 @@ if (pipelineBack) pipelineBack.addEventListener('click', goLanding);
 document.getElementById('skill-back').addEventListener('click', phaseOutTrainer);
 
 const dashBack = document.getElementById('dashboard-back');
-if (dashBack) dashBack.addEventListener('click', goLanding);
+if (dashBack) dashBack.addEventListener('click', goPipeline);
 
 // Clickable brand logos — always go home (landing), from any state
 function forceGoHome() {
@@ -3406,7 +3702,7 @@ function forceGoHome() {
   const btn = document.getElementById(id);
   if (btn) btn.addEventListener('click', (e) => {
     e.preventDefault();
-    forceGoHome();
+    window.location.reload();
   });
 });
 

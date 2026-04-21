@@ -2709,6 +2709,7 @@ const TOUR_PAGE_IDS = ['info-sections', 'info-counting', 'feat-anchor'];
 let tourIndex = 0;
 let tourAnimating = false;
 let tourInitialized = false;
+let tourGeneration = 0; // incremented on every abort so stale callbacks self-cancel
 
 function initTourPages() {
   if (tourInitialized) return;
@@ -3126,6 +3127,8 @@ function goTourCard(nextIndex) {
   }
 
   tourAnimating = true;
+  const myGen = ++tourGeneration; // snapshot — stale if startTraining increments this
+  const alive = () => myGen === tourGeneration;
 
   const ZOOM_MS     = TOUR_ZOOM_MS;
   const ZOOM_OUT_MS = 1200;
@@ -3155,6 +3158,11 @@ function goTourCard(nextIndex) {
 
   // ── 2. After zoom-out, show hero ring centered on CURRENT card, then spin to target ──
   setTimeout(() => {
+    if (!alive()) { // aborted — clean up and bail
+      if (currentEl) { currentEl.classList.remove('tour-page-active'); currentEl.style.cssText = ''; }
+      wrap.style.cssText = ''; resetHeroRing();
+      return;
+    }
     if (currentEl) {
       currentEl.classList.remove('tour-page-active');
       currentEl.style.transition = '';
@@ -3185,7 +3193,10 @@ function goTourCard(nextIndex) {
 
     // Pause so user sees the current card, then spin to target
     setTimeout(() => {
+    if (!alive()) { wrap.style.cssText = ''; resetHeroRing(); return; }
     spinRingToCard(ring, targetCard).then(() => {
+      if (!alive()) { wrap.style.cssText = ''; resetHeroRing(); return; }
+
       // Measure the actual suit-symbol position now that the target card faces front
       const cards = ring.querySelectorAll('.rc-card');
       const frontCard = cards[targetCard];
@@ -3212,6 +3223,7 @@ function goTourCard(nextIndex) {
 
       // Brief pause to see the card, then zoom in through the measured suit symbol
       setTimeout(() => {
+        if (!alive()) { wrap.style.cssText = ''; resetHeroRing(); return; }
         wrap.style.transformOrigin = origin;
         wrap.style.transition = `transform ${ZOOM_MS}ms cubic-bezier(0.25, 0, 0.6, 1), opacity ${ZOOM_MS * 0.2}ms ease-in ${ZOOM_MS * 0.75}ms`;
         wrap.style.transform = 'scale(45)';
@@ -3221,6 +3233,7 @@ function goTourCard(nextIndex) {
 
         // Start page fade-in at 35% of zoom — same proportion as startLearnMore
         setTimeout(() => {
+          if (!alive()) return;
           if (newEl) {
             newEl.style.opacity = '0';
             newEl.style.transform = 'scale(0.92)';
@@ -3234,6 +3247,7 @@ function goTourCard(nextIndex) {
 
         // Clean up ring after zoom fully completes
         setTimeout(() => {
+          if (!alive()) { wrap.style.cssText = ''; resetHeroRing(); return; }
           const lsHero = document.querySelector('.ls-hero');
           const landing = document.getElementById('landing');
           const pipelineActive = !document.getElementById('pipeline')?.classList.contains('hidden');
@@ -3313,8 +3327,18 @@ function exitTourToLanding() {
 // "Start Training" — fast-path straight to the pipeline (skips the tour).
 // Used by the top-right nav button for returning users who already know the app.
 function startTraining() {
-  // Close tour stage if open; abort any in-flight tour animation
+  // Abort any in-flight tour animation and immediately hide the ring if it was moved to body
   tourAnimating = false;
+  tourGeneration++;
+  const wrap = document.querySelector('.hero-card-ring-wrap');
+  if (wrap && wrap.parentElement === document.body) {
+    wrap.style.cssText = '';
+    resetHeroRing();
+    const lsHero = document.querySelector('.ls-hero');
+    const landing = document.getElementById('landing');
+    if (lsHero) lsHero.appendChild(wrap);
+    else if (landing) landing.appendChild(wrap);
+  }
   const stage = document.getElementById('tour-stage');
   if (stage && !stage.classList.contains('hidden')) {
     stage.classList.add('hidden');

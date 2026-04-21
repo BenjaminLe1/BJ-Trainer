@@ -24,13 +24,13 @@
   --card-bg:     #ffffff;
   --card-shadow: 0 2px 12px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.08);
 
-  /* Trainer (dark) */
-  --tr-bg:       #111813;
-  --tr-panel:    #0d1510;
-  --tr-border:   rgba(255,255,255,0.08);
-  --tr-text:     #f0ece0;
-  --tr-muted:    #8b9a8b;
-  --tr-dim:      #4a5a4a;
+  /* Trainer (light) */
+  --tr-bg:       #f5f1eb;
+  --tr-panel:    #eee9e0;
+  --tr-border:   rgba(40,25,5,0.1);
+  --tr-text:     #1e1408;
+  --tr-muted:    #5a4828;
+  --tr-dim:      #8a7248;
 
   /* Type */
   --font-sans:   'Hanken Grotesk', system-ui, sans-serif;
@@ -592,17 +592,17 @@ h3 {
   flex-shrink: 0;
 }
 .nav-brand-spade {
-  width: 14px;
+  width: 16px;
   height: auto;
   flex-shrink: 0;
+  opacity: 0.7;
 }
 .nav-brand-name {
-  font-family: var(--font-sans);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #1a1208;
+  font-family: 'Cormorant Garamond', 'Instrument Serif', Georgia, serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: rgba(26,18,8,0.75);
   white-space: nowrap;
   line-height: 1;
 }
@@ -1038,10 +1038,11 @@ h3 {
   line-height: 1;
 }
 .nav-brand-name {
-  font-size: 0.8rem;
-  font-weight: 400;
-  color: rgba(42,31,10,0.55);
-  letter-spacing: 0.02em;
+  font-family: 'Cormorant Garamond', 'Instrument Serif', Georgia, serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: rgba(26,18,8,0.65);
+  letter-spacing: 0.04em;
   white-space: nowrap;
 }
 .nav-links {
@@ -1590,7 +1591,6 @@ h3 {
 /* ============================================================
    PIPELINE & SKILL TRAINER — DARK NAV
    ============================================================ */
-#pipeline,
 #skill-trainer,
 #dashboard {
   display: flex;
@@ -1598,6 +1598,12 @@ h3 {
   min-height: 100vh;
   background: var(--tr-bg);
   color: var(--tr-text);
+}
+#pipeline {
+  position: relative;
+  height: 100dvh;
+  overflow: hidden;
+  background: #fff;
 }
 #skill-trainer.ft-active {
   height: 100vh;
@@ -1611,8 +1617,8 @@ h3 {
 }
 
 .dark-nav {
-  background: var(--tr-panel);
-  border-bottom: 1px solid var(--tr-border);
+  background: var(--tr-bg);
+  border-bottom: none;
   padding: 0 1.5rem;
   height: 56px;
   display: grid;
@@ -1633,7 +1639,7 @@ h3 {
   transition: color 0.15s, border-color 0.15s;
   white-space: nowrap;
 }
-.dark-nav-back:hover { color: var(--tr-text); border-color: rgba(255,255,255,0.2); }
+.dark-nav-back:hover { color: var(--tr-text); border-color: rgba(26,18,8,0.5); }
 
 /* Dark-nav brand (click → home) — replaces the old hidden title on pipeline */
 .dark-nav-brand {
@@ -1642,16 +1648,17 @@ h3 {
   gap: 0.55rem;
   background: transparent;
   border: none;
-  color: #e8c77a;
-  font-family: var(--font-serif, 'Instrument Serif', Georgia, serif);
-  font-size: 1.05rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
+  color: #a07820;
+  font-family: 'Cormorant Garamond', 'Instrument Serif', Georgia, serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   padding: 0.3rem 0.5rem;
   margin-left: -0.5rem;
   cursor: pointer;
   border-radius: 6px;
   transition: background 0.15s, color 0.15s, transform 0.15s;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.3);
 }
 .dark-nav-brand:hover {
   color: #f9e4a8;
@@ -1677,7 +1684,12 @@ h3 {
   transition: color 0.15s, border-color 0.15s;
   white-space: nowrap;
 }
-.dark-nav-account:hover { color: var(--tr-text); border-color: rgba(255,255,255,0.2); }
+.dark-nav-account:hover { color: var(--tr-text); border-color: rgba(26,18,8,0.5); }
+
+/* Hidden on landing, shown on pipeline */
+#pipe-account-wrap { display: none; }
+.hero-nav.pipeline-mode #nav-start-btn { display: none; }
+.hero-nav.pipeline-mode #pipe-account-wrap { display: flex; align-items: center; }
 
 .pipe-account-wrap {
   position: relative;
@@ -1717,229 +1729,168 @@ h3 {
 .skill-nav-score { font-size: 0.8rem; color: var(--tr-muted); text-align: right; min-width: 60px; }
 
 /* ============================================================
-   PIPELINE — BLACKJACK TABLE SCENE (3D)
+   PIPELINE — VIDEO ANIMATION + HOTSPOT OVERLAY
    ============================================================ */
-.bj-stage {
-  flex: 1;
+/* Nav floats transparently over the canvas */
+.pipe-nav {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 0 2rem;
+  height: 60px;
+  background: transparent;
+  pointer-events: none;
+}
+.pipe-nav > * { pointer-events: auto; }
+.pipe-account-wrap {
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: clamp(0.6rem, 1.6vh, 1.4rem) clamp(0.6rem, 2vw, 1.6rem);
-  overflow: hidden;
-  min-height: 0;
-  background:
-    radial-gradient(ellipse 85% 60% at 50% 55%, #1a0608 0%, #0a0205 55%, #020002 100%);
+  justify-content: flex-end;
+  margin-left: auto;
 }
 
-/* The scene sizes itself to fit BOTH available width and height,
-   while preserving the 10:7 aspect ratio. viewBox-based SVG inside
-   scales its wordmark + ring automatically. */
-.bj-scene {
-  position: relative;
-  /* Fit under the 56px nav + padding. Height is the usual limiter on tall/narrow windows. */
-  width: min(96vw, calc((100dvh - 120px) * 10 / 7), 1180px);
-  aspect-ratio: 10 / 7;
-  margin: 0 auto;
-  perspective: 1800px;
-  perspective-origin: 50% 75%;
+.pipe-nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.pipe-nav-spade {
+  width: 16px;
+  height: auto;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+.pipe-nav-brand-name {
+  font-family: 'Cormorant Garamond', 'Instrument Serif', Georgia, serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: rgba(26, 18, 8, 0.65);
+  white-space: nowrap;
+  line-height: 1;
+}
+.pipe-nav-account {
+  display: inline-flex;
+  align-items: center;
+  background: transparent;
+  border: 1.5px solid rgba(26, 18, 8, 0.55);
+  color: #1a1208;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  padding: 0.6rem 1.3rem;
+  border-radius: 100px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
+}
+.pipe-nav-account:hover {
+  background: #1a1208;
+  border-color: #1a1208;
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(26,18,8,0.22);
+}
+.pipe-nav-account:active {
+  transform: translateY(1px) scale(0.985);
 }
 
-/* 3D tilt wrapper — gives the table a table-like perspective.
-   Slightly less tilt on narrow screens so the ring still reads. */
-.bj-tilt {
-  width: 100%;
-  height: 100%;
-  transform: rotateX(18deg);
-  transform-origin: 50% 70%;
-  transition: transform 0.5s cubic-bezier(.2,.8,.2,1);
-  filter: drop-shadow(0 40px 60px rgba(0,0,0,0.75))
-          drop-shadow(0 10px 20px rgba(0,0,0,0.55));
+/* Stage: full-screen, video covers the whole page */
+.pipeline-video-stage {
+  position: absolute;
+  inset: 0;
+  background: #fff;
 }
 
-#bj-svg {
+/* Wrap fills the full stage — canvas uses cover-fit drawing in JS */
+.pipeline-video-wrap {
+  position: absolute;
+  inset: 0;
+}
+
+#pipeline-canvas {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   display: block;
+}
+
+/* Hotspots sit over the canvas */
+#pipeline-hotspots {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+#pipeline-hotspots.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#pipeline-hotspots svg {
+  width: 100%;
+  height: 100%;
   overflow: visible;
 }
 
-/* ── SVG felt text (scales with viewBox automatically) ── */
-.bj-wordmark {
-  font-family: 'GFS Didot', 'Didot', Georgia, serif;
-  font-size: 110px;
-  font-weight: 700;
-  letter-spacing: 18px;
-  fill: url(#goldMetal);
-  stroke: #2a1b05;
-  stroke-width: 1.2;
-  paint-order: stroke fill;
-  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6));
+.ph-highlight {
+  fill: transparent;
+  stroke: none;
+  pointer-events: all;
 }
-.bj-subtext {
-  font-family: 'GFS Didot', Georgia, serif;
-  font-size: 20px;
-  font-weight: 400;
-  letter-spacing: 6px;
-  fill: #e8c77a;
-  opacity: 0.88;
-}
-.bj-paytext {
-  font-family: 'GFS Didot', Georgia, serif;
-  font-size: 17px;
-  font-weight: 400;
-  letter-spacing: 5px;
-  fill: #d4a24a;
-  opacity: 0.8;
-}
-
-/* ── Neon glow spotlights under items ── */
-.bj-glow {
-  fill: url(#glowAmber);
-  opacity: 0.75;
-  mix-blend-mode: screen;
-  animation: bjGlowPulse 3.6s ease-in-out infinite;
-  transform-box: fill-box;
-  transform-origin: center;
-}
-.bj-glow[data-for="bj-dealerhand"] { animation-delay: 0.4s; }
-.bj-glow[data-for="bj-shoe"]       { animation-delay: 0.8s; }
-.bj-glow[data-for="bj-playerhand"] { animation-delay: 1.2s; }
-.bj-glow[data-for="bj-chipstack"]  { animation-delay: 1.6s; }
-
-@keyframes bjGlowPulse {
-  0%, 100% { opacity: 0.55; transform: scale(0.97); }
-  50%      { opacity: 0.88; transform: scale(1.04); }
-}
-
-/* ── Clickable items ── */
-.bj-item {
+.ph-label {
   cursor: pointer;
-  transform-box: fill-box;
-  transform-origin: center;
-  transition: transform 0.28s cubic-bezier(.2,.8,.2,1),
-              filter 0.28s ease;
+  transform-box: view-box;
+  transition: transform 0.25s ease;
 }
-@media (hover: hover) {
-  .bj-item:hover {
-    transform: translateY(-6px) scale(1.05);
-    filter: drop-shadow(0 10px 18px rgba(255,200,100,0.6))
-            drop-shadow(0 0 16px rgba(255,200,100,0.35));
-  }
+.ph-label path {
+  fill: none;
+  stroke: #b8922a;
+  stroke-width: 1.8;
+  transition: stroke 0.25s ease;
 }
-.bj-item.done {
-  filter: drop-shadow(0 0 14px rgba(22,163,74,0.75));
+.ph-label circle {
+  fill: none;
+  stroke: #b8922a;
+  stroke-width: 1.8;
+  transition: stroke 0.25s ease;
 }
-@media (hover: hover) {
-  .bj-item.done:hover {
-    filter: drop-shadow(0 0 18px rgba(22,163,74,0.9));
-  }
+.ph-label .ph-dot-inner {
+  fill: #b8922a;
+  stroke: none;
+  transition: fill 0.25s ease;
 }
-
-.bj-vip-item { opacity: 0.55; }
-@media (hover: hover) {
-  .bj-vip-item:hover {
-    opacity: 1;
-    transform: translateY(-2px) scale(1.02);
-    filter: drop-shadow(0 4px 10px rgba(232,199,122,0.55));
-  }
-}
-
-/* Status overlay rings (injected by JS) */
-.bj-done-mark circle { fill: none; stroke: #22c55e; stroke-width: 3; opacity: 0.92; }
-.bj-done-mark path   { fill: none; stroke: #22c55e; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-
-/* ── HTML floating labels (positioned via JS over each item) ── */
-.bj-labels {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 20;
-}
-.bj-label {
-  position: absolute;
-  left: 0;
-  top: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.4rem 0.8rem 0.4rem 0.55rem;
-  background: linear-gradient(180deg, rgba(24,14,4,0.92), rgba(10,4,0,0.92));
-  border: 1px solid rgba(212,162,74,0.55);
-  border-radius: 999px;
-  color: #f1e4c2;
-  font-family: var(--font-sans, 'Inter', sans-serif);
-  font-size: clamp(0.62rem, 1.05vw, 0.78rem);
-  letter-spacing: 0.14em;
+.ph-label text {
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  white-space: nowrap;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.55),
-              0 0 0 1px rgba(255,215,130,0.12),
-              0 0 22px rgba(255,180,80,0.22);
-  transform: translate(-50%, -50%);
-  transition: opacity 0.3s ease, transform 0.3s ease;
-  opacity: 0;
+  font-size: 22px;
+  fill: #b8922a;
+  transition: fill 0.25s ease;
+  user-select: none;
 }
-.bj-label.visible { opacity: 1; }
-.bj-label-num {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1.6em;
-  height: 1.6em;
-  padding: 0 0.35em;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #f0d47a, #a87a22);
-  color: #1a0d03;
-  font-weight: 800;
-  letter-spacing: 0;
-  box-shadow: inset 0 -1px 2px rgba(0,0,0,0.35),
-              0 1px 2px rgba(0,0,0,0.45);
-}
-.bj-label-name {
-  font-weight: 600;
-  color: #fbe9bf;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.55);
-}
-.bj-label.done .bj-label-num {
-  background: linear-gradient(180deg, #5cf08a, #138838);
-  color: #04220e;
-}
-.bj-label.done .bj-label-name::after {
-  content: ' · ✓';
-  color: #5cf08a;
-  margin-left: 0.15em;
-}
-
-/* ── Entrance animation — "sitting down at the table" ── */
-@keyframes bjTableEnter {
-  0% {
-    opacity: 0;
-    transform: translateY(60px) scale(0.88);
-  }
-  60% { opacity: 1; }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-@keyframes bjTiltEnter {
-  0%   { transform: rotateX(42deg); }
-  100% { transform: rotateX(18deg); }
-}
-.bj-scene.entering {
-  animation: bjTableEnter 900ms cubic-bezier(.2,.82,.22,1) both;
-  transform-origin: 50% 90%;
-}
-.bj-scene.entering .bj-tilt {
-  animation: bjTiltEnter 900ms cubic-bezier(.2,.82,.22,1) both;
-}
-.bj-scene.entering .bj-labels .bj-label {
-  animation: bjLabelFadeIn 600ms ease both;
-  animation-delay: 700ms;
-}
-@keyframes bjLabelFadeIn {
-  0%   { opacity: 0; transform: translate(-50%, -40%); }
-  100% { opacity: 1; transform: translate(-50%, -50%); }
+.ph-label[data-skill="full-training"] path,
+.ph-label[data-skill="full-training"] circle { stroke: #7a5e10; stroke-width: 2.8; }
+.ph-label[data-skill="full-training"] .ph-dot-inner { fill: #7a5e10; }
+.ph-label[data-skill="full-training"] text { fill: #7a5e10; font-size: 32px; }
+@media (hover: hover) {
+  .ph-label:hover { transform: scale(1.06); }
+  .ph-label:hover path,
+  .ph-label:hover circle { stroke: #6b2fa0; }
+  .ph-label:hover .ph-dot-inner { fill: #6b2fa0; }
+  .ph-label:hover text { fill: #6b2fa0; }
 }
 
 /* Landing page exit animation */
@@ -1951,32 +1902,11 @@ h3 {
   animation: landingLeave 280ms ease-in both;
   pointer-events: none;
 }
-
 @media (prefers-reduced-motion: reduce) {
-  .bj-scene.entering,
-  .bj-scene.entering .bj-tilt,
-  .bj-scene.entering .bj-labels .bj-label,
-  .bj-glow,
   #landing.leaving { animation: none; }
 }
 
-/* ── Responsive ── */
-@media (max-width: 820px) {
-  .bj-tilt { transform: rotateX(14deg); }
-  .bj-stage { padding: 0.6rem 0.4rem; }
-}
-@media (max-width: 560px) {
-  .bj-tilt { transform: rotateX(10deg); }
-  .bj-label {
-    padding: 0.3rem 0.55rem 0.3rem 0.35rem;
-    gap: 0.35rem;
-    letter-spacing: 0.1em;
-  }
-}
-/* Short viewports — the wordmark is the tallest element, dial back tilt so it doesn't clip */
-@media (max-height: 640px) {
-  .bj-tilt { transform: rotateX(12deg); }
-}
+
 
 /* ============================================================
    SKILL TRAINER — BODY
@@ -2002,7 +1932,7 @@ h3 {
 /* Top bar */
 .ft-topbar {
   display: flex; align-items: flex-end; justify-content: space-around;
-  padding: 0.75rem 1.5rem 0.8rem;
+  padding: 0.5rem 1.5rem 0.55rem;
   background: rgba(0,0,0,0.3);
   border-bottom: 1px solid rgba(255,255,255,0.07);
   flex-shrink: 0;
@@ -2087,17 +2017,18 @@ h3 {
 }
 /* Bankroll footer */
 .ft-bankroll-footer {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0.4rem 0 0;
-  border-top: 1px solid rgba(255,255,255,0.08);
-  margin-top: 0.3rem;
+  display: flex; align-items: center; justify-content: center; gap: 1rem;
+  padding: 0.35rem 0 0;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  margin-top: 0.2rem;
+  width: 100%;
 }
 .ft-bankroll-sublbl {
-  font-size: 0.58rem; text-transform: uppercase; letter-spacing: .1em;
+  font-size: 0.62rem; text-transform: uppercase; letter-spacing: .1em;
   color: rgba(255,255,255,0.3);
 }
 .ft-bankroll {
-  font-family: var(--font-serif); font-size: 1.2rem;
+  font-family: var(--font-serif); font-size: 1.3rem;
   color: #c9a84c; letter-spacing: 0.02em;
 }
 
@@ -2105,27 +2036,27 @@ h3 {
 .ft-dealer-zone {
   flex: 1; display: flex; flex-direction: column;
   align-items: center; justify-content: flex-end;
-  padding-bottom: 1.25rem;
+  padding-bottom: 0.75rem; min-height: 0;
 }
 .ft-zone-lbl {
   font-size: 0.62rem; text-transform: uppercase; letter-spacing: .14em;
-  color: rgba(255,255,255,0.28); margin-bottom: 0.6rem;
+  color: rgba(255,255,255,0.28); margin-bottom: 0.4rem;
 }
 .ft-dealer-cards {
   display: flex; gap: 0;
 }
-.ft-dealer-cards .card { width: 76px; height: 108px; font-size: 1.1rem; }
+.ft-dealer-cards .card { width: 68px; height: 96px; font-size: 1rem; }
 .ft-dealer-cards .card:not(:first-child) { margin-left: -10px; }
 
 /* Curved felt arc divider */
 .ft-felt-divider {
-  flex-shrink: 0; position: relative; height: 40px; overflow: visible;
+  flex-shrink: 0; position: relative; height: 28px; overflow: visible;
 }
 .ft-felt-divider::before {
   content: '';
   position: absolute;
-  left: -10%; right: -10%; top: 10px;
-  height: 50px;
+  left: -10%; right: -10%; top: 6px;
+  height: 40px;
   border-top: 1.5px solid rgba(201,168,76,0.22);
   border-radius: 50% 50% 0 0 / 100% 100% 0 0;
 }
@@ -2134,14 +2065,14 @@ h3 {
 .ft-player-zone {
   flex: 1; display: flex;
   align-items: flex-start; justify-content: center;
-  padding-top: 0.75rem;
+  padding-top: 0.5rem; min-height: 0;
 }
 .ft-betting-area {
   display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
 }
 /* Betting circle on the felt */
 .ft-bet-circle {
-  width: 100px; height: 100px; border-radius: 50%;
+  width: 85px; height: 85px; border-radius: 50%;
   border: 2px dashed rgba(201,168,76,0.35);
   display: flex; align-items: center; justify-content: center;
   position: relative;
@@ -2150,6 +2081,11 @@ h3 {
 .ft-bet-chips {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
+}
+.ft-bet-circle-amount {
+  position: absolute; bottom: -1.4rem; left: 50%; transform: translateX(-50%);
+  font-family: var(--font-serif); font-size: 1.1rem; color: #c9a84c;
+  white-space: nowrap; pointer-events: none;
 }
 /* Stacked chip tokens inside the circle */
 .ft-bet-chip-token {
@@ -2161,49 +2097,37 @@ h3 {
 .ft-player-cards {
   position: relative; display: flex; align-items: flex-start;
 }
-.ft-player-cards .card { width: 88px; height: 124px; font-size: 1.2rem; }
-.ft-player-cards .card:nth-child(2) { margin-left: -28px; margin-top: 12px; }
-.ft-player-cards .card:nth-child(3) { margin-left: -28px; margin-top: 0; }
-.ft-player-cards .card:nth-child(4) { margin-left: -28px; margin-top: 6px; }
+.ft-player-cards .card { width: 72px; height: 102px; font-size: 1.05rem; }
+.ft-player-cards .card:nth-child(2) { margin-left: -24px; margin-top: 10px; }
+.ft-player-cards .card:nth-child(3) { margin-left: -24px; margin-top: 0; }
+.ft-player-cards .card:nth-child(4) { margin-left: -24px; margin-top: 5px; }
 
-/* Bottom panel — compact */
+/* Bottom panel */
 .ft-bottom-panel {
   flex-shrink: 0;
   background: rgba(0,0,0,0.35);
   border-top: 1px solid rgba(255,255,255,0.07);
-  padding: 0.7rem 1.1rem 0.8rem;
-  display: flex; align-items: stretch;
+  padding: 0.75rem 1rem;
+  display: flex; flex-direction: column; align-items: center;
 }
 .ft-phase {
-  width: 100%; display: flex; flex-direction: column; gap: 0.45rem;
+  display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
 }
 
 /* Bet phase */
-.ft-bet-row {
-  display: flex; align-items: center; justify-content: space-between;
-  background: rgba(255,255,255,0.04);
-  border-radius: 7px; padding: 0.28rem 0.65rem;
-}
-.ft-bet-lbl {
-  font-size: 0.65rem; text-transform: uppercase; letter-spacing: .12em;
-  color: rgba(255,255,255,0.4);
-}
-.ft-bet-amount {
-  font-family: var(--font-serif); font-size: 1.2rem; color: #c9a84c;
-}
 .ft-chips {
   display: flex; gap: 0.45rem; justify-content: center;
 }
 
-/* Casino-style chips — compact size */
+/* Casino-style chips */
 .ft-chip {
-  position: relative; width: 56px; height: 56px; border-radius: 50%;
+  position: relative; width: 54px; height: 54px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; border: none; padding: 0; overflow: hidden;
   font-family: var(--font-sans); font-weight: 800; font-size: 0.65rem;
   letter-spacing: 0.03em; color: white;
   text-shadow: 0 1px 3px rgba(0,0,0,0.6);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.18);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.18);
   transition: transform .12s ease, filter .12s ease;
   z-index: 0; isolation: isolate;
 }
@@ -2215,12 +2139,12 @@ h3 {
   z-index: 1;
 }
 .ft-chip::after {
-  content: ''; position: absolute; inset: 7px; border-radius: 50%;
+  content: ''; position: absolute; inset: 6px; border-radius: 50%;
   border: 1.5px solid rgba(255,255,255,0.32);
   z-index: 2; pointer-events: none;
 }
 .ft-chip span { position: relative; z-index: 3; }
-.ft-chip:hover { transform: translateY(-4px) scale(1.07); filter: brightness(1.12); }
+.ft-chip:hover { transform: translateY(-3px) scale(1.06); filter: brightness(1.12); }
 .ft-chip:active { transform: scale(0.91); }
 
 /* Chip colors */
@@ -2235,21 +2159,21 @@ h3 {
 .ft-bet-chip-token.ft-chip-100 { background: #222; }
 .ft-bet-chip-token.ft-chip-500 { background: #7d3c98; }
 .ft-bet-btns {
-  display: flex; gap: 0.55rem;
+  display: flex; gap: 0.5rem; justify-content: center;
 }
 .ft-ghost-btn {
-  flex: 0 0 auto; padding: 0.55rem 1rem;
-  background: none; border: 1px solid rgba(255,255,255,0.18);
-  border-radius: 8px; color: rgba(255,255,255,0.5);
-  font-size: 0.8rem; font-family: var(--font-sans);
+  flex: 0 0 auto; padding: 0.55rem 1.2rem;
+  background: none; border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px; color: rgba(255,255,255,0.45);
+  font-size: 0.85rem; font-family: var(--font-sans);
   cursor: pointer; transition: border-color .15s, color .15s;
 }
 .ft-ghost-btn:hover { border-color: rgba(255,255,255,0.4); color: rgba(255,255,255,0.8); }
 .ft-deal-btn {
-  flex: 1; padding: 0.65rem;
+  flex: 0 0 auto; padding: 0.55rem 3rem;
   background: #c9a84c; color: #1a0f00;
   border: none; border-radius: 8px;
-  font-size: 0.9rem; font-weight: 700; font-family: var(--font-sans);
+  font-size: 0.95rem; font-weight: 700; font-family: var(--font-sans);
   cursor: pointer; transition: background .15s, transform .1s;
 }
 .ft-deal-btn:hover:not(:disabled) { background: #d9b85c; }
@@ -2306,13 +2230,13 @@ h3 {
 
 /* Bankroll footer — compact + reset button */
 .ft-bankroll-left {
-  display: flex; flex-direction: column; gap: 1px;
+  display: flex; align-items: baseline; gap: 0.4rem;
 }
 .ft-reset-btn {
-  padding: 0.35rem 0.7rem !important;
-  font-size: 0.7rem !important;
+  padding: 0.25rem 0.55rem !important;
+  font-size: 0.62rem !important;
   border-radius: 6px !important;
-  opacity: 0.7;
+  opacity: 0.6;
 }
 .ft-reset-btn:hover { opacity: 1; }
 
@@ -2816,8 +2740,8 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
    AUTH MODAL
    ============================================================ */
 .auth-box {
-  background: #111813;
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--tr-bg);
+  border: 1px solid rgba(40,25,5,0.1);
   border-radius: 20px;
   padding: 2.25rem 2rem 2rem;
   max-width: 380px;
@@ -2829,14 +2753,16 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
 }
 .auth-close {
   position: absolute; top: 1rem; right: 1rem;
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(40,25,5,0.05); border: 1px solid rgba(40,25,5,0.1);
   color: var(--tr-dim); font-size: 0.85rem; cursor: pointer;
   padding: 0.3rem 0.55rem; border-radius: 6px; line-height: 1; transition: all 0.15s;
 }
-.auth-close:hover { background: rgba(255,255,255,0.1); color: var(--tr-text); }
+.auth-close:hover { background: rgba(40,25,5,0.1); color: var(--tr-text); }
 
-.auth-brand { margin-bottom: 1.25rem; }
-.auth-brand-icon { font-size: 1.5rem; color: var(--accent); }
+.auth-brand { margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem; }
+.auth-brand .nav-brand-spade { width: 22px; height: 24px; flex-shrink: 0; }
+.auth-brand .nav-brand-spade path { fill: #1a1208; }
+.auth-brand-name { font-family: var(--font-serif); font-size: 1.2rem; font-weight: 600; color: var(--tr-text); letter-spacing: 0.01em; }
 
 .auth-heading {
   font-family: var(--font-serif); font-size: 1.55rem; font-weight: 400;
@@ -2852,13 +2778,13 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
 }
 .auth-label-hint { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--tr-dim); }
 .auth-input {
-  width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+  width: 100%; background: var(--tr-panel); border: 1px solid rgba(40,25,5,0.15);
   border-radius: 10px; padding: 0.75rem 1rem; color: var(--tr-text);
   font-family: var(--font-sans); font-size: 0.95rem; outline: none;
   transition: border-color 0.15s, background 0.15s; box-sizing: border-box;
 }
-.auth-input:focus { border-color: var(--accent); background: rgba(255,255,255,0.06); }
-.auth-input::placeholder { color: rgba(255,255,255,0.2); }
+.auth-input:focus { border-color: var(--accent); background: #e8e2d6; }
+.auth-input::placeholder { color: var(--tr-dim); }
 
 .auth-error {
   font-size: 0.8rem; color: #f87171; margin-bottom: 0.75rem;
@@ -2881,18 +2807,18 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
   gap: 0.75rem; margin-bottom: 1rem;
 }
 .auth-divider::before, .auth-divider::after {
-  content: ''; border-top: 1px dashed rgba(255,255,255,0.1);
+  content: ''; border-top: 1px dashed rgba(40,25,5,0.15);
 }
 .auth-divider span { font-size: 0.72rem; color: var(--tr-dim); white-space: nowrap; }
 
 .auth-guest-btn {
   width: 100%; padding: 0.75rem 1rem; border-radius: 10px;
-  background: transparent; border: 1px solid rgba(255,255,255,0.1);
+  background: transparent; border: 1px solid rgba(40,25,5,0.15);
   color: var(--tr-muted); font-family: var(--font-sans); font-size: 0.9rem;
   font-weight: 500; cursor: pointer; transition: border-color 0.15s, color 0.15s;
   margin-bottom: 1.5rem;
 }
-.auth-guest-btn:hover { border-color: rgba(255,255,255,0.25); color: var(--tr-text); }
+.auth-guest-btn:hover { border-color: rgba(40,25,5,0.3); color: var(--tr-text); }
 
 .auth-footer-text {
   text-align: center; font-size: 0.82rem; color: var(--tr-dim); margin: 0;
@@ -3232,13 +3158,12 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
 #colin-widget.colin-hidden { display: none; }
 #colin-widget > * { pointer-events: auto; }
 
-/* ── Trainer mode: top center, row layout (icon + speech bubble) ── */
+/* ── Trainer mode: top-left corner (below nav), row layout (icon + speech bubble) ── */
 #colin-widget.colin-trainer-mode {
   bottom: auto;
   right: auto;
-  left: 50%;
-  top: 3.5rem;
-  transform: translateX(-50%);
+  left: 1.5rem;
+  top: calc(56px + 1.25rem); /* 56px nav height + breathing room */
   flex-direction: row;
   align-items: center;
   gap: 0.5rem;
@@ -3247,18 +3172,19 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
 /* Icon first, speech bubble second */
 #colin-widget.colin-trainer-mode #colin-bubble        { order: 1; }
 #colin-widget.colin-trainer-mode .colin-feedback-toast { order: 2; }
-/* Panel drops below icon */
+/* Panel fixed to top-left corner in trainer mode — no gap from the edge */
 #colin-widget.colin-trainer-mode #colin-panel {
   order: 3;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  top: calc(100% + 0.6rem);
+  position: fixed;
+  left: 1.5rem;
+  top: calc(56px + 1.25rem); /* same as widget: below the 56px nav */
   bottom: auto;
-  transform-origin: top center;
+  right: auto;
+  z-index: 301;
+  transform-origin: top left;
 }
 #colin-widget.colin-trainer-mode #colin-panel.colin-panel-closed {
-  transform: translateX(-50%) scale(0.85) translateY(-8px);
+  transform: scale(0.85) translateY(-8px);
 }
 
 /* ── Speech bubble tail in trainer mode — tail points UP-LEFT toward icon ── */
@@ -3290,15 +3216,18 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
   transform: translateY(0);
 }
 
-/* ── Panel open: bubble fades out — it "moved" into the panel header ── */
+/* ── Panel open: bubble smoothly moves into the panel ── */
 #colin-widget.colin-panel-is-open #colin-bubble {
+  transform: scale(0.55) translateY(-10px);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s ease;
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.22s ease;
 }
+/* Trainer mode: bubble moves down into the panel (which is below the icon) */
 #colin-widget.colin-trainer-mode.colin-panel-is-open #colin-bubble {
-  opacity: 1;
-  pointer-events: auto;
+  transform: scale(0.55) translateY(10px);
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* Inline feedback toast — shows verdict above the Colin bubble without
@@ -3331,6 +3260,29 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
   pointer-events: none;
 }
 
+/* Lobby mode (pipeline/dashboard): toast appears above the bubble as a speech bubble */
+#colin-widget:not(.colin-trainer-mode) .colin-feedback-toast:not(.colin-toast-hidden) {
+  background: var(--tr-panel, #1a2a1e);
+  color: var(--tr-text, #f0ece0);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  max-width: 220px;
+  word-break: break-word;
+  pointer-events: none;
+}
+#colin-widget:not(.colin-trainer-mode) .colin-feedback-toast:not(.colin-toast-hidden)::after {
+  content: '';
+  position: absolute;
+  bottom: -7px;
+  right: 20px;
+  width: 12px; height: 12px;
+  background: var(--tr-panel, #1a2a1e);
+  border-right: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  clip-path: polygon(0 0, 100% 100%, 100% 0);
+  transform: rotate(45deg);
+}
+
 /* Floating bubble */
 #colin-bubble {
   width: 64px;
@@ -3341,7 +3293,7 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
   cursor: pointer;
   box-shadow: none;
   position: relative;
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, opacity 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3368,7 +3320,7 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
   height: 18px;
   border-radius: 50%;
   background: #4ade80;
-  border: 2px solid #111813;
+  border: 2px solid var(--tr-bg);
   font-size: 0.6rem;
   font-weight: 700;
   color: #000;
@@ -3378,12 +3330,13 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
 }
 .colin-bubble-badge.hidden { display: none; }
 
-/* Chat panel — absolutely positioned so it floats above the bubble
-   without pushing the bubble out of the bottom-right corner */
+/* Chat panel — fixed to the bottom-right corner in default mode so there
+   is no gap between the panel and the corner of the screen. */
 #colin-panel {
-  position: absolute;
-  bottom: calc(100% + 0.75rem);
-  right: 0;
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 301; /* above widget (300) so it covers the bubble behind it */
   width: 320px;
   max-height: 440px;
   background: var(--tr-panel, #0d1510);
@@ -3420,12 +3373,12 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: var(--accent);
+  background: none;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 .colin-header-name {
   font-size: 0.9rem;
@@ -4215,15 +4168,15 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
 .tour-ring .rc-card:nth-child(7) { transform: rotateY(270deg) translateZ(210px); }
 .tour-ring .rc-card:nth-child(8) { transform: rotateY(315deg) translateZ(210px); }
 
-/* Single combined animation: enter → spin → zoom out. No competing classes. */
+/* Spin animation: fade in → spin → end visible at scale(1).
+   JS takes over from there and zooms into the front card. */
 @keyframes tourTransition {
   0%   { opacity: 0; transform: rotateX(14deg) rotateY(0deg)    scale(0.35); filter: blur(10px); }
-  10%  { opacity: 1; transform: rotateX(14deg) rotateY(0deg)    scale(1);    filter: blur(0);   }
-  84%  { opacity: 1; transform: rotateX(14deg) rotateY(1440deg) scale(1);    filter: blur(0);   }
-  100% { opacity: 0; transform: rotateX(14deg) rotateY(1440deg) scale(6);    filter: blur(12px); }
+  4%   { opacity: 1; transform: rotateX(14deg) rotateY(0deg)    scale(1);    filter: blur(0);   }
+  100% { opacity: 1; transform: rotateX(14deg) rotateY(1440deg) scale(1);    filter: blur(0);   }
 }
 .tour-ring-wrap.transitioning {
-  animation: tourTransition 2800ms cubic-bezier(0.12, 0, 0.28, 1) both;
+  animation: tourTransition 10000ms cubic-bezier(0.12, 0, 0.28, 1) both;
 }
 
 /* Progress dots at bottom */
@@ -4404,11 +4357,12 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
 }
 
 .nav-brand-name {
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: rgba(26,18,8,0.6);
+  font-family: 'Cormorant Garamond', 'Instrument Serif', Georgia, serif !important;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: rgba(26,18,8,0.65);
 }
 
 /* ── 2. Buttons — ui-ux-pro-max redesign ────────────────────── */
@@ -5053,19 +5007,19 @@ kbd {
 
 /* ── Bet spread reference dropdown ───────────────────────── */
 .ft-spread-ref {
-  width: 100%;
-  background: rgba(201,168,76,0.08);
-  border: 1px solid rgba(201,168,76,0.28);
-  border-radius: 10px;
+  width: auto; max-width: 320px;
+  background: rgba(201,168,76,0.06);
+  border: 1px solid rgba(201,168,76,0.2);
+  border-radius: 8px;
   overflow: hidden;
 }
 .ft-spread-ref-toggle {
   list-style: none; cursor: pointer;
-  font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .1em;
-  color: #c9a84c;
-  display: flex; align-items: center; gap: 0.5rem;
+  font-size: 0.62rem; font-weight: 600; text-transform: uppercase; letter-spacing: .1em;
+  color: rgba(201,168,76,0.7);
+  display: flex; align-items: center; gap: 0.4rem;
   user-select: none;
-  padding: 0.65rem 0.9rem;
+  padding: 0.4rem 0.75rem;
   transition: background 180ms ease;
 }
 .ft-spread-ref-toggle:hover { background: rgba(201,168,76,0.08); }
@@ -5110,60 +5064,98 @@ kbd {
    Premium dark-nav · depth backgrounds · premium transitions
    ============================================================ */
 
-/* ── 1. Trainer & dashboard background with depth vignette ── */
+/* ── 1. Trainer & dashboard background ──────────────────── */
 #skill-trainer {
-  background:
-    radial-gradient(ellipse 100% 55% at 50% 0%,
-      rgba(28,72,40,0.4) 0%, transparent 70%),
-    var(--tr-bg) !important;
+  background: var(--tr-bg) !important;
 }
 #dashboard {
-  background:
-    radial-gradient(ellipse 100% 45% at 50% 0%,
-      rgba(28,72,40,0.22) 0%, transparent 65%),
-    var(--tr-bg) !important;
+  background: var(--tr-bg) !important;
 }
 
-/* ── 2. Dark nav — true glassmorphism ────────────────────── */
+/* ── 2. Nav — matches trainer body color exactly ───────────── */
 .dark-nav {
-  background: rgba(8,14,10,0.86) !important;
-  backdrop-filter: blur(24px) !important;
-  -webkit-backdrop-filter: blur(24px) !important;
-  border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+  background: var(--tr-bg) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-bottom: none !important;
   height: 60px !important;
-  box-shadow: 0 1px 0 rgba(255,255,255,0.04),
-              0 4px 24px rgba(0,0,0,0.35) !important;
+  box-shadow: none !important;
 }
 
-/* ── 3. Nav buttons — pill + spring ─────────────────────── */
+/* ── 3. Nav buttons — pill, matching hero-nav ────────────── */
 .dark-nav-back {
+  border: 1.5px solid rgba(26,18,8,0.5) !important;
+  color: rgba(26,18,8,0.65) !important;
   border-radius: 100px !important;
-  font-size: 0.8rem !important;
-  letter-spacing: 0.02em !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.09em !important;
+  text-transform: uppercase !important;
+  padding: 0.5rem 1.2rem !important;
   transition: color 180ms ease,
               border-color 180ms ease,
               background 180ms ease,
               transform 180ms cubic-bezier(0.34,1.56,0.64,1) !important;
 }
 .dark-nav-back:hover {
-  background: rgba(255,255,255,0.05) !important;
+  background: rgba(26,18,8,0.06) !important;
+  border-color: rgba(26,18,8,0.7) !important;
+  color: #1e1408 !important;
   transform: translateX(-2px) !important;
 }
 .dark-nav-back:active { transform: scale(0.95) !important; }
 
 .dark-nav-account {
+  border: 1.5px solid rgba(26,18,8,0.5) !important;
+  color: rgba(26,18,8,0.65) !important;
   border-radius: 100px !important;
-  font-size: 0.78rem !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.09em !important;
+  text-transform: uppercase !important;
+  padding: 0.5rem 1.2rem !important;
   transition: color 180ms ease,
               border-color 180ms ease,
               background 180ms ease,
               transform 180ms cubic-bezier(0.34,1.56,0.64,1) !important;
 }
 .dark-nav-account:hover {
-  background: rgba(255,255,255,0.05) !important;
+  background: rgba(26,18,8,0.06) !important;
+  border-color: rgba(26,18,8,0.7) !important;
+  color: #1e1408 !important;
   transform: scale(1.03) !important;
 }
 .dark-nav-account:active { transform: scale(0.96) !important; }
+
+/* ── Full Trainer nav — matches casino felt background ─────── */
+#skill-trainer.ft-active .dark-nav {
+  background: #122b19 !important;
+  box-shadow: none !important;
+}
+#skill-trainer.ft-active .dark-nav-title {
+  color: rgba(210,240,210,0.75) !important;
+}
+#skill-trainer.ft-active .skill-nav-score {
+  color: rgba(180,220,180,0.7) !important;
+}
+#skill-trainer.ft-active .dark-nav-back {
+  border-color: rgba(180,230,180,0.45) !important;
+  color: rgba(210,240,210,0.8) !important;
+}
+#skill-trainer.ft-active .dark-nav-back:hover {
+  background: rgba(255,255,255,0.08) !important;
+  border-color: rgba(210,240,210,0.75) !important;
+  color: #e0f5e0 !important;
+}
+#skill-trainer.ft-active .dark-nav-account {
+  border-color: rgba(180,230,180,0.45) !important;
+  color: rgba(210,240,210,0.8) !important;
+}
+#skill-trainer.ft-active .dark-nav-account:hover {
+  background: rgba(255,255,255,0.08) !important;
+  border-color: rgba(210,240,210,0.75) !important;
+  color: #e0f5e0 !important;
+}
 
 /* ── 4. Nav title ────────────────────────────────────────── */
 .dark-nav-title {
@@ -5171,99 +5163,108 @@ kbd {
   font-size: 1.05rem !important;
   font-weight: 400 !important;
   letter-spacing: 0.06em !important;
-  color: rgba(240,236,224,0.75) !important;
+  color: rgba(26,18,8,0.6) !important;
 }
 
 /* ── 5. Score display in nav ─────────────────────────────── */
 .skill-nav-score {
   font-family: 'Cormorant Garamond', var(--font-serif), Georgia, serif !important;
   font-size: 1rem !important;
-  color: #c9a84c !important;
+  color: #8a5c1a !important;
   letter-spacing: 0.04em !important;
   text-align: right !important;
   white-space: nowrap !important;
 }
 
-/* ── 6. Skill body — subtle texture overlay ─────────────── */
+/* ── 6. Nav brand — matches hero-nav brand ───────────────── */
+.dark-nav-brand {
+  color: rgba(26,18,8,0.65) !important;
+  text-shadow: none !important;
+}
+.dark-nav-brand:hover {
+  color: #2a1f0a !important;
+  background: rgba(26,18,8,0.06) !important;
+}
+
+/* ── 7. Skill body — warm light overlay ─────────────────── */
 .skill-body {
   position: relative !important;
 }
 .skill-body::before {
   content: '';
   position: absolute; inset: 0; pointer-events: none; z-index: 0;
-  background:
-    radial-gradient(ellipse 60% 40% at 50% 110%,
-      rgba(12,30,16,0.6) 0%, transparent 70%);
+  background: radial-gradient(ellipse 60% 40% at 50% 110%,
+    rgba(220,200,160,0.2) 0%, transparent 70%);
 }
 .skill-body > * { position: relative; z-index: 1; }
 
-/* ── 7. Playing cards — deeper, more premium shadows ─────── */
+/* ── 8. Playing cards — light-bg shadows ─────────────────── */
 #skill-trainer .card {
   border-radius: 10px !important;
   box-shadow:
-    0 12px 32px rgba(0,0,0,0.65),
-    0 4px 8px rgba(0,0,0,0.5),
-    inset 0 1px 0 rgba(255,255,255,0.55),
-    inset 0 -1px 0 rgba(0,0,0,0.15) !important;
+    0 8px 24px rgba(0,0,0,0.14),
+    0 3px 8px rgba(0,0,0,0.09),
+    inset 0 1px 0 rgba(255,255,255,0.9),
+    inset 0 -1px 0 rgba(0,0,0,0.06) !important;
 }
 
-/* ── 8. Felt table (Deviations) — richer ─────────────────── */
+/* ── 9. Felt table (Deviations) ──────────────────────────── */
 .felt-table {
   border: none !important;
   box-shadow:
-    0 16px 56px rgba(0,0,0,0.65),
-    0 4px 16px rgba(0,0,0,0.4),
-    inset 0 1px 0 rgba(255,255,255,0.04),
-    0 0 0 1px rgba(255,255,255,0.05) !important;
+    0 12px 40px rgba(0,0,0,0.2),
+    0 4px 12px rgba(0,0,0,0.1),
+    inset 0 1px 0 rgba(255,255,255,0.25) !important;
 }
 
-/* ── 9. Dealer label & hand-info ─────────────────────────── */
+/* ── 10. Dealer label & hand-info ────────────────────────── */
 .sk-hand-group-label {
   font-family: 'Cormorant Garamond', var(--font-serif), Georgia, serif !important;
   font-size: 0.72rem !important;
   letter-spacing: 0.12em !important;
 }
 
-/* ── 10. Input fields — glass-themed ────────────────────── */
+/* ── 11. Input fields — light glass ─────────────────────── */
 .sk-input {
-  background: rgba(255,255,255,0.04) !important;
+  background: rgba(255,255,255,0.75) !important;
   backdrop-filter: blur(8px) !important;
-  border: 1px solid rgba(255,255,255,0.1) !important;
+  border: 1px solid rgba(40,25,5,0.12) !important;
   border-radius: 12px !important;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.05) !important;
+  color: #1e1408 !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9) !important;
   transition: border-color 200ms ease, box-shadow 200ms ease !important;
 }
 .sk-input:focus {
-  border-color: rgba(196,101,58,0.5) !important;
-  box-shadow: 0 0 0 3px rgba(196,101,58,0.12), 0 4px 16px rgba(0,0,0,0.25) !important;
+  border-color: rgba(196,101,58,0.55) !important;
+  box-shadow: 0 0 0 3px rgba(196,101,58,0.1), 0 2px 8px rgba(0,0,0,0.06) !important;
 }
 
-/* ── 11. Radio buttons (Bet Spread) ─────────────────────── */
+/* ── 12. Radio buttons (Bet Spread) ─────────────────────── */
 .sk-radio-btn {
-  background: rgba(255,255,255,0.03) !important;
-  border: 1px solid rgba(255,255,255,0.08) !important;
+  background: rgba(255,255,255,0.55) !important;
+  border: 1px solid rgba(40,25,5,0.1) !important;
   border-radius: 10px !important;
   transition: all 200ms ease !important;
 }
-.sk-radio-btn:hover { background: rgba(255,255,255,0.07) !important; }
+.sk-radio-btn:hover { background: rgba(40,25,5,0.05) !important; }
 .sk-radio-btn.selected {
-  background: rgba(196,101,58,0.12) !important;
+  background: rgba(196,101,58,0.1) !important;
   border-color: rgba(196,101,58,0.4) !important;
-  box-shadow: 0 0 16px rgba(196,101,58,0.12) !important;
+  box-shadow: 0 0 12px rgba(196,101,58,0.1) !important;
 }
 
-/* ── 12. Skill table (Bet Spread results) ────────────────── */
+/* ── 13. Skill table (Bet Spread results) ────────────────── */
 .sk-table {
-  background: rgba(255,255,255,0.02) !important;
-  border: 1px solid rgba(255,255,255,0.06) !important;
+  background: rgba(255,255,255,0.55) !important;
+  border: 1px solid rgba(40,25,5,0.08) !important;
   border-radius: 12px !important;
   overflow: hidden !important;
 }
 .sk-table th {
-  background: rgba(255,255,255,0.03) !important;
-  border-bottom-color: rgba(255,255,255,0.07) !important;
+  background: rgba(40,25,5,0.04) !important;
+  border-bottom-color: rgba(40,25,5,0.08) !important;
 }
-.sk-table td { border-bottom-color: rgba(255,255,255,0.04) !important; }
+.sk-table td { border-bottom-color: rgba(40,25,5,0.05) !important; }
 
 /* ── 13. Drill complete screen ───────────────────────────── */
 .kc-wrapper > div[style*="gap:1.25rem"] {
@@ -5287,10 +5288,10 @@ kbd {
 .pipe-account-dropdown {
   backdrop-filter: blur(20px) !important;
   -webkit-backdrop-filter: blur(20px) !important;
-  background: rgba(15,22,17,0.95) !important;
-  border: 1px solid rgba(255,255,255,0.1) !important;
+  background: rgba(252,248,241,0.97) !important;
+  border: 1px solid rgba(40,25,5,0.1) !important;
   border-radius: 14px !important;
-  box-shadow: 0 16px 48px rgba(0,0,0,0.6) !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.12) !important;
 }
 
 /* ── 17. Skill intro screen headline ─────────────────────── */
@@ -5454,21 +5455,55 @@ kbd {
   font-weight: 400 !important;
 }
 
-/* ── Colin chat panel — glassmorphism ────────────────────── */
+/* ── Colin chat panel — light theme ─────────────────────── */
 #colin-panel {
-  background: rgba(10,18,13,0.82) !important;
-  backdrop-filter: blur(28px) !important;
-  -webkit-backdrop-filter: blur(28px) !important;
-  border: 1px solid rgba(255,255,255,0.09) !important;
+  background: rgba(252, 248, 241, 0.97) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(180, 145, 70, 0.22) !important;
   box-shadow:
-    0 24px 64px rgba(0,0,0,0.7),
-    0 8px 24px rgba(0,0,0,0.4),
-    inset 0 1px 0 rgba(255,255,255,0.05) !important;
+    0 20px 56px rgba(0,0,0,0.14),
+    0 6px 18px rgba(0,0,0,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.8) !important;
 }
 .colin-panel-header {
-  background: rgba(255,255,255,0.025) !important;
-  border-bottom-color: rgba(255,255,255,0.06) !important;
+  background: rgba(240, 230, 210, 0.55) !important;
+  border-bottom-color: rgba(180, 145, 70, 0.18) !important;
 }
+.colin-header-name  { color: #2a1a06 !important; }
+.colin-header-sub   { color: #8a7050 !important; }
+.colin-close-btn {
+  background: rgba(40, 25, 5, 0.06) !important;
+  border-color: rgba(40, 25, 5, 0.1) !important;
+  color: #8a7050 !important;
+}
+.colin-close-btn:hover {
+  background: rgba(40, 25, 5, 0.1) !important;
+  color: #2a1a06 !important;
+}
+.colin-messages {
+  scrollbar-color: rgba(150, 110, 40, 0.2) transparent !important;
+}
+.colin-messages::-webkit-scrollbar-thumb { background: rgba(150, 110, 40, 0.18) !important; }
+.colin-msg-colin .colin-msg-text {
+  background: rgba(230, 218, 195, 0.7) !important;
+  color: #2a1a06 !important;
+}
+.colin-msg-user .colin-msg-text { color: #fff !important; }
+.colin-typing-dots {
+  background: rgba(230, 218, 195, 0.7) !important;
+}
+.colin-typing-dots span { background: #a08050 !important; }
+.colin-input-row {
+  border-top-color: rgba(180, 145, 70, 0.18) !important;
+}
+.colin-input {
+  background: rgba(255, 252, 245, 0.8) !important;
+  border-color: rgba(180, 145, 70, 0.25) !important;
+  color: #2a1a06 !important;
+}
+.colin-input::placeholder { color: rgba(100, 75, 30, 0.35) !important; }
+.colin-input:focus { border-color: var(--accent) !important; }
 
 /* ── TC trainer RC display number ─────────────────────────── */
 #tc-rc {

@@ -156,7 +156,7 @@ const Account = {
 // ============================================================
 const VIEWS = ['landing', 'pipeline', 'skill-trainer', 'dashboard'];
 
-const APP_VIEWS = ['pipeline', 'skill-trainer', 'dashboard'];
+const APP_VIEWS = ['skill-trainer', 'dashboard'];
 
 function showView(id) {
   VIEWS.forEach(v => {
@@ -178,7 +178,7 @@ function goLanding()  {
   }
   showView('landing');
   const hn = document.getElementById('hero-nav');
-  if (hn) hn.classList.remove('hidden');
+  if (hn) { hn.classList.remove('hidden'); hn.classList.remove('pipeline-mode'); }
 }
 function goPipeline() {
   // Close tour stage if open
@@ -188,9 +188,28 @@ function goPipeline() {
     _ts.classList.remove('active', 'entering', 'leaving');
   }
   showView('pipeline');
-  renderBJTable();
-  renderPipelineStatus();
-  playBJEnterAnim();
+  document.getElementById('hero-nav')?.classList.add('pipeline-mode');
+  playPipelineVideo();
+  const data = Account.getStats();
+  window.dispatchEvent(new CustomEvent('colin:event', { detail: {
+    event: 'view_change',
+    payload: {
+      view: 'pipeline',
+      user: Account.currentUser(),
+      stats: data ? data.stats : null,
+      sessions: data ? (data.sessions || 0) : 0
+    }
+  }}));
+}
+function goPipelineReturn() {
+  const _ts = document.getElementById('tour-stage');
+  if (_ts && !_ts.classList.contains('hidden')) {
+    _ts.classList.add('hidden');
+    _ts.classList.remove('active', 'entering', 'leaving');
+  }
+  showView('pipeline');
+  document.getElementById('hero-nav')?.classList.add('pipeline-mode');
+  showPipelineEndFrame();
   const data = Account.getStats();
   window.dispatchEvent(new CustomEvent('colin:event', { detail: {
     event: 'view_change',
@@ -219,7 +238,7 @@ function phaseIntoTrainer(skillId, itemEl) {
   // so the zoom appears to "dive into" that specific item.
   if (itemEl) {
     const pipeRect = pipeline.getBoundingClientRect();
-    const hit = itemEl.querySelector('.bj-hit') || itemEl;
+    const hit = itemEl;
     const iRect = hit.getBoundingClientRect();
     const ox = ((iRect.left + iRect.width / 2)  - pipeRect.left) / pipeRect.width  * 100;
     const oy = ((iRect.top  + iRect.height / 2) - pipeRect.top)  / pipeRect.height * 100;
@@ -258,7 +277,7 @@ function phaseOutTrainer() {
 
   setTimeout(() => {
     trainer.classList.remove('phasing-out');
-    goPipeline();
+    goPipelineReturn();
     pipeline.classList.remove('phasing-in-return');
     void pipeline.offsetWidth;
     pipeline.classList.add('phasing-in-return');
@@ -424,177 +443,126 @@ const BJ_SKILL_NAMES = {
   'full-training':  'Full Training'
 };
 
-let bjWired = false;
-let bjResizeObserver = null;
-
-// How each label sits relative to its SVG item.
-// dx/dy are fractions of the item's bbox size:
-//   dy: -0.5 puts label top of item, +0.5 puts label below it
-//   dx: 0 = centered horizontally
-const BJ_LABEL_ANCHORS = {
-  'bj-discard':    { dx: 0,   dy:  0.85 }, // top-left item → label below it
-  'bj-dealerhand': { dx: 0,   dy:  0.95 }, // top-center → below dealer's hand
-  'bj-shoe':       { dx: 0,   dy:  0.85 }, // top-right → below shoe
-  'bj-playerhand': { dx: 0,   dy: -0.75 }, // bottom → label above
-  'bj-chipstack':  { dx: 0,   dy: -0.85 }, // bottom → label above
+// Hotspot positions as % of video frame (1928×1072)
+const HOTSPOT_POS = {
+  'basic-strategy': { left: '9%',  top: '9%',  width: '18%', height: '22%' },
+  'keep-counting':  { left: '72%', top: '17%', width: '16%', height: '22%' },
+  'true-count':     { left: '9%',  top: '27%', width: '16%', height: '20%' },
+  'deviations':     { left: '74%', top: '4%',  width: '16%', height: '20%' },
+  'bet-spread':     { left: '64%', top: '31%', width: '16%', height: '18%' },
+  'full-training':  { left: '2%',  top: '48%', width: '18%', height: '16%' },
 };
 
-function renderBJTable() {
-  const svg = document.getElementById('bj-svg');
-  const scene = document.getElementById('bj-scene');
-  if (!svg || !scene) return;
+const BJ_LABEL_ANCHORS = {
+  'bj-discard':    { dx: 0,   dy:  0.85 },
+  'bj-dealerhand': { dx: 0,   dy:  0.95 },
+  'bj-shoe':       { dx: 0,   dy:  0.85 },
+  'bj-playerhand': { dx: 0,   dy: -0.75 },
+  'bj-chipstack':  { dx: 0,   dy: -0.85 },
+};
 
-  if (!bjWired) {
-    // Delegated click — phase into the clicked item, then navigate to trainer
-    svg.addEventListener('click', (e) => {
-      const group = e.target.closest('.bj-item');
-      if (!group) return;
-      const skill = group.dataset.skill;
-      if (skill) phaseIntoTrainer(skill, group);
-    });
-
-    // Also let the HTML labels act as click targets (pointer-events enabled per-label)
-    const labelsEl = document.getElementById('bj-labels');
-    if (labelsEl) {
-      labelsEl.addEventListener('click', (e) => {
-        const label = e.target.closest('.bj-label');
-        if (!label) return;
-        const itemId = label.dataset.for;
-        const item = document.getElementById(itemId);
-        if (!item) return;
-        const skill = item.dataset.skill;
-        if (skill) phaseIntoTrainer(skill, item);
-      });
-    }
-
-    // Reposition labels whenever the scene resizes
-    if ('ResizeObserver' in window) {
-      bjResizeObserver = new ResizeObserver(() => positionBJLabels());
-      bjResizeObserver.observe(scene);
-    }
-    window.addEventListener('resize', positionBJLabels, { passive: true });
-
-    bjWired = true;
-  }
-
-  // Position labels now, and again once the SVG has laid out.
-  positionBJLabels();
-  requestAnimationFrame(positionBJLabels);
-  setTimeout(positionBJLabels, 100);
-  setTimeout(positionBJLabels, 500);
+function initPipelineHotspots() {
+  const container = document.getElementById('pipeline-hotspots');
+  if (!container) return;
+  container.addEventListener('click', e => {
+    const label = e.target.closest('.ph-label[data-skill]');
+    if (label) goSkill(label.dataset.skill);
+  });
 }
 
-function positionBJLabels() {
-  const scene = document.getElementById('bj-scene');
-  const labelsEl = document.getElementById('bj-labels');
-  if (!scene || !labelsEl) return;
+const PIPELINE_FRAME_COUNT = 121;
+const PIPELINE_FPS = 24;
+let pipelineFrames = [];
+let pipelineFramesLoaded = false;
+let pipelineAnimRaf = null;
+let pipelineLastFrameTime = 0;
+let pipelineCurrentFrame = 0;
 
-  const sRect = scene.getBoundingClientRect();
-  if (sRect.width === 0) return;
+function preloadPipelineFrames() {
+  let loaded = 0;
+  for (let i = 1; i <= PIPELINE_FRAME_COUNT; i++) {
+    const img = new Image();
+    const num = String(i).padStart(4, '0');
+    img.src = `assets/frames/frame_${num}.jpg`;
+    img.onload = img.onerror = () => {
+      if (++loaded === PIPELINE_FRAME_COUNT) pipelineFramesLoaded = true;
+    };
+    pipelineFrames.push(img);
+  }
+}
 
-  labelsEl.querySelectorAll('.bj-label').forEach(label => {
-    const itemId = label.dataset.for;
-    const item = document.getElementById(itemId);
-    if (!item) return;
+function resizePipelineCanvas() {
+  const canvas = document.getElementById('pipeline-canvas');
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width === 0) return;
+  canvas.width  = Math.round(rect.width  * dpr);
+  canvas.height = Math.round(rect.height * dpr);
+  drawPipelineFrame(pipelineCurrentFrame);
+}
 
-    // Use the visible hitbox if present (it's the authoritative clickable bounds),
-    // otherwise fall back to the group itself.
-    const hit = item.querySelector('.bj-hit') || item;
-    const iRect = hit.getBoundingClientRect();
-    if (iRect.width === 0) return;
+function drawPipelineFrame(index) {
+  const canvas = document.getElementById('pipeline-canvas');
+  if (!canvas || !canvas.width) return;
+  const img = pipelineFrames[index];
+  if (!img?.complete) return;
+  const ctx = canvas.getContext('2d');
+  const cw = canvas.width, ch = canvas.height;
+  const iw = img.naturalWidth || 1928, ih = img.naturalHeight || 1076;
+  const scale = Math.max(cw / iw, ch / ih);
+  const sw = iw * scale, sh = ih * scale;
+  ctx.drawImage(img, (cw - sw) / 2, (ch - sh) / 2, sw, sh);
+}
 
-    const anchor = BJ_LABEL_ANCHORS[itemId] || { dx: 0, dy: -0.75 };
-    const cx = iRect.left + iRect.width / 2 - sRect.left + anchor.dx * iRect.width;
-    const cy = iRect.top  + iRect.height / 2 - sRect.top  + anchor.dy * iRect.height;
+function showPipelineEndFrame() {
+  cancelAnimationFrame(pipelineAnimRaf);
+  resizePipelineCanvas();
+  drawPipelineFrame(PIPELINE_FRAME_COUNT - 1);
+  const hotspots = document.getElementById('pipeline-hotspots');
+  if (hotspots) hotspots.classList.add('visible');
+}
 
-    label.style.left = `${cx}px`;
-    label.style.top  = `${cy}px`;
+function playPipelineVideo() {
+  const canvas = document.getElementById('pipeline-canvas');
+  if (!canvas) return;
 
-    // Enable click targets on the labels themselves
-    label.style.pointerEvents = 'auto';
-    label.classList.add('visible');
+  const hotspots = document.getElementById('pipeline-hotspots');
+  if (hotspots) hotspots.classList.remove('visible');
 
-    // Sync done state from AppState
-    const skillId = item.dataset.skill;
-    const done = AppState.skillStatus && AppState.skillStatus[skillId] && AppState.skillStatus[skillId].done;
-    label.classList.toggle('done', !!done);
-  });
+  cancelAnimationFrame(pipelineAnimRaf);
+  pipelineCurrentFrame = 0;
+  pipelineLastFrameTime = 0;
+  resizePipelineCanvas();
+
+  const interval = 1000 / PIPELINE_FPS;
+
+  function animate(ts) {
+    if (!pipelineLastFrameTime) pipelineLastFrameTime = ts;
+    if (ts - pipelineLastFrameTime >= interval) {
+      drawPipelineFrame(pipelineCurrentFrame);
+      pipelineLastFrameTime = ts;
+      if (pipelineCurrentFrame < PIPELINE_FRAME_COUNT - 1) {
+        pipelineCurrentFrame++;
+        pipelineAnimRaf = requestAnimationFrame(animate);
+      } else {
+        if (hotspots) hotspots.classList.add('visible');
+      }
+    } else {
+      pipelineAnimRaf = requestAnimationFrame(animate);
+    }
+  }
+
+  drawPipelineFrame(0);
+  setTimeout(() => { pipelineAnimRaf = requestAnimationFrame(animate); }, 1000);
 }
 
 function renderPipelineStatus() {
-  const svg = document.getElementById('bj-svg');
-  const statusLayer = document.getElementById('bj-status');
-  if (!svg || !statusLayer) return;
-
-  // Clear all previous status marks and done classes
-  statusLayer.innerHTML = '';
-  svg.querySelectorAll('.bj-item.done').forEach(g => g.classList.remove('done'));
-
-  Object.entries(AppState.skillStatus).forEach(([id, status]) => {
-    if (status && status.done) markBJItemDone(id);
-  });
-
-  // Re-sync HTML label done states
-  positionBJLabels();
-}
-
-function markBJItemDone(skillId) {
-  const svg = document.getElementById('bj-svg');
-  const statusLayer = document.getElementById('bj-status');
-  if (!svg || !statusLayer) return;
-  const group = svg.querySelector(`.bj-item[data-skill="${skillId}"]`);
-  if (!group) return;
-
-  group.classList.add('done');
-
-  // bbox of the item in SVG user coordinates — draw a ring + check around it
-  let bb;
-  try { bb = group.getBBox(); } catch { return; }
-
-  const cx = bb.x + bb.width / 2;
-  const cy = bb.y + bb.height / 2;
-  const r  = Math.max(bb.width, bb.height) / 2 + 10;
-
-  // Remove existing mark for this id, then append fresh
-  const existing = statusLayer.querySelector(`[data-for="${skillId}"]`);
-  if (existing) existing.remove();
-
-  const mark = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-  mark.setAttribute('class', 'bj-done-mark');
-  mark.setAttribute('data-for', skillId);
-
-  const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  ring.setAttribute('cx', cx);
-  ring.setAttribute('cy', cy);
-  ring.setAttribute('r',  r);
-  mark.appendChild(ring);
-
-  // Small check badge in top-right of the ring
-  const checkCx = cx + r * 0.72;
-  const checkCy = cy - r * 0.72;
-  const bg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  bg.setAttribute('cx', checkCx);
-  bg.setAttribute('cy', checkCy);
-  bg.setAttribute('r',  11);
-  bg.setAttribute('fill', '#0a2815');
-  bg.setAttribute('stroke', '#16a34a');
-  bg.setAttribute('stroke-width', '2');
-  mark.appendChild(bg);
-
-  const check = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  check.setAttribute('d', `M ${checkCx - 5} ${checkCy} L ${checkCx - 1} ${checkCy + 4} L ${checkCx + 5} ${checkCy - 4}`);
-  mark.appendChild(check);
-
-  statusLayer.appendChild(mark);
+  // No done-state shown on hotspots per design decision
 }
 
 function playBJEnterAnim() {
-  const scene = document.getElementById('bj-scene');
-  if (!scene) return;
-  scene.classList.remove('entering');
-  // Force reflow so the animation can replay
-  void scene.offsetWidth;
-  scene.classList.add('entering');
+  // No-op: replaced by video animation
 }
 
 // ============================================================
@@ -2093,6 +2061,7 @@ const FullTraining = {
           <div class="ft-betting-area">
             <div class="ft-bet-circle" id="ft-bet-circle">
               <div class="ft-bet-chips" id="ft-bet-chips"></div>
+              <span class="ft-bet-circle-amount">$<span id="ft-bet-amount">0</span></span>
             </div>
             <div class="ft-player-cards" id="ft-player-cards"></div>
           </div>
@@ -2104,14 +2073,10 @@ const FullTraining = {
           <!-- BET PHASE -->
           <div id="ft-phase-bet" class="ft-phase">
             <details class="ft-spread-ref">
-              <summary class="ft-spread-ref-toggle">▸ Bet Spread Reference</summary>
+              <summary class="ft-spread-ref-toggle">Bet Spread Reference</summary>
               <div class="ft-spread-ref-body" id="ft-spread-body"></div>
             </details>
             <div id="ft-bet-warning" class="ft-bet-warning hidden"></div>
-            <div class="ft-bet-row">
-              <span class="ft-bet-lbl">Bet</span>
-              <span class="ft-bet-amount">$<span id="ft-bet-amount">0</span></span>
-            </div>
             <div class="ft-chips" id="ft-chips">
               <button class="ft-chip ft-chip-5"   data-val="5"  ><span>$5</span></button>
               <button class="ft-chip ft-chip-25"  data-val="25" ><span>$25</span></button>
@@ -2545,10 +2510,7 @@ const FullTraining = {
       resultRow.innerHTML = `
         <div class="ft-outcomes">
           ${outcomes.map(o => `
-            <div class="ft-outcome-row">
-              <span class="ft-outcome-label ${o.delta > 0 ? 'ft-outcome-win' : o.delta < 0 ? 'ft-outcome-lose' : 'ft-outcome-push'}">${o.label}</span>
-              <span class="ft-outcome-amount ${o.delta > 0 ? 'ft-outcome-win' : o.delta < 0 ? 'ft-outcome-lose' : 'ft-outcome-push'}">${o.delta >= 0 ? '+' : ''}$${Math.abs(o.delta).toLocaleString()}</span>
-            </div>
+            <span class="ft-outcome-amount ${o.delta > 0 ? 'ft-outcome-win' : o.delta < 0 ? 'ft-outcome-lose' : 'ft-outcome-push'}">${o.delta >= 0 ? '+' : ''}$${Math.abs(o.delta).toLocaleString()}</span>
           `).join('')}
           <div class="ft-bs-verdict ${bsCorrect ? 'ft-bs-ok' : 'ft-bs-wrong'}">${bsLabel}</div>
         </div>
@@ -2614,6 +2576,9 @@ const FullTraining = {
 window.addEventListener('load', () => {
   const spinner = document.getElementById('page-spinner');
   if (spinner) spinner.classList.add('spinner-hidden');
+  initPipelineHotspots();
+  preloadPipelineFrames();
+  window.addEventListener('resize', resizePipelineCanvas, { passive: true });
 });
 
 // ============================================================
@@ -3095,104 +3060,61 @@ function startLearnMore() {
 
   if (!ring) return;
   spinRingToAce(ring).then(() => {
+    // Brief pause to let the spin settle visually
     setTimeout(() => {
-      const aceEl = document.querySelector('.hero-card-ring .rc-card:nth-child(1)');
-      if (!aceEl || !pan) return;
+      // Prepare tour stage behind landing (invisible)
+      tourIndex = 0;
+      if (stage) {
+        stage.classList.remove('hidden');
+        stage.classList.add('active');
+        stage.style.opacity = '0';
+      }
+      showTourPage(0);
 
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      const CARD_W = 340;
-      const CARD_H = 476;
-      const portX = (vw - CARD_W) / 2;
-      const portY = (vh - CARD_H) / 2;
+      const FADE_MS = TOUR_ZOOM_MS;
+      if (landing) {
+        landing.style.transformOrigin = '50% 40%';
+        landing.style.transition = `transform ${FADE_MS}ms cubic-bezier(0.25, 0, 0.6, 1), opacity ${FADE_MS * 0.2}ms ease-in ${FADE_MS * 0.75}ms`;
+        landing.style.opacity = '0';
+        landing.style.transform = 'scale(45)';
+      }
+      if (stage) {
+        stage.style.transform = 'scale(0.92)';
+        void stage.offsetWidth;
+        stage.style.transition = `opacity ${FADE_MS * 0.5}ms ease ${FADE_MS * 0.35}ms, transform ${FADE_MS}ms ease`;
+        stage.style.opacity = '1';
+        stage.style.transform = 'scale(1)';
+      }
 
-      // Camera zoom: scale ring wrap until Ace = portrait card size
-      const aceRect0 = aceEl.getBoundingClientRect();
-      const totalScale = 1.25 * (CARD_W / aceRect0.width);
-      pan.wrap.style.transition = 'transform 950ms cubic-bezier(0.2, 0, 0.1, 1)';
-      pan.wrap.style.transform = `translateY(-50%) translate(${pan.dx}px, ${pan.dy}px) scale(${totalScale})`;
-
+      // Cleanup after fade completes
       setTimeout(() => {
-        pan.wrap.style.transition = '';
-
-        const aceRect = aceEl.getBoundingClientRect();
-
-        // Setup tour stage hidden behind overlay
-        tourIndex = 0;
-        if (stage) {
-          stage.classList.remove('hidden');
-          stage.classList.add('active');
-          stage.style.opacity = '0';
+        if (landing) {
+          landing.classList.add('hidden');
+          landing.style.transition = '';
+          landing.style.opacity = '';
+          landing.style.transform = '';
+          landing.style.transformOrigin = '';
         }
-        showTourPage(0);
-
-        // Build overlay at Ace position
-        const overlay = document.createElement('div');
-        overlay.className = 'ace-flip-overlay';
-        overlay.innerHTML = `
-          <div class="ace-flip-bg"></div>
-          <div class="ace-flip-wrap">
-            <div class="ace-flip-inner">
-              <div class="ace-flip-front">
-                <span class="ace-rank-tl">A</span>
-                <span class="ace-suit">♠</span>
-                <span class="ace-rank-br">A</span>
-              </div>
-            </div>
-          </div>
-        `;
-        document.body.appendChild(overlay);
-
-        const bg   = overlay.querySelector('.ace-flip-bg');
-        const wrap = overlay.querySelector('.ace-flip-wrap');
-
-        wrap.style.left   = aceRect.left   + 'px';
-        wrap.style.top    = aceRect.top    + 'px';
-        wrap.style.width  = aceRect.width  + 'px';
-        wrap.style.height = aceRect.height + 'px';
-        bg.style.opacity  = '0';
-
-        // Hide ring Ace — overlay replaces it
-        aceEl.style.opacity = '0';
-
-        void wrap.offsetWidth;
-
-        // Grow to portrait card center (400ms), bg fades in
-        wrap.style.transition = `left 400ms cubic-bezier(0.22,1,0.36,1), top 400ms cubic-bezier(0.22,1,0.36,1), width 400ms cubic-bezier(0.22,1,0.36,1), height 400ms cubic-bezier(0.22,1,0.36,1)`;
-        bg.style.transition   = 'opacity 400ms ease';
-        requestAnimationFrame(() => {
-          wrap.style.left   = portX + 'px';
-          wrap.style.top    = portY + 'px';
-          wrap.style.width  = CARD_W + 'px';
-          wrap.style.height = CARD_H + 'px';
-          bg.style.opacity  = '1';
-        });
-
-        setTimeout(() => {
-          // Zoom portrait → fullscreen (600ms)
-          wrap.style.transition = `left 600ms cubic-bezier(0.2,0,0.1,1), top 600ms cubic-bezier(0.2,0,0.1,1), width 600ms cubic-bezier(0.2,0,0.1,1), height 600ms cubic-bezier(0.2,0,0.1,1)`;
-          requestAnimationFrame(() => {
-            wrap.style.left   = '0px';
-            wrap.style.top    = '0px';
-            wrap.style.width  = vw + 'px';
-            wrap.style.height = vh + 'px';
-          });
-
-          setTimeout(() => {
-            if (stage) stage.style.opacity = '';
-            if (landing) landing.classList.add('hidden');
-            if (hero) hero.classList.remove('tour-pending');
-            resetHeroRing();
-            overlay.remove();
-            updateSideArrows();
-          }, 640);
-        }, 430);
-      }, 1000);
-    }, 450);
+        if (stage) {
+          stage.style.transition = '';
+          stage.style.opacity = '';
+          stage.style.transform = '';
+        }
+        if (hero) hero.classList.remove('tour-pending');
+        resetHeroRing();
+        updateSideArrows();
+      }, FADE_MS + 40);
+    }, 350);
   });
 }
 
-// Navigate to a new tour card: zoom out → ring spin → zoom in (mirrors startLearnMore).
+// Each tour page maps to a card: page0→Ace♠(0), page1→King♥(1), page2→Queen♠(2)
+const TOUR_TARGET_CARD = [0, 1, 2];
+// Shared zoom duration for all card-to-page transitions (startLearnMore + goTourCard)
+const TOUR_ZOOM_MS = 1800;
+// Transform origin for zooming INTO each card — targets the suit symbol
+const CARD_ZOOM_ORIGIN = ['50% 42%', '50% 47%', '50% 42%'];
+
 function goTourCard(nextIndex) {
   if (tourAnimating) return;
   if (nextIndex < 0 || nextIndex >= TOUR_PAGE_IDS.length) return;
@@ -3205,90 +3127,136 @@ function goTourCard(nextIndex) {
 
   tourAnimating = true;
 
-  const vw = window.innerWidth, vh = window.innerHeight;
-  const CW = 154, CH = 216;
-  const portX = (vw - CW) / 2, portY = (vh - CH) / 2;
-  const SPIN_MS  = 4200; // ring spin duration
-  const ZOOM_OUT = 380;  // card zoom-out ms
-  const ZOOM_IN  = 520;  // card zoom-in ms
+  const ZOOM_MS     = TOUR_ZOOM_MS;
+  const ZOOM_OUT_MS = 1200;
+  const targetCard  = TOUR_TARGET_CARD[nextIndex] || 0;
 
-  // ── 1. Overlay that covers the current tour page (looks like the ace card) ──
-  const overlay = document.createElement('div');
-  overlay.className = 'ace-flip-overlay';
-  overlay.style.zIndex = '500';
-  overlay.innerHTML = `
-    <div class="ace-flip-bg" style="opacity:1"></div>
-    <div class="ace-flip-wrap">
-      <div class="ace-flip-inner">
-        <div class="ace-flip-front">
-          <span class="ace-rank-tl">A</span>
-          <span class="ace-suit">♠</span>
-          <span class="ace-rank-br">A</span>
-        </div>
-      </div>
-    </div>`;
-  document.body.appendChild(overlay);
+  const currentEl = document.getElementById(TOUR_PAGE_IDS[tourIndex]);
+  const wrap = document.querySelector('.hero-card-ring-wrap');
+  const ring = document.querySelector('.hero-card-ring');
 
-  const cardWrap = overlay.querySelector('.ace-flip-wrap');
-  cardWrap.style.cssText = `position:absolute;left:0;top:0;width:${vw}px;height:${vh}px;`;
-  void cardWrap.offsetWidth;
+  if (!wrap || !ring) {
+    tourIndex = nextIndex;
+    showTourPage(nextIndex);
+    tourAnimating = false;
+    return;
+  }
 
-  // ── 2. Zoom OUT: fullscreen → card size ──
-  cardWrap.style.transition = `left ${ZOOM_OUT}ms cubic-bezier(0.4,0,0.8,1),top ${ZOOM_OUT}ms cubic-bezier(0.4,0,0.8,1),width ${ZOOM_OUT}ms cubic-bezier(0.4,0,0.8,1),height ${ZOOM_OUT}ms cubic-bezier(0.4,0,0.8,1)`;
-  requestAnimationFrame(() => {
-    cardWrap.style.left   = portX + 'px';
-    cardWrap.style.top    = portY + 'px';
-    cardWrap.style.width  = CW + 'px';
-    cardWrap.style.height = CH + 'px';
-  });
+  // ── 1. Fade OUT current page — mirrors startLearnMore landing exit (scale up + fade) ──
+  if (currentEl) {
+    currentEl.style.transition = 'none';
+    currentEl.style.transform = 'scale(1)';
+    currentEl.style.opacity = '1';
+    void currentEl.offsetWidth;
+    currentEl.style.transition = `opacity ${ZOOM_OUT_MS * 0.4}ms ease-in, transform ${ZOOM_OUT_MS}ms cubic-bezier(0.25, 0, 0.6, 1)`;
+    currentEl.style.opacity = '0';
+    currentEl.style.transform = 'scale(1.08)';
+  }
 
+  // ── 2. After zoom-out, show hero ring centered on CURRENT card, then spin to target ──
   setTimeout(() => {
-    // ── 3. Ring spin — move ring to body so it renders above everything ──
-    const ringWrap = document.getElementById('tour-ring-wrap');
-    const tourStage = document.getElementById('tour-stage');
-    if (ringWrap) {
-      document.body.appendChild(ringWrap); // escape tour-stage stacking context
-      ringWrap.classList.remove('hidden', 'transitioning');
-      ringWrap.style.zIndex = '501';
-      void ringWrap.offsetWidth;
-      ringWrap.style.animationDuration = SPIN_MS + 'ms';
-      ringWrap.classList.add('transitioning');
+    if (currentEl) {
+      currentEl.classList.remove('tour-page-active');
+      currentEl.style.transition = '';
+      currentEl.style.transform = '';
+      currentEl.style.opacity = '';
     }
 
-    // Swap page content at spin midpoint
-    setTimeout(() => {
-      tourIndex = nextIndex;
-      showTourPage(nextIndex);
-    }, SPIN_MS / 2);
+    // Move hero ring to body, center it on screen
+    document.body.appendChild(wrap);
+    wrap.classList.remove('panning', 'zoom-through', 'diving');
 
+    // Snap ring to the CURRENT card facing front so user sees it before spinning
+    ring.getAnimations().forEach(a => a.cancel());
+    ring.style.animation = 'none';
+    const currentCardIndex = TOUR_TARGET_CARD[tourIndex];
+    const snapAngle = (360 - (currentCardIndex * 45) % 360) % 360;
+    ring.style.transform = `rotateX(14deg) rotateY(${snapAngle}deg)`;
+    void ring.offsetWidth;
+
+    wrap.style.cssText = `
+      position: fixed; left: 50%; top: 50%;
+      right: auto; transform: none;
+      margin-left: -130px; margin-top: -170px;
+      width: 260px; height: 340px;
+      perspective: 900px; z-index: 501;
+      opacity: 1; animation: none; transition: none;
+    `;
+
+    // Pause so user sees the current card, then spin to target
     setTimeout(() => {
-      // Cleanup ring, move back inside tour-stage
-      if (ringWrap) {
-        ringWrap.classList.add('hidden');
-        ringWrap.classList.remove('transitioning');
-        ringWrap.style.animationDuration = '';
-        ringWrap.style.zIndex = '';
-        if (tourStage) tourStage.appendChild(ringWrap);
+    spinRingToCard(ring, targetCard).then(() => {
+      // Measure the actual suit-symbol position now that the target card faces front
+      const cards = ring.querySelectorAll('.rc-card');
+      const frontCard = cards[targetCard];
+      const sym = frontCard ? frontCard.querySelector('.suit-sym') : null;
+      let origin = '50% 42%';
+      if (sym) {
+        const wrapRect = wrap.getBoundingClientRect();
+        const symRect  = sym.getBoundingClientRect();
+        const ox = ((symRect.left + symRect.width  / 2 - wrapRect.left) / wrapRect.width  * 100).toFixed(1);
+        const oy = ((symRect.top  + symRect.height / 2 - wrapRect.top)  / wrapRect.height * 100).toFixed(1);
+        origin = `${ox}% ${oy}%`;
       }
 
-      // ── 4. Zoom IN: card size → fullscreen ──
-      cardWrap.style.transition = `left ${ZOOM_IN}ms cubic-bezier(0.2,0,0.1,1),top ${ZOOM_IN}ms cubic-bezier(0.2,0,0.1,1),width ${ZOOM_IN}ms cubic-bezier(0.2,0,0.1,1),height ${ZOOM_IN}ms cubic-bezier(0.2,0,0.1,1)`;
-      requestAnimationFrame(() => {
-        cardWrap.style.left   = '0px';
-        cardWrap.style.top    = '0px';
-        cardWrap.style.width  = vw + 'px';
-        cardWrap.style.height = vh + 'px';
+      // Update index + clean up old page — do NOT make new page visible yet
+      tourIndex = nextIndex;
+      const pages = document.getElementById('tour-pages');
+      TOUR_PAGE_IDS.forEach((id, i) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (i !== nextIndex) el.classList.remove('tour-page-active', 'zoom-in', 'zoom-out');
       });
+      if (pages) pages.scrollTop = 0;
+      renderTourProgress(nextIndex);
 
+      // Brief pause to see the card, then zoom in through the measured suit symbol
       setTimeout(() => {
-        overlay.remove();
-        tourAnimating = false;
-        updateSideArrows();
-      }, ZOOM_IN + 40);
+        wrap.style.transformOrigin = origin;
+        wrap.style.transition = `transform ${ZOOM_MS}ms cubic-bezier(0.25, 0, 0.6, 1), opacity ${ZOOM_MS * 0.2}ms ease-in ${ZOOM_MS * 0.75}ms`;
+        wrap.style.transform = 'scale(45)';
+        wrap.style.opacity = '0';
 
-    }, SPIN_MS);
+        const newEl = document.getElementById(TOUR_PAGE_IDS[nextIndex]);
 
-  }, ZOOM_OUT + 20);
+        // Start page fade-in at 35% of zoom — same proportion as startLearnMore
+        setTimeout(() => {
+          if (newEl) {
+            newEl.style.opacity = '0';
+            newEl.style.transform = 'scale(0.92)';
+            newEl.classList.add('tour-page-active');
+            void newEl.offsetWidth;
+            newEl.style.transition = `opacity ${ZOOM_MS * 0.5}ms ease, transform ${ZOOM_MS}ms ease`;
+            newEl.style.opacity = '1';
+            newEl.style.transform = 'scale(1)';
+          }
+        }, ZOOM_MS * 0.35);
+
+        // Clean up ring after zoom fully completes
+        setTimeout(() => {
+          const lsHero = document.querySelector('.ls-hero');
+          const landing = document.getElementById('landing');
+          const pipelineActive = !document.getElementById('pipeline')?.classList.contains('hidden');
+          if (!pipelineActive) {
+            if (lsHero) lsHero.appendChild(wrap);
+            else if (landing) landing.appendChild(wrap);
+          }
+          wrap.style.cssText = '';
+          resetHeroRing();
+
+          if (newEl) {
+            newEl.style.transition = '';
+            newEl.style.opacity = '';
+            newEl.style.transform = '';
+          }
+          tourAnimating = false;
+          updateSideArrows();
+        }, ZOOM_MS + 40);
+      }, 400);
+    });
+    }, 450); // pause on current card before spinning
+
+  }, ZOOM_OUT_MS + 10);
 }
 
 function tourNext() {
@@ -3316,10 +3284,12 @@ function exitTourToLanding() {
     if (el) el.classList.remove('tour-page-active', 'zoom-in', 'zoom-out');
   });
 
+  const isPipelineActive = () => !document.getElementById('pipeline')?.classList.contains('hidden');
+
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
     stage.classList.add('hidden');
     stage.classList.remove('active');
-    if (landing) landing.classList.remove('hidden');
+    if (landing && !isPipelineActive()) landing.classList.remove('hidden');
     updateSideArrows();
     return;
   }
@@ -3331,7 +3301,7 @@ function exitTourToLanding() {
     stage.classList.remove('active');
     stage.style.opacity = '';
     stage.style.transition = '';
-    if (landing) landing.classList.remove('hidden');
+    if (landing && !isPipelineActive()) landing.classList.remove('hidden');
     // Restore the ring Ace that was hidden during the zoom-in reveal
     const aceEl = document.querySelector('.hero-card-ring .rc-card:nth-child(1)');
     if (aceEl) aceEl.style.opacity = '';
@@ -3343,7 +3313,8 @@ function exitTourToLanding() {
 // "Start Training" — fast-path straight to the pipeline (skips the tour).
 // Used by the top-right nav button for returning users who already know the app.
 function startTraining() {
-  // Close tour stage if open
+  // Close tour stage if open; abort any in-flight tour animation
+  tourAnimating = false;
   const stage = document.getElementById('tour-stage');
   if (stage && !stage.classList.contains('hidden')) {
     stage.classList.add('hidden');

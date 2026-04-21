@@ -2,6 +2,11 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import Anthropic from '@anthropic-ai/sdk';
+import { readFileSync } from 'fs';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const app  = express();
 const port = process.env.PORT || 3001;
@@ -10,10 +15,12 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 app.use(express.json());
 app.use(cors({ origin: process.env.ALLOWED_ORIGIN || '*' }));
 
-// ── Session store (in-memory) ──────────────────────────────────
-const sessions = new Map(); // sessionId -> { messages: [], lastActive: number }
+// ── Load guidelines ──────────────────────────────────────────
+const SYSTEM_PROMPT = readFileSync(join(__dirname, 'colin-guidelines.md'), 'utf-8');
 
-// Prune sessions inactive > 2 hours
+// ── Session store (in-memory) ──────────────────────────────────
+const sessions = new Map();
+
 setInterval(() => {
   const cutoff = Date.now() - 2 * 60 * 60 * 1000;
   for (const [id, s] of sessions) {
@@ -28,26 +35,49 @@ function getSession(id) {
   return s;
 }
 
-// ── System prompt ──────────────────────────────────────────────
-const SYSTEM_PROMPT = `You are Colin, the AI coaching agent for a blackjack card counting training app called BJ Trainer.
-You are concise, direct, and expert-level. Calm and encouraging — like a seasoned card counter who played professionally and now coaches.
-
-The app has these trainers:
-- basic-strategy: Drills for hit/stand/double/split decisions
-- keep-counting: Hi-Lo running count tracking (2-6=+1, 7-9=0, 10-A=-1)
-- deviations: Illustrious 18 count-based strategy deviations
-- true-count: Converting running count to true count (RC / decks remaining, round to 0.5)
-- bet-spread: Bankroll management and bet sizing by true count
-- full-training: Combined simulation of all skills
-
-Rules:
-- You ARE the feedback system. There is no other feedback box — your reply IS the verdict.
-- For CORRECT answers: reply with 1–3 words ONLY. No punctuation needed. Examples: "Nice", "Perfect", "Sharp", "Exactly", "Yes"
-- For WRONG answers: reply "Wrong —" then the reason in 8 words or fewer. One tight line, no extra sentences.
-- When suggesting a redirect, include [ACTION:redirect:trainer-id] at the END of your message on its own line. Valid IDs: basic-strategy, keep-counting, deviations, true-count, bet-spread, full-training, dashboard, pipeline
-- On the dashboard, assess the weakest skill first and give one concrete next step (2 sentences max).
-- A player is casino-ready when: Basic Strategy >95%, Running Count >90%, True Count within ±0.5 consistently, at least one deviation set memorized.
-- Stay focused on blackjack training. You are not a general chatbot.`;
+// ── Level focus lookup ───────────────────────────────────────
+const FOCUS = {
+  'basic-strategy': [
+    '',
+    'hard totals only — focus on when to hit vs stand',
+    'hard and soft hands — watch the ace',
+    'all hand types — pairs are the new challenge',
+    'all hands, prioritize edge cases like 12-16 vs dealer 4-6',
+    'full range — razor-sharp on every cell of the chart',
+  ],
+  'keep-counting': [
+    '',
+    'one card at a time — build the habit',
+    'two cards — start tracking the delta',
+    'three cards with a countdown — stay calm under pressure',
+    'four cards, 6 seconds — maintain pace and accuracy',
+    'five cards, 4 seconds — casino speed',
+  ],
+  'deviations': [
+    '',
+    'the two most important: 16 vs 10 and 15 vs 10',
+    'top 7 deviations — the ones that matter most',
+    'top 9 — you know the basics, now drill the doubles',
+    'top 11 — the full Illustrious 18 is close',
+    'all 13 — every deviation, every count threshold',
+  ],
+  'true-count': [
+    '',
+    'small RC, whole-number decks — nail the formula first',
+    'slightly wider range — watch for the half-deck values',
+    'mid-range RC and decks — round to nearest 0.5 precisely',
+    'wide range — speed and accuracy together',
+    'full casino range — fast and exact',
+  ],
+  'full-training': [
+    '',
+    'play correct, count correct — one rep at a time',
+    'two skills together — play first, then confirm the count',
+    'bet sizing matters now — use the true count',
+    'stay sharp on both simultaneously',
+    'casino-speed full simulation',
+  ],
+};
 
 // ── Build human-turn message from event context ────────────────
 function buildUserMessage(event, payload, userMessage) {
@@ -61,9 +91,9 @@ function buildUserMessage(event, payload, userMessage) {
       : 'no stats yet (new user)';
     const isNew = !payload.stats || Object.values(payload.stats).every(v => v.total === 0);
     if (isNew) {
-      return `New user just arrived. Your reply MUST start with this exact sentence: "Hi, I'm Colin — I'll be your personal card counting coach." Then add exactly 1–2 more short sentences: mention you'll give live feedback on every question and they can ask you anything, then tell them to start with Basic Strategy. Do not deviate from this structure.`;
+      return `New user just arrived at the pipeline. Greet them per the guidelines (new user flow).`;
     }
-    return `Returning user "${payload.user || 'Guest'}" is back. Sessions: ${payload.sessions || 0}. Stats: ${statsStr}. Reply in 1–2 short sentences: greet them by name if available, then tell them exactly what to work on next based on their weakest stat. Be direct, not generic.`;
+    return `Returning user "${payload.user || 'Guest'}" is back. Sessions: ${payload.sessions || 0}. Stats: ${statsStr}. Follow the returning user flow from the guidelines.`;
   }
 
   if (event === 'trainer_enter') {
@@ -72,104 +102,59 @@ function buildUserMessage(event, payload, userMessage) {
     const statsStr = pct !== null ? `${s.correct}/${s.total} (${pct}%)` : 'no attempts yet';
     const lvl = payload.difficultyLevel || 1;
     const lvlName = payload.difficultyName || 'Beginner';
-
-    const FOCUS = {
-      'basic-strategy': [
-        '', // unused
-        'hard totals only — focus on when to hit vs stand',
-        'hard and soft hands — watch the ace',
-        'all hand types — pairs are the new challenge',
-        'all hands, prioritize edge cases like 12-16 vs dealer 4-6',
-        'full range — razor-sharp on every cell of the chart',
-      ],
-      'keep-counting': [
-        '',
-        'one card at a time — build the habit',
-        'two cards — start tracking the delta',
-        'three cards with a countdown — stay calm under pressure',
-        'four cards, 6 seconds — maintain pace and accuracy',
-        'five cards, 4 seconds — casino speed',
-      ],
-      'deviations': [
-        '',
-        'the two most important: 16 vs 10 and 15 vs 10',
-        'top 7 deviations — the ones that matter most',
-        'top 9 — you know the basics, now drill the doubles',
-        'top 11 — the full Illustrious 18 is close',
-        'all 13 — every deviation, every count threshold',
-      ],
-      'true-count': [
-        '',
-        'small RC, whole-number decks — nail the formula first',
-        'slightly wider range — watch for the half-deck values',
-        'mid-range RC and decks — round to nearest 0.5 precisely',
-        'wide range — speed and accuracy together',
-        'full casino range — fast and exact',
-      ],
-      'full-training': [
-        '',
-        'play correct, count correct — one rep at a time',
-        'two skills together — play first, then confirm the count',
-        'bet sizing matters now — use the true count',
-        'stay sharp on both simultaneously',
-        'casino-speed full simulation',
-      ],
-    };
-
     const focusLine = (FOCUS[payload.skillId] || ['','','','','',''])[lvl] || '';
     return `User entered the ${payload.skillName} trainer at Level ${lvl}/5 (${lvlName}). Stats: ${statsStr}. Difficulty auto-set to ${lvlName}. One short sentence: energize them to start, mention the specific focus: "${focusLine}".`;
   }
 
   if (event === 'trainer_answer') {
-    const { skillId, isCorrect, streak } = payload;
+    const { skillId, isCorrect } = payload;
 
     if (skillId === 'basic-strategy') {
       if (!isCorrect) {
-        return `Basic Strategy wrong. Hand: ${payload.handLabel} vs dealer ${payload.dealerLabel}. Chose: ${payload.chosen}. Correct: ${payload.correctAction}. Reply "Wrong —" + reason in 8 words or fewer.`;
+        return `Basic Strategy wrong. Hand: ${payload.handLabel} vs dealer ${payload.dealerLabel}. Chose: ${payload.chosen}. Correct: ${payload.correctAction}. Reply per guidelines.`;
       }
-      return `Basic Strategy correct. Reply 1–3 words of praise only.`;
+      return `Basic Strategy correct. Reply per guidelines.`;
     }
 
     if (skillId === 'keep-counting') {
       if (!isCorrect) {
-        return `Running Count wrong. Submitted: ${payload.playerCount}. Correct: ${payload.correctCount}. Cards: ${payload.cardBreakdown ? payload.cardBreakdown.map(c => `${c.rank}(${c.value > 0 ? '+' : ''}${c.value})`).join(', ') : 'not provided'}. Reply "Wrong —" + reason in 8 words or fewer.`;
+        return `Running Count wrong. Submitted: ${payload.playerCount}. Correct: ${payload.correctCount}. Cards: ${payload.cardBreakdown ? payload.cardBreakdown.map(c => `${c.rank}(${c.value > 0 ? '+' : ''}${c.value})`).join(', ') : 'not provided'}. Reply per guidelines.`;
       }
-      return `Running Count correct. Reply 1–3 words of praise only.`;
+      return `Running Count correct. Reply per guidelines.`;
     }
 
     if (skillId === 'deviations') {
       if (!isCorrect) {
         const shouldStr = payload.shouldDeviate ? 'should deviate' : 'should NOT deviate';
-        return `Deviations wrong. ${payload.hand} vs ${payload.upcard}, TC: ${payload.trueCount}. Chose: ${payload.chosen}. Correct: ${payload.correctAction} (${shouldStr}). Reply "Wrong —" + reason in 8 words or fewer.`;
+        return `Deviations wrong. ${payload.hand} vs ${payload.upcard}, TC: ${payload.trueCount}. Chose: ${payload.chosen}. Correct: ${payload.correctAction} (${shouldStr}). Reply per guidelines.`;
       }
-      return `Deviations correct. Reply 1–3 words of praise only.`;
+      return `Deviations correct. Reply per guidelines.`;
     }
 
     if (skillId === 'true-count') {
       if (!isCorrect) {
-        return `True Count wrong. Answered: ${payload.playerAnswer}. Correct: ${payload.correctAnswer}. Reply "Wrong —" + reason in 8 words or fewer.`;
+        return `True Count wrong. Answered: ${payload.playerAnswer}. Correct: ${payload.correctAnswer}. Reply per guidelines.`;
       }
-      return `True Count correct. Reply 1–3 words of praise only.`;
+      return `True Count correct. Reply per guidelines.`;
     }
 
     if (skillId === 'full-training') {
       const playStr  = payload.playWasCorrect  ? 'correct' : `WRONG (chose ${payload.chosenPlay}, correct ${payload.correctPlay})`;
       const countStr = payload.countWasCorrect ? 'correct' : `WRONG (submitted ${payload.playerCount}, correct ${payload.runningCount})`;
       if (!isCorrect) {
-        return `Full Training: play ${playStr}, count ${countStr}. Reply "Wrong —" + targeted reason in 8 words or fewer.`;
+        return `Full Training: play ${playStr}, count ${countStr}. Reply per guidelines.`;
       }
-      return `Full Training correct. Reply 1–3 words of praise only.`;
+      return `Full Training correct. Reply per guidelines.`;
     }
 
-    // Generic fallback
-    if (!isCorrect) return `${skillId} wrong. Reply "Wrong —" + reason in 8 words or fewer.`;
-    return `${skillId} correct. Reply 1–3 words of praise only.`;
+    if (!isCorrect) return `${skillId} wrong. Reply per guidelines.`;
+    return `${skillId} correct. Reply per guidelines.`;
   }
 
   if (event === 'dashboard_load') {
     const weakStr     = payload.weaknesses?.length ? payload.weaknesses.join(', ') : 'none';
     const strongStr   = payload.strengths?.length  ? payload.strengths.join(', ')  : 'none';
-    return `User opened their Dashboard. Username: ${payload.user}. Sessions: ${payload.sessions}. Overall accuracy: ${payload.globalPct}%. Weak areas: ${weakStr}. Strengths: ${strongStr}. Give a 2-sentence coaching assessment: what to focus on next and a rough estimate of how close they are to being casino-ready.`;
+    return `User opened their Dashboard. Username: ${payload.user}. Sessions: ${payload.sessions}. Overall accuracy: ${payload.globalPct}%. Weak areas: ${weakStr}. Strengths: ${strongStr}. Reply per guidelines.`;
   }
 
   return 'Hello Colin.';
@@ -186,7 +171,6 @@ app.post('/colin', async (req, res) => {
 
   session.messages.push({ role: 'user', content: humanText });
 
-  // Cap history to last 20 messages
   if (session.messages.length > 20) {
     session.messages = session.messages.slice(-20);
   }
@@ -201,7 +185,6 @@ app.post('/colin', async (req, res) => {
 
     const raw = response.content[0].text;
 
-    // Parse optional action tag
     const actionMatch = raw.match(/\[ACTION:redirect:([a-z-]+)\]/);
     const action = actionMatch ? { type: 'redirect', target: actionMatch[1] } : null;
     const reply  = raw.replace(/\[ACTION:redirect:[a-z-]+\]/g, '').trim();

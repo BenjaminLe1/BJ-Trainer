@@ -22,35 +22,34 @@
   // ── Colin face SVG ────────────────────────────────────────────
   function colinFaceSVG(size) {
     return `<svg width="${size}" height="${size}" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <!-- Neck + shoulders -->
-      <path d="M20 52 Q20 58 32 58 Q44 58 44 52 L42 44 Q37 47 32 47 Q27 47 22 44Z" fill="#e8b48a"/>
+      <!-- Shoulders -->
+      <path d="M10 64 Q10 54 20 51 Q26 49 32 49 Q38 49 44 51 Q54 54 54 64Z" fill="#3a5a8a"/>
+      <!-- Neck -->
+      <rect x="27" y="44" width="10" height="8" rx="3" fill="#e8b080"/>
       <!-- Head -->
-      <ellipse cx="32" cy="30" rx="16" ry="18" fill="#f0c090"/>
-      <!-- Hair — flat dark cap, clean shape -->
-      <path d="M16 28 C16 14 48 14 48 28 C46 18 38 11 32 11 C26 11 18 18 16 28Z" fill="#2c2420"/>
-      <!-- Side burns -->
-      <rect x="16" y="26" width="3" height="7" rx="1.5" fill="#2c2420"/>
-      <rect x="45" y="26" width="3" height="7" rx="1.5" fill="#2c2420"/>
+      <ellipse cx="32" cy="29" rx="15" ry="17" fill="#f2c188"/>
+      <!-- Hair — short clean cut with side part -->
+      <path d="M17 26 C17 12 47 12 47 26 C45 15 38 9 32 9 C26 9 19 15 17 26Z" fill="#1a1208"/>
+      <path d="M17 22 C18 16 24 11 32 11 C32 11 28 14 27 20Z" fill="#2a1e10"/>
       <!-- Ears -->
-      <ellipse cx="16" cy="32" rx="3" ry="4" fill="#e0a070"/>
-      <ellipse cx="48" cy="32" rx="3" ry="4" fill="#e0a070"/>
-      <!-- Eyebrows — thick, slight arch -->
-      <path d="M21 23 Q25 21 29 23" stroke="#2c2420" stroke-width="2.2" stroke-linecap="round" fill="none"/>
-      <path d="M35 23 Q39 21 43 23" stroke="#2c2420" stroke-width="2.2" stroke-linecap="round" fill="none"/>
-      <!-- Eyes — simple circles, friendly -->
-      <circle cx="25" cy="29" r="4" fill="#fff"/>
-      <circle cx="39" cy="29" r="4" fill="#fff"/>
-      <circle cx="25.5" cy="29.5" r="2.5" fill="#3a2a18"/>
-      <circle cx="39.5" cy="29.5" r="2.5" fill="#3a2a18"/>
-      <circle cx="26.2" cy="28.4" r="0.8" fill="#fff"/>
-      <circle cx="40.2" cy="28.4" r="0.8" fill="#fff"/>
-      <!-- Nose — small button -->
-      <ellipse cx="32" cy="35" rx="2" ry="1.2" fill="#d4956a" opacity="0.7"/>
-      <!-- Smile — friendly curved line -->
-      <path d="M25 42 Q32 47 39 42" stroke="#c07040" stroke-width="2" stroke-linecap="round" fill="none"/>
-      <!-- Light stubble suggestion — just two short strokes -->
-      <path d="M22 40 Q24 41 23 43" stroke="#c08860" stroke-width="1" stroke-linecap="round" opacity="0.4" fill="none"/>
-      <path d="M42 40 Q40 41 41 43" stroke="#c08860" stroke-width="1" stroke-linecap="round" opacity="0.4" fill="none"/>
+      <ellipse cx="17" cy="30" rx="2.5" ry="3.5" fill="#dda060"/>
+      <ellipse cx="47" cy="30" rx="2.5" ry="3.5" fill="#dda060"/>
+      <!-- Eyebrows — clean, slightly tapered -->
+      <path d="M21 22 Q25 20 28 21.5" stroke="#1a1208" stroke-width="2" stroke-linecap="round" fill="none"/>
+      <path d="M36 21.5 Q39 20 43 22" stroke="#1a1208" stroke-width="2" stroke-linecap="round" fill="none"/>
+      <!-- Eyes -->
+      <ellipse cx="25" cy="28" rx="3.8" ry="3.2" fill="#fff"/>
+      <ellipse cx="39" cy="28" rx="3.8" ry="3.2" fill="#fff"/>
+      <circle cx="25.5" cy="28.5" r="2.2" fill="#2e1a0a"/>
+      <circle cx="39.5" cy="28.5" r="2.2" fill="#2e1a0a"/>
+      <circle cx="26.2" cy="27.6" r="0.7" fill="#fff"/>
+      <circle cx="40.2" cy="27.6" r="0.7" fill="#fff"/>
+      <!-- Nose -->
+      <path d="M30 33 Q32 36 34 33" stroke="#c4845a" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+      <!-- Mouth — confident smile -->
+      <path d="M25 39 Q32 44 39 39" stroke="#b06030" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+      <path d="M25 39 Q25.5 40.5 26.5 40.5" stroke="#b06030" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+      <path d="M39 39 Q38.5 40.5 37.5 40.5" stroke="#b06030" stroke-width="1.2" stroke-linecap="round" fill="none"/>
     </svg>`;
   }
 
@@ -298,16 +297,49 @@
     syncWidgetPosition();
   }
 
-  // Trainer mode: icon moves to left-center with speech bubble layout.
-  // Lobby mode (pipeline/dashboard): icon stays bottom-left with chat panel.
+  // Trainer mode: icon moves to top-left with speech bubble layout.
+  // Lobby mode (pipeline/dashboard): icon stays bottom-right with chat panel.
   function syncWidgetPosition() {
     const widget = document.getElementById('colin-widget');
     if (!widget) return;
-    if (isViewVisible('skill-trainer')) {
-      widget.classList.add('colin-trainer-mode');
-    } else {
-      widget.classList.remove('colin-trainer-mode');
-    }
+
+    const goTrainer = isViewVisible('skill-trainer');
+    const isTrainer  = widget.classList.contains('colin-trainer-mode');
+    if (goTrainer === isTrainer) return; // already correct, nothing to do
+
+    // ── FLIP animation: bottom-right ↔ top-left ──────────────────
+    // Capture where the widget is RIGHT NOW (before any class change).
+    const first = widget.getBoundingClientRect();
+
+    // Apply the class — layout changes instantly (no visual effect yet because
+    // we'll invert it with a transform in the next step).
+    if (goTrainer) widget.classList.add('colin-trainer-mode');
+    else           widget.classList.remove('colin-trainer-mode');
+
+    // Force reflow so the browser computes the new layout before we read it.
+    void widget.offsetWidth;
+
+    // Capture the destination rect (where CSS wants the widget after the change).
+    const last = widget.getBoundingClientRect();
+
+    // Invert: shift by the difference so the widget appears at its OLD position.
+    const dx = first.left - last.left;
+    const dy = first.top  - last.top;
+    widget.style.transition = 'none';
+    widget.style.transform  = `translate(${dx}px, ${dy}px)`;
+
+    // Force reflow so the browser commits the inverted position.
+    void widget.offsetWidth;
+
+    // Play: clear the offset and let the transition carry it to translate(0,0).
+    widget.style.transition = 'transform 700ms cubic-bezier(0.4, 0, 0.2, 1)';
+    widget.style.transform  = '';
+
+    // Clean up inline styles once animation is done.
+    setTimeout(() => {
+      widget.style.transition = '';
+      widget.style.transform  = '';
+    }, 720);
   }
 
   // ── Colin event listener ──────────────────────────────────────
@@ -323,8 +355,7 @@
       if (!hasGreetedThisLoad) {
         hasGreetedThisLoad = true;
         setTimeout(() => {
-          openPanel();
-          sendToServer(event, payload);
+          sendToServer(event, payload, null, true);
         }, 1600); // slightly after the 900ms table entrance settles
       }
       return;

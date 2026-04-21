@@ -2,7 +2,9 @@
   'use strict';
 
   // ── Config ────────────────────────────────────────────────────
-  const COLIN_API = 'http://localhost:3001/colin';
+  const COLIN_API = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:3001/colin'
+    : '/colin';
 
   // ── Session identity ──────────────────────────────────────────
   let sessionId = sessionStorage.getItem('colin_session');

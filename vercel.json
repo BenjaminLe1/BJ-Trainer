@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/colin", "destination": "/api/colin" }
+  ]
+}

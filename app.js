@@ -509,6 +509,7 @@ const PIPELINE_FPS = 24;
 let pipelineFrames = [];
 let pipelineFramesLoaded = false;
 let pipelineAnimRaf = null;
+let pipelineAnimTimeout = null;
 let pipelineLastFrameTime = 0;
 let pipelineCurrentFrame = 0;
 
@@ -551,6 +552,7 @@ function drawPipelineFrame(index) {
 
 function showPipelineEndFrame() {
   cancelAnimationFrame(pipelineAnimRaf);
+  clearTimeout(pipelineAnimTimeout);
   resizePipelineCanvas();
   drawPipelineFrame(PIPELINE_FRAME_COUNT - 1);
   const hotspots = document.getElementById('pipeline-hotspots');
@@ -565,6 +567,7 @@ function playPipelineVideo() {
   if (hotspots) hotspots.classList.remove('visible');
 
   cancelAnimationFrame(pipelineAnimRaf);
+  clearTimeout(pipelineAnimTimeout);
   pipelineCurrentFrame = 0;
   pipelineLastFrameTime = 0;
   resizePipelineCanvas();
@@ -588,7 +591,9 @@ function playPipelineVideo() {
   }
 
   drawPipelineFrame(0);
-  setTimeout(() => { pipelineAnimRaf = requestAnimationFrame(animate); }, 1000);
+  pipelineAnimTimeout = setTimeout(() => {
+    pipelineAnimRaf = requestAnimationFrame(animate);
+  }, 1000);
 }
 
 function renderPipelineStatus() {
@@ -3025,8 +3030,8 @@ function spinRingToCard(ring, cardIndex) {
       { transform: `rotateX(14deg) rotateY(${currentAngle}deg)` },
       { transform: `rotateX(14deg) rotateY(${targetAngle}deg)` }
     ], {
-      duration: 7000,
-      easing: 'linear',
+      duration: 2000,
+      easing: 'cubic-bezier(0.15, 0, 0.25, 1)',
       fill: 'forwards'
     });
 
@@ -3058,8 +3063,8 @@ function spinRingToAce(ring) {
       { transform: `rotateX(14deg) rotateY(${currentAngle}deg)` },
       { transform: `rotateX(14deg) rotateY(${targetAngle}deg)` }
     ], {
-      duration: 7000,
-      easing: 'linear',
+      duration: 2000,
+      easing: 'cubic-bezier(0.15, 0, 0.25, 1)',
       fill: 'forwards'
     });
 
@@ -3168,11 +3173,29 @@ function goTourCard(nextIndex) {
   const myGen = ++tourGeneration;
   const alive = () => myGen === tourGeneration;
 
+  // Shared cleanup for abort paths: restore wrap parent, clear styles, reset ring.
+  const abortCleanup = () => {
+    const wrapEl = document.querySelector('.hero-card-ring-wrap');
+    if (wrapEl && wrapEl.parentElement === document.body) {
+      const lsHero = document.querySelector('.ls-hero');
+      const landingEl = document.getElementById('landing');
+      if (lsHero) lsHero.appendChild(wrapEl);
+      else if (landingEl) landingEl.appendChild(wrapEl);
+    }
+    if (wrapEl) wrapEl.style.cssText = '';
+    resetHeroRing();
+    const curEl = document.getElementById(TOUR_PAGE_IDS[tourIndex]);
+    if (curEl) {
+      curEl.classList.remove('tour-page-active');
+      curEl.style.cssText = '';
+    }
+  };
+
   const ZOOM_MS          = TOUR_ZOOM_MS;
   const ZOOM_OUT_MS      = 950;  // ring zoom-out animation: scale(18) → scale(1)
   const PAUSE_ON_RING_MS = 320;  // pause on full ring before spinning
   const targetCard       = TOUR_TARGET_CARD[nextIndex] || 0;
-  const currentCardIndex = TOUR_TARGET_CARD[tourIndex];
+  const currentCardIndex = TOUR_TARGET_CARD[tourIndex] || 0;
 
   const currentEl = document.getElementById(TOUR_PAGE_IDS[tourIndex]);
   const wrap = document.querySelector('.hero-card-ring-wrap');
@@ -3220,32 +3243,33 @@ function goTourCard(nextIndex) {
   const mCards = ring.querySelectorAll('.rc-card');
   const mFront = mCards[currentCardIndex];
   const mSym   = mFront ? mFront.querySelector('.suit-sym') : null;
-  let zoomOutOrigin = CARD_ZOOM_ORIGIN[tourIndex] || '50% 42%';
+  let oxPct = 50, oyPct = 42;
   if (mSym) {
     const wr = wrap.getBoundingClientRect();
     const sr = mSym.getBoundingClientRect();
-    const ox = ((sr.left + sr.width  / 2 - wr.left) / wr.width  * 100).toFixed(1);
-    const oy = ((sr.top  + sr.height / 2 - wr.top)  / wr.height * 100).toFixed(1);
-    zoomOutOrigin = `${ox}% ${oy}%`;
+    oxPct = parseFloat(((sr.left + sr.width  / 2 - wr.left) / wr.width  * 100).toFixed(1));
+    oyPct = parseFloat(((sr.top  + sr.height / 2 - wr.top)  / wr.height * 100).toFixed(1));
   }
 
-  // Jump to zoomed-in state (fills screen, as if we're still inside the card)
-  wrap.style.transformOrigin = zoomOutOrigin;
-  wrap.style.transform = 'scale(18)';
+  // Keep wrap at true-center margins. Use a translate in the transform to bring the suit symbol
+  // to screen center at scale(18); animating to scale(1) + translate(0,0) lands the ring at true
+  // center seamlessly — no post-zoom snap.
+  const tx = (130 - (oxPct / 100) * 260).toFixed(1);
+  const ty = (170 - (oyPct / 100) * 340).toFixed(1);
+
+  // Jump to zoomed-in state (suit symbol fills screen center)
+  wrap.style.transformOrigin = `${oxPct}% ${oyPct}%`;
+  wrap.style.transform = `translate(${tx}px, ${ty}px) scale(18)`;
   void wrap.offsetWidth;
 
-  // Animate zoom-out: ring pulls back from card detail to full ring view
+  // Animate zoom-out: ring pulls back to true-centered scale(1) with no jump
   wrap.style.transition = `transform ${ZOOM_OUT_MS}ms cubic-bezier(0.35, 0, 0.15, 1), opacity 240ms ease-out`;
-  wrap.style.transform = 'scale(1)';
+  wrap.style.transform = 'translate(0px, 0px) scale(1)';
   wrap.style.opacity = '1';
 
   // ── 3. After zoom-out + brief pause, spin ring to target card ──
   setTimeout(() => {
-    if (!alive()) {
-      if (currentEl) { currentEl.classList.remove('tour-page-active'); currentEl.style.cssText = ''; }
-      wrap.style.cssText = ''; resetHeroRing();
-      return;
-    }
+    if (!alive()) { abortCleanup(); return; }
     if (currentEl) {
       currentEl.classList.remove('tour-page-active');
       currentEl.style.transition = '';
@@ -3253,8 +3277,16 @@ function goTourCard(nextIndex) {
       currentEl.style.opacity = '';
     }
 
+    // Snap wrap to canonical centered state before the spin.
+    // Eliminates any sub-pixel transform/origin drift left over from the zoom-out transition.
+    wrap.style.transition = 'none';
+    wrap.style.transformOrigin = '50% 50%';
+    wrap.style.transform = 'translate(0px, 0px) scale(1)';
+    wrap.style.opacity = '1';
+    void wrap.offsetWidth;
+
     spinRingToCard(ring, targetCard).then(() => {
-      if (!alive()) { wrap.style.cssText = ''; resetHeroRing(); return; }
+      if (!alive()) { abortCleanup(); return; }
 
       // Measure target card suit symbol for zoom-in origin
       const cards = ring.querySelectorAll('.rc-card');
@@ -3282,10 +3314,10 @@ function goTourCard(nextIndex) {
 
       // Brief pause on target card, then zoom in through suit symbol
       setTimeout(() => {
-        if (!alive()) { wrap.style.cssText = ''; resetHeroRing(); return; }
+        if (!alive()) { abortCleanup(); return; }
         wrap.style.transformOrigin = origin;
         wrap.style.transition = `transform ${ZOOM_MS}ms cubic-bezier(0.25, 0, 0.6, 1), opacity ${ZOOM_MS * 0.2}ms ease-in ${ZOOM_MS * 0.75}ms`;
-        wrap.style.transform = 'scale(45)';
+        wrap.style.transform = 'translate(0px, 0px) scale(45)';
         wrap.style.opacity = '0';
 
         const newEl = document.getElementById(TOUR_PAGE_IDS[nextIndex]);
@@ -3304,7 +3336,7 @@ function goTourCard(nextIndex) {
         }, ZOOM_MS * 0.35);
 
         setTimeout(() => {
-          if (!alive()) { wrap.style.cssText = ''; resetHeroRing(); return; }
+          if (!alive()) { abortCleanup(); return; }
           const lsHero = document.querySelector('.ls-hero');
           const landing = document.getElementById('landing');
           const pipelineActive = !document.getElementById('pipeline')?.classList.contains('hidden');
@@ -3403,9 +3435,6 @@ function startTraining() {
     goPipeline();
     return;
   }
-  const landing = document.getElementById('landing');
-  if (!landing || landing.classList.contains('hidden')) { goPipeline(); return; }
-
   // Ripple expand from the Start Training button
   const btn = document.getElementById('nav-start-btn') || document.querySelector('.nav-start-btn');
   const btnRect = btn ? btn.getBoundingClientRect() : { left: window.innerWidth / 2, top: window.innerHeight / 2, width: 0, height: 0 };

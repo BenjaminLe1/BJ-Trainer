@@ -24,34 +24,42 @@
   // ── Colin face SVG ────────────────────────────────────────────
   function colinFaceSVG(size) {
     return `<svg width="${size}" height="${size}" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <!-- Shoulders -->
-      <path d="M10 64 Q10 54 20 51 Q26 49 32 49 Q38 49 44 51 Q54 54 54 64Z" fill="#3a5a8a"/>
+      <!-- Suit jacket + white shirt + tie -->
+      <path d="M8 64 Q8 52 18 48 L24 46 L32 52 L40 46 L46 48 Q56 52 56 64Z" fill="#1a1a2e"/>
+      <path d="M24 46 L28 54 L32 50 L36 54 L40 46 L32 52Z" fill="#f0ece0"/>
+      <!-- Tie -->
+      <path d="M30 50 L32 58 L34 50 L32 47Z" fill="#8b1a1a"/>
       <!-- Neck -->
-      <rect x="27" y="44" width="10" height="8" rx="3" fill="#e8b080"/>
-      <!-- Head -->
-      <ellipse cx="32" cy="29" rx="15" ry="17" fill="#f2c188"/>
-      <!-- Hair — short clean cut with side part -->
-      <path d="M17 26 C17 12 47 12 47 26 C45 15 38 9 32 9 C26 9 19 15 17 26Z" fill="#1a1208"/>
-      <path d="M17 22 C18 16 24 11 32 11 C32 11 28 14 27 20Z" fill="#2a1e10"/>
+      <rect x="28" y="43" width="8" height="6" rx="2" fill="#d4956a"/>
+      <!-- Head — sharper jaw -->
+      <path d="M17 28 C17 14 47 14 47 28 C47 38 42 46 32 46 C22 46 17 38 17 28Z" fill="#d4956a"/>
+      <!-- Slick hair — swept back -->
+      <path d="M16 26 C15 10 49 10 48 26 C46 14 40 8 32 8 C24 8 18 14 16 26Z" fill="#0d0d0d"/>
+      <path d="M16 26 C17 18 22 12 30 10 Q24 14 22 22Z" fill="#1a1a1a"/>
+      <!-- Hair shine -->
+      <path d="M22 13 Q28 10 34 11" stroke="#2a2a2a" stroke-width="1.5" stroke-linecap="round" fill="none"/>
       <!-- Ears -->
-      <ellipse cx="17" cy="30" rx="2.5" ry="3.5" fill="#dda060"/>
-      <ellipse cx="47" cy="30" rx="2.5" ry="3.5" fill="#dda060"/>
-      <!-- Eyebrows — clean, slightly tapered -->
-      <path d="M21 22 Q25 20 28 21.5" stroke="#1a1208" stroke-width="2" stroke-linecap="round" fill="none"/>
-      <path d="M36 21.5 Q39 20 43 22" stroke="#1a1208" stroke-width="2" stroke-linecap="round" fill="none"/>
-      <!-- Eyes -->
-      <ellipse cx="25" cy="28" rx="3.8" ry="3.2" fill="#fff"/>
-      <ellipse cx="39" cy="28" rx="3.8" ry="3.2" fill="#fff"/>
-      <circle cx="25.5" cy="28.5" r="2.2" fill="#2e1a0a"/>
-      <circle cx="39.5" cy="28.5" r="2.2" fill="#2e1a0a"/>
-      <circle cx="26.2" cy="27.6" r="0.7" fill="#fff"/>
-      <circle cx="40.2" cy="27.6" r="0.7" fill="#fff"/>
+      <ellipse cx="17" cy="30" rx="2.2" ry="3" fill="#c4855a"/>
+      <ellipse cx="47" cy="30" rx="2.2" ry="3" fill="#c4855a"/>
+      <!-- Sharp eyebrows -->
+      <path d="M20 23 L28 21" stroke="#0d0d0d" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+      <path d="M36 21 L44 23" stroke="#0d0d0d" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+      <!-- Sunglasses frame -->
+      <rect x="19" y="25" width="10" height="7" rx="3" fill="#0d0d0d"/>
+      <rect x="35" y="25" width="10" height="7" rx="3" fill="#0d0d0d"/>
+      <line x1="29" y1="28" x2="35" y2="28" stroke="#0d0d0d" stroke-width="1.8"/>
+      <line x1="19" y1="28" x2="17" y2="27" stroke="#0d0d0d" stroke-width="1.5"/>
+      <line x1="45" y1="28" x2="47" y2="27" stroke="#0d0d0d" stroke-width="1.5"/>
+      <!-- Lens shine -->
+      <path d="M21 26.5 Q23 26 24 27" stroke="rgba(255,255,255,0.25)" stroke-width="1" stroke-linecap="round" fill="none"/>
+      <path d="M37 26.5 Q39 26 40 27" stroke="rgba(255,255,255,0.25)" stroke-width="1" stroke-linecap="round" fill="none"/>
       <!-- Nose -->
-      <path d="M30 33 Q32 36 34 33" stroke="#c4845a" stroke-width="1.4" stroke-linecap="round" fill="none"/>
-      <!-- Mouth — confident smile -->
-      <path d="M25 39 Q32 44 39 39" stroke="#b06030" stroke-width="1.8" stroke-linecap="round" fill="none"/>
-      <path d="M25 39 Q25.5 40.5 26.5 40.5" stroke="#b06030" stroke-width="1.2" stroke-linecap="round" fill="none"/>
-      <path d="M39 39 Q38.5 40.5 37.5 40.5" stroke="#b06030" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+      <path d="M30.5 34 Q32 36.5 33.5 34" stroke="#b06040" stroke-width="1.3" stroke-linecap="round" fill="none"/>
+      <!-- Smirk -->
+      <path d="M26 40 Q30 43 36 41" stroke="#8a4a28" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+      <!-- Jaw definition -->
+      <path d="M20 36 Q18 40 20 44" stroke="#c07850" stroke-width="0.8" stroke-linecap="round" opacity="0.4" fill="none"/>
+      <path d="M44 36 Q46 40 44 44" stroke="#c07850" stroke-width="0.8" stroke-linecap="round" opacity="0.4" fill="none"/>
     </svg>`;
   }
 

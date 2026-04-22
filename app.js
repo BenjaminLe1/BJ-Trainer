@@ -3161,12 +3161,14 @@ function goTourCard(nextIndex) {
   }
 
   tourAnimating = true;
-  const myGen = ++tourGeneration; // snapshot — stale if startTraining increments this
+  const myGen = ++tourGeneration;
   const alive = () => myGen === tourGeneration;
 
-  const ZOOM_MS     = TOUR_ZOOM_MS;
-  const ZOOM_OUT_MS = 1200;
-  const targetCard  = TOUR_TARGET_CARD[nextIndex] || 0;
+  const ZOOM_MS          = TOUR_ZOOM_MS;
+  const ZOOM_OUT_MS      = 950;  // ring zoom-out animation: scale(18) → scale(1)
+  const PAUSE_ON_RING_MS = 320;  // pause on full ring before spinning
+  const targetCard       = TOUR_TARGET_CARD[nextIndex] || 0;
+  const currentCardIndex = TOUR_TARGET_CARD[tourIndex];
 
   const currentEl = document.getElementById(TOUR_PAGE_IDS[tourIndex]);
   const wrap = document.querySelector('.hero-card-ring-wrap');
@@ -3179,20 +3181,62 @@ function goTourCard(nextIndex) {
     return;
   }
 
-  // ── 1. Fade OUT current page — mirrors startLearnMore landing exit (scale up + fade) ──
+  // ── 1. Fade out current page (simultaneous with ring zoom-out) ──
   if (currentEl) {
     currentEl.style.transition = 'none';
     currentEl.style.transform = 'scale(1)';
     currentEl.style.opacity = '1';
     void currentEl.offsetWidth;
-    currentEl.style.transition = `opacity ${ZOOM_OUT_MS * 0.4}ms ease-in, transform ${ZOOM_OUT_MS}ms cubic-bezier(0.25, 0, 0.6, 1)`;
+    currentEl.style.transition = `opacity ${ZOOM_OUT_MS * 0.35}ms ease-in, transform ${ZOOM_OUT_MS * 0.8}ms cubic-bezier(0.25, 0, 0.6, 1)`;
     currentEl.style.opacity = '0';
     currentEl.style.transform = 'scale(1.08)';
   }
 
-  // ── 2. After zoom-out, show hero ring centered on CURRENT card, then spin to target ──
+  // ── 2. Move ring to body, snap current card front, zoom out from card to full ring ──
+  document.body.appendChild(wrap);
+  wrap.classList.remove('panning', 'zoom-through', 'diving');
+  ring.getAnimations().forEach(a => a.cancel());
+  ring.style.animation = 'none';
+  const snapAngle = (360 - (currentCardIndex * 45) % 360) % 360;
+  ring.style.transform = `rotateX(14deg) rotateY(${snapAngle}deg)`;
+  void ring.offsetWidth;
+
+  // Place ring centered at scale(1) first so we can measure the suit symbol accurately
+  wrap.style.cssText = `
+    position: fixed; left: 50%; top: 50%;
+    right: auto; margin-left: -130px; margin-top: -170px;
+    width: 260px; height: 340px;
+    perspective: 900px; z-index: 501;
+    opacity: 0; animation: none; transition: none;
+  `;
+  void wrap.offsetWidth;
+
+  // Measure current front card's suit symbol for zoom-out origin
+  const mCards = ring.querySelectorAll('.rc-card');
+  const mFront = mCards[currentCardIndex];
+  const mSym   = mFront ? mFront.querySelector('.suit-sym') : null;
+  let zoomOutOrigin = CARD_ZOOM_ORIGIN[tourIndex] || '50% 42%';
+  if (mSym) {
+    const wr = wrap.getBoundingClientRect();
+    const sr = mSym.getBoundingClientRect();
+    const ox = ((sr.left + sr.width  / 2 - wr.left) / wr.width  * 100).toFixed(1);
+    const oy = ((sr.top  + sr.height / 2 - wr.top)  / wr.height * 100).toFixed(1);
+    zoomOutOrigin = `${ox}% ${oy}%`;
+  }
+
+  // Jump to zoomed-in state (fills screen, as if we're still inside the card)
+  wrap.style.transformOrigin = zoomOutOrigin;
+  wrap.style.transform = 'scale(18)';
+  void wrap.offsetWidth;
+
+  // Animate zoom-out: ring pulls back from card detail to full ring view
+  wrap.style.transition = `transform ${ZOOM_OUT_MS}ms cubic-bezier(0.35, 0, 0.15, 1), opacity 240ms ease-out`;
+  wrap.style.transform = 'scale(1)';
+  wrap.style.opacity = '1';
+
+  // ── 3. After zoom-out + brief pause, spin ring to target card ──
   setTimeout(() => {
-    if (!alive()) { // aborted — clean up and bail
+    if (!alive()) {
       if (currentEl) { currentEl.classList.remove('tour-page-active'); currentEl.style.cssText = ''; }
       wrap.style.cssText = ''; resetHeroRing();
       return;
@@ -3204,38 +3248,14 @@ function goTourCard(nextIndex) {
       currentEl.style.opacity = '';
     }
 
-    // Move hero ring to body, center it on screen
-    document.body.appendChild(wrap);
-    wrap.classList.remove('panning', 'zoom-through', 'diving');
-
-    // Snap ring to the CURRENT card facing front so user sees it before spinning
-    ring.getAnimations().forEach(a => a.cancel());
-    ring.style.animation = 'none';
-    const currentCardIndex = TOUR_TARGET_CARD[tourIndex];
-    const snapAngle = (360 - (currentCardIndex * 45) % 360) % 360;
-    ring.style.transform = `rotateX(14deg) rotateY(${snapAngle}deg)`;
-    void ring.offsetWidth;
-
-    wrap.style.cssText = `
-      position: fixed; left: 50%; top: 50%;
-      right: auto; transform: none;
-      margin-left: -130px; margin-top: -170px;
-      width: 260px; height: 340px;
-      perspective: 900px; z-index: 501;
-      opacity: 1; animation: none; transition: none;
-    `;
-
-    // Pause so user sees the current card, then spin to target
-    setTimeout(() => {
-    if (!alive()) { wrap.style.cssText = ''; resetHeroRing(); return; }
     spinRingToCard(ring, targetCard).then(() => {
       if (!alive()) { wrap.style.cssText = ''; resetHeroRing(); return; }
 
-      // Measure the actual suit-symbol position now that the target card faces front
+      // Measure target card suit symbol for zoom-in origin
       const cards = ring.querySelectorAll('.rc-card');
       const frontCard = cards[targetCard];
       const sym = frontCard ? frontCard.querySelector('.suit-sym') : null;
-      let origin = '50% 42%';
+      let origin = CARD_ZOOM_ORIGIN[nextIndex] || '50% 42%';
       if (sym) {
         const wrapRect = wrap.getBoundingClientRect();
         const symRect  = sym.getBoundingClientRect();
@@ -3244,7 +3264,7 @@ function goTourCard(nextIndex) {
         origin = `${ox}% ${oy}%`;
       }
 
-      // Update index + clean up old page — do NOT make new page visible yet
+      // Update index + clean up old page
       tourIndex = nextIndex;
       const pages = document.getElementById('tour-pages');
       TOUR_PAGE_IDS.forEach((id, i) => {
@@ -3255,7 +3275,7 @@ function goTourCard(nextIndex) {
       if (pages) pages.scrollTop = 0;
       renderTourProgress(nextIndex);
 
-      // Brief pause to see the card, then zoom in through the measured suit symbol
+      // Brief pause on target card, then zoom in through suit symbol
       setTimeout(() => {
         if (!alive()) { wrap.style.cssText = ''; resetHeroRing(); return; }
         wrap.style.transformOrigin = origin;
@@ -3265,7 +3285,6 @@ function goTourCard(nextIndex) {
 
         const newEl = document.getElementById(TOUR_PAGE_IDS[nextIndex]);
 
-        // Start page fade-in at 35% of zoom — same proportion as startLearnMore
         setTimeout(() => {
           if (!alive()) return;
           if (newEl) {
@@ -3279,7 +3298,6 @@ function goTourCard(nextIndex) {
           }
         }, ZOOM_MS * 0.35);
 
-        // Clean up ring after zoom fully completes
         setTimeout(() => {
           if (!alive()) { wrap.style.cssText = ''; resetHeroRing(); return; }
           const lsHero = document.querySelector('.ls-hero');
@@ -3300,11 +3318,9 @@ function goTourCard(nextIndex) {
           tourAnimating = false;
           updateSideArrows();
         }, ZOOM_MS + 40);
-      }, 400);
+      }, 380);
     });
-    }, 450); // pause on current card before spinning
-
-  }, ZOOM_OUT_MS + 10);
+  }, ZOOM_OUT_MS + PAUSE_ON_RING_MS);
 }
 
 function tourNext() {
@@ -3384,11 +3400,38 @@ function startTraining() {
   }
   const landing = document.getElementById('landing');
   if (!landing || landing.classList.contains('hidden')) { goPipeline(); return; }
-  landing.classList.add('leaving');
+
+  // Ripple expand from the Start Training button
+  const btn = document.getElementById('nav-start-btn') || document.querySelector('.nav-start-btn');
+  const btnRect = btn ? btn.getBoundingClientRect() : { left: window.innerWidth / 2, top: window.innerHeight / 2, width: 0, height: 0 };
+  const cx = btnRect.left + btnRect.width / 2;
+  const cy = btnRect.top + btnRect.height / 2;
+  const maxR = Math.ceil(Math.hypot(Math.max(cx, window.innerWidth - cx), Math.max(cy, window.innerHeight - cy)));
+
+  const ripple = document.createElement('div');
+  ripple.style.cssText = `
+    position: fixed; z-index: 9999; pointer-events: none;
+    left: ${cx}px; top: ${cy}px;
+    width: 0; height: 0;
+    border-radius: 50%;
+    background: #0a0a0a;
+    transform: translate(-50%, -50%);
+    transition: width 600ms cubic-bezier(0.4, 0, 0.2, 1), height 600ms cubic-bezier(0.4, 0, 0.2, 1);
+  `;
+  document.body.appendChild(ripple);
+
+  void ripple.offsetWidth;
+  ripple.style.width  = `${maxR * 2}px`;
+  ripple.style.height = `${maxR * 2}px`;
+
   setTimeout(() => {
-    landing.classList.remove('leaving');
     goPipeline();
-  }, 280);
+    setTimeout(() => {
+      ripple.style.transition = 'opacity 300ms ease';
+      ripple.style.opacity = '0';
+      setTimeout(() => ripple.remove(), 320);
+    }, 80);
+  }, 580);
 }
 
 // ── Side arrow visibility + wiring ──────────────────────────

@@ -3025,8 +3025,8 @@ function spinRingToCard(ring, cardIndex) {
       { transform: `rotateX(14deg) rotateY(${currentAngle}deg)` },
       { transform: `rotateX(14deg) rotateY(${targetAngle}deg)` }
     ], {
-      duration: 1800,
-      easing: 'cubic-bezier(0.15, 0, 0.25, 1)',
+      duration: 1000,
+      easing: 'linear',
       fill: 'forwards'
     });
 
@@ -3058,8 +3058,8 @@ function spinRingToAce(ring) {
       { transform: `rotateX(14deg) rotateY(${currentAngle}deg)` },
       { transform: `rotateX(14deg) rotateY(${targetAngle}deg)` }
     ], {
-      duration: 1800,
-      easing: 'cubic-bezier(0.15, 0, 0.25, 1)',
+      duration: 1000,
+      easing: 'linear',
       fill: 'forwards'
     });
 

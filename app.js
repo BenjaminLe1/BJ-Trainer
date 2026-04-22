@@ -3030,7 +3030,7 @@ function spinRingToCard(ring, cardIndex) {
       { transform: `rotateX(14deg) rotateY(${currentAngle}deg)` },
       { transform: `rotateX(14deg) rotateY(${targetAngle}deg)` }
     ], {
-      duration: 2000,
+      duration: 1400,
       easing: 'cubic-bezier(0.15, 0, 0.25, 1)',
       fill: 'forwards'
     });
@@ -3063,7 +3063,7 @@ function spinRingToAce(ring) {
       { transform: `rotateX(14deg) rotateY(${currentAngle}deg)` },
       { transform: `rotateX(14deg) rotateY(${targetAngle}deg)` }
     ], {
-      duration: 2000,
+      duration: 1400,
       easing: 'cubic-bezier(0.15, 0, 0.25, 1)',
       fill: 'forwards'
     });
@@ -3102,9 +3102,20 @@ function startLearnMore() {
   const pan = panHeroRingToCenter();
 
   if (!ring) return;
+
+  // Generation guard: if the user clicks Next before startLearnMore's finale timeouts fire,
+  // goTourCard bumps tourGeneration — stale callbacks below self-cancel instead of clobbering
+  // the in-flight zoom-out (which would snap the ring back to CSS defaults → "ring jumps up").
+  // Note: we deliberately do NOT set tourAnimating=true here, so Next is still clickable once
+  // the tour stage appears; the generation guard alone is what prevents interference.
+  const myGen = ++tourGeneration;
+  const alive = () => myGen === tourGeneration;
+
   spinRingToAce(ring).then(() => {
+    if (!alive()) return;
     // Brief pause to let the spin settle visually
     setTimeout(() => {
+      if (!alive()) return;
       // Prepare tour stage behind landing (invisible)
       tourIndex = 0;
       if (stage) {
@@ -3131,6 +3142,7 @@ function startLearnMore() {
 
       // Cleanup after fade completes
       setTimeout(() => {
+        if (!alive()) return;
         if (landing) {
           landing.classList.add('hidden');
           landing.style.transition = '';
@@ -3154,7 +3166,7 @@ function startLearnMore() {
 // Each tour page maps to a card: page0→Ace♠(0), page1→King♥(1), page2→Queen♠(2)
 const TOUR_TARGET_CARD = [0, 1, 2];
 // Shared zoom duration for all card-to-page transitions (startLearnMore + goTourCard)
-const TOUR_ZOOM_MS = 1800;
+const TOUR_ZOOM_MS = 1200;
 // Transform origin for zooming INTO each card — targets the suit symbol
 const CARD_ZOOM_ORIGIN = ['50% 42%', '50% 47%', '50% 42%'];
 
@@ -3192,7 +3204,7 @@ function goTourCard(nextIndex) {
   };
 
   const ZOOM_MS          = TOUR_ZOOM_MS;
-  const ZOOM_OUT_MS      = 950;  // ring zoom-out animation: scale(18) → scale(1)
+  const ZOOM_OUT_MS      = 650;  // ring zoom-out animation: scale(18) → scale(1)
   const PAUSE_ON_RING_MS = 320;  // pause on full ring before spinning
   const targetCard       = TOUR_TARGET_CARD[nextIndex] || 0;
   const currentCardIndex = TOUR_TARGET_CARD[tourIndex] || 0;
@@ -3251,18 +3263,17 @@ function goTourCard(nextIndex) {
     oyPct = parseFloat(((sr.top  + sr.height / 2 - wr.top)  / wr.height * 100).toFixed(1));
   }
 
-  // Keep wrap at true-center margins. Use a translate in the transform to bring the suit symbol
-  // to screen center at scale(18); animating to scale(1) + translate(0,0) lands the ring at true
-  // center seamlessly — no post-zoom snap.
+  // Zoom-out anchored on the suit symbol: translate compensates so the suit sits at screen
+  // center at scale(18); animating to scale(1)+translate(0,0) lands the ring at true center.
   const tx = (130 - (oxPct / 100) * 260).toFixed(1);
   const ty = (170 - (oyPct / 100) * 340).toFixed(1);
 
-  // Jump to zoomed-in state (suit symbol fills screen center)
   wrap.style.transformOrigin = `${oxPct}% ${oyPct}%`;
   wrap.style.transform = `translate(${tx}px, ${ty}px) scale(18)`;
   void wrap.offsetWidth;
 
-  // Animate zoom-out: ring pulls back to true-centered scale(1) with no jump
+  // Animate zoom-out: ring pulls back to true-centered scale(1), suit-symbol stays visually
+  // anchored near screen center as more of the card comes into view around it.
   wrap.style.transition = `transform ${ZOOM_OUT_MS}ms cubic-bezier(0.35, 0, 0.15, 1), opacity 240ms ease-out`;
   wrap.style.transform = 'translate(0px, 0px) scale(1)';
   wrap.style.opacity = '1';

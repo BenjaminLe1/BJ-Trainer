@@ -1855,19 +1855,22 @@ h3 {
 }
 .ph-label path {
   fill: none;
-  stroke: #b8922a;
-  stroke-width: 1.8;
+  stroke: #f4e3a8;
+  stroke-width: 1.4;
+  filter: drop-shadow(0 0 2px rgba(255, 210, 120, 0.9)) drop-shadow(0 0 6px rgba(255, 180, 70, 0.55)) drop-shadow(0 0 14px rgba(255, 170, 60, 0.35));
   transition: stroke 0.25s ease;
 }
 .ph-label circle {
   fill: none;
-  stroke: #b8922a;
-  stroke-width: 1.8;
+  stroke: #f4e3a8;
+  stroke-width: 1.4;
+  filter: drop-shadow(0 0 2px rgba(255, 210, 120, 0.9)) drop-shadow(0 0 6px rgba(255, 180, 70, 0.55)) drop-shadow(0 0 14px rgba(255, 170, 60, 0.35));
   transition: stroke 0.25s ease;
 }
 .ph-label .ph-dot-inner {
-  fill: #b8922a;
+  fill: #f4e3a8;
   stroke: none;
+  filter: drop-shadow(0 0 2px rgba(255, 210, 120, 0.95)) drop-shadow(0 0 5px rgba(255, 180, 70, 0.6));
   transition: fill 0.25s ease;
 }
 .ph-label text {
@@ -1877,7 +1880,9 @@ h3 {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-size: 22px;
-  fill: #b8922a;
+  fill: #d9b24a;
+  stroke: none;
+  filter: drop-shadow(0 0 2px rgba(255, 220, 130, 0.9)) drop-shadow(0 0 6px rgba(255, 185, 75, 0.65)) drop-shadow(0 0 14px rgba(255, 165, 55, 0.4));
   transition: fill 0.25s ease;
   user-select: none;
 }
@@ -3448,7 +3453,7 @@ kbd { font-size: 0.68rem; font-family: var(--font-sans); background: var(--tr-pa
   border-bottom-left-radius: 4px;
 }
 .colin-msg-user .colin-msg-text {
-  background: var(--accent);
+  background: #2d5a38;
   color: #fff;
   border-bottom-right-radius: 4px;
 }
@@ -5327,8 +5332,8 @@ kbd {
 
 /* ── Felt table — match full-training aesthetic ──────────── */
 .felt-table {
-  background: #163320 !important;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%23163320'/%3E%3Crect x='0' y='0' width='1' height='1' fill='rgba(255,255,255,0.012)'/%3E%3Crect x='2' y='2' width='1' height='1' fill='rgba(255,255,255,0.012)'/%3E%3C/svg%3E") !important;
+  background: #2d5a38 !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%232d5a38'/%3E%3Crect x='0' y='0' width='1' height='1' fill='rgba(255,255,255,0.02)'/%3E%3Crect x='2' y='2' width='1' height='1' fill='rgba(255,255,255,0.02)'/%3E%3C/svg%3E") !important;
   border: 1.5px solid rgba(201,168,76,0.18) !important;
   border-radius: 24px !important;
   box-shadow:
@@ -5507,7 +5512,7 @@ kbd {
   background: rgba(230, 218, 195, 0.7) !important;
   color: #2a1a06 !important;
 }
-.colin-msg-user .colin-msg-text { color: #fff !important; }
+.colin-msg-user .colin-msg-text { background: #2d5a38 !important; color: #fff !important; }
 .colin-typing-dots {
   background: rgba(230, 218, 195, 0.7) !important;
 }

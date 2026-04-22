@@ -1191,6 +1191,11 @@ const BasicStrategy = {
         const suits = shuffle([...SUITS]);
         p1 = cardEl({rank:aRank,suit:suits[0].name,sym:suits[0].sym});
         p2 = cardEl({rank:bRank,suit:suits[1].name,sym:suits[1].sym});
+        if (aRank === bRank) {
+          const pk = aRank === '10' ? 'TT' : aRank + aRank;
+          hand = { type:'pair', pairKey: pk, label: aRank==='10'?'10-10':aRank+'-'+aRank, soft:false };
+          correctAction = bsLookup(hand, dealerIdx);
+        }
       }
 
       // Stagger classes = deal order
@@ -1645,7 +1650,9 @@ const Deviations = {
       playerHandEl.appendChild(p2);
 
       actionsEl.innerHTML = '';
-      ['H','S','D'].forEach(a => {
+      const sameRank = cards[0].rank === cards[1].rank;
+      const actionList = sameRank ? ['H','S','D','P'] : ['H','S','D'];
+      actionList.forEach(a => {
         const btn = document.createElement('button');
         btn.className = 'sk-action-btn';
         btn.textContent = ACTION_FULL[a];

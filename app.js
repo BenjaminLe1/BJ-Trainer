@@ -2826,6 +2826,9 @@ function resetHeroRing() {
     ring.style.animation = 'cardRingSpin 40s linear 0s infinite';
   }
 
+  // Re-enable card repulsion (startLearnMore cancels CSS animations without firing animationend)
+  if (markCardsRepulsionReady) markCardsRepulsionReady();
+
   // Fade back in after the snap settles (ring wrap is inside #landing so
   // it's invisible while the tour stage is open anyway)
   setTimeout(() => {
@@ -3202,9 +3205,10 @@ function goTourCard(nextIndex) {
   void ring.offsetWidth;
 
   // Place ring centered at scale(1) first so we can measure the suit symbol accurately
+  // transform: none is required to override the CSS class's translateY(-50%)
   wrap.style.cssText = `
     position: fixed; left: 50%; top: 50%;
-    right: auto; margin-left: -130px; margin-top: -170px;
+    right: auto; transform: none; margin-left: -130px; margin-top: -170px;
     width: 260px; height: 340px;
     perspective: 900px; z-index: 501;
     opacity: 0; animation: none; transition: none;
@@ -3508,6 +3512,8 @@ initTourPages();
 
 
 // ── Per-card mouse repulsion (proximity-based, no ring tilt) ─
+let markCardsRepulsionReady = null; // called by resetHeroRing after tour aborts animation
+
 (function initCardRepulsion() {
   const cards   = document.querySelectorAll('.rc-card');
   const hero    = document.querySelector('.ls-hero');
@@ -3522,6 +3528,9 @@ initTourPages();
   const state = Array.from(cards).map((_card, i) => ({
     ry: i * 45, targetY: 0, curY: 0, ready: false,
   }));
+
+  // Expose so resetHeroRing can re-enable repulsion after tour aborts CSS animations
+  markCardsRepulsionReady = () => state.forEach(s => { s.ready = true; s.targetY = 0; s.curY = 0; });
 
   cards.forEach((card, i) => {
     card.addEventListener('animationend', e => {

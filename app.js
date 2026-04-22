@@ -3025,8 +3025,8 @@ function spinRingToCard(ring, cardIndex) {
       { transform: `rotateX(14deg) rotateY(${currentAngle}deg)` },
       { transform: `rotateX(14deg) rotateY(${targetAngle}deg)` }
     ], {
-      duration: 950,
-      easing: 'cubic-bezier(0.1, 0, 0.3, 1)',
+      duration: 1800,
+      easing: 'cubic-bezier(0.15, 0, 0.25, 1)',
       fill: 'forwards'
     });
 
@@ -3058,8 +3058,8 @@ function spinRingToAce(ring) {
       { transform: `rotateX(14deg) rotateY(${currentAngle}deg)` },
       { transform: `rotateX(14deg) rotateY(${targetAngle}deg)` }
     ], {
-      duration: 950,
-      easing: 'cubic-bezier(0.1, 0, 0.3, 1)', // fast start, dramatic deceleration to stop
+      duration: 1800,
+      easing: 'cubic-bezier(0.15, 0, 0.25, 1)',
       fill: 'forwards'
     });
 
@@ -3164,6 +3164,7 @@ function goTourCard(nextIndex) {
   }
 
   tourAnimating = true;
+  if (pauseCardRepulsion) pauseCardRepulsion(); // freeze cards at neutral translateY
   const myGen = ++tourGeneration;
   const alive = () => myGen === tourGeneration;
 
@@ -3512,7 +3513,8 @@ initTourPages();
 
 
 // ── Per-card mouse repulsion (proximity-based, no ring tilt) ─
-let markCardsRepulsionReady = null; // called by resetHeroRing after tour aborts animation
+let markCardsRepulsionReady = null; // called by resetHeroRing to resume repulsion
+let pauseCardRepulsion = null;      // called by goTourCard to freeze cards at neutral
 
 (function initCardRepulsion() {
   const cards   = document.querySelectorAll('.rc-card');
@@ -3530,7 +3532,20 @@ let markCardsRepulsionReady = null; // called by resetHeroRing after tour aborts
   }));
 
   // Expose so resetHeroRing can re-enable repulsion after tour aborts CSS animations
-  markCardsRepulsionReady = () => state.forEach(s => { s.ready = true; s.targetY = 0; s.curY = 0; });
+  markCardsRepulsionReady = () => {
+    cards.forEach((card, i) => {
+      card.style.transform = `rotateY(${i * 45}deg) translateZ(210px) translateY(0px)`;
+    });
+    state.forEach(s => { s.ready = true; s.targetY = 0; s.curY = 0; });
+  };
+
+  // Pause tick and reset cards to neutral so zoom-out measurement isn't skewed by repulsion
+  pauseCardRepulsion = () => {
+    state.forEach(s => { s.ready = false; s.targetY = 0; s.curY = 0; });
+    cards.forEach((card, i) => {
+      card.style.transform = `rotateY(${i * 45}deg) translateZ(210px) translateY(0px)`;
+    });
+  };
 
   cards.forEach((card, i) => {
     card.addEventListener('animationend', e => {

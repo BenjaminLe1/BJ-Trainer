@@ -593,7 +593,7 @@ function playPipelineVideo() {
   drawPipelineFrame(0);
   pipelineAnimTimeout = setTimeout(() => {
     pipelineAnimRaf = requestAnimationFrame(animate);
-  }, 1000);
+  }, 1500);
 }
 
 function renderPipelineStatus() {
@@ -3446,37 +3446,263 @@ function startTraining() {
     goPipeline();
     return;
   }
-  // Ripple expand from the Start Training button
-  const btn = document.getElementById('nav-start-btn') || document.querySelector('.nav-start-btn');
-  const btnRect = btn ? btn.getBoundingClientRect() : { left: window.innerWidth / 2, top: window.innerHeight / 2, width: 0, height: 0 };
-  const cx = btnRect.left + btnRect.width / 2;
-  const cy = btnRect.top + btnRect.height / 2;
-  const maxR = Math.ceil(Math.hypot(Math.max(cx, window.innerWidth - cx), Math.max(cy, window.innerHeight - cy)));
-
-  const ripple = document.createElement('div');
-  ripple.style.cssText = `
-    position: fixed; z-index: 9999; pointer-events: none;
-    left: ${cx}px; top: ${cy}px;
-    width: 0; height: 0;
-    border-radius: 50%;
-    background: #0a0a0a;
-    transform: translate(-50%, -50%);
-    transition: width 600ms cubic-bezier(0.4, 0, 0.2, 1), height 600ms cubic-bezier(0.4, 0, 0.2, 1);
+  // Realistic slab doors — uniform ivory color with photographic surface texture.
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed; inset: 0; z-index: 9999; pointer-events: none; overflow: hidden;
+    background: transparent;
   `;
-  document.body.appendChild(ripple);
 
-  void ripple.offsetWidth;
-  ripple.style.width  = `${maxR * 2}px`;
-  ripple.style.height = `${maxR * 2}px`;
+  // Fine speckle — simulates micro-dust/paint grain
+  const noiseSvg = "data:image/svg+xml;utf8," + encodeURIComponent(
+    `<svg xmlns='http://www.w3.org/2000/svg' width='260' height='260'>
+       <filter id='n'>
+         <feTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='2' seed='5'/>
+         <feColorMatrix values='0 0 0 0 0.35  0 0 0 0 0.28  0 0 0 0 0.15  0 0 0 0.28 0'/>
+       </filter>
+       <rect width='100%' height='100%' filter='url(#n)'/>
+     </svg>`
+  );
 
+  // Vertical wood-grain streaks — long thin turbulence giving the paint depth
+  const grainSvg = "data:image/svg+xml;utf8," + encodeURIComponent(
+    `<svg xmlns='http://www.w3.org/2000/svg' width='420' height='900'>
+       <filter id='g'>
+         <feTurbulence type='fractalNoise' baseFrequency='0.015 0.9' numOctaves='2' seed='7'/>
+         <feColorMatrix values='0 0 0 0 0.28  0 0 0 0 0.22  0 0 0 0 0.10  0 0 0 0.22 0'/>
+       </filter>
+       <rect width='100%' height='100%' filter='url(#g)'/>
+     </svg>`
+  );
+
+  const DOOR_COLOR = '#ece0c3'; // uniform ivory — no gradient across the face
+
+  const makeDoor = (side) => {
+    const d = document.createElement('div');
+    const isLeft = side === 'left';
+    d.style.cssText = `
+      position: absolute; top: 0; ${isLeft ? 'left' : 'right'}: 0;
+      width: 50.2%; height: 100%;
+      background-color: ${DOOR_COLOR};
+      background-image: url("${noiseSvg}"), url("${grainSvg}");
+      background-repeat: repeat, repeat-y;
+      background-size: 260px 260px, 100% 900px;
+      background-blend-mode: multiply, multiply;
+      box-shadow:
+        /* dark hairline on the outer edge only */
+        inset ${isLeft ? '1px' : '-1px'} 0 0 rgba(60, 40, 10, 0.5),
+        /* hairline top and bottom edges */
+        inset 0 1px 0 rgba(255, 252, 235, 0.5),
+        inset 0 -1px 0 rgba(60, 40, 10, 0.5),
+        /* ambient outer drop shadow so the door sits in the room */
+        0 60px 140px rgba(40, 25, 5, 0.55),
+        0 24px 50px rgba(40, 25, 5, 0.35),
+        0 6px 14px rgba(40, 25, 5, 0.25);
+      transform: translateX(${isLeft ? '-101%' : '101%'});
+      transition: transform 617ms cubic-bezier(0.58, 0.02, 0.28, 1);
+      will-change: transform;
+      overflow: hidden;
+      clip-path: ${isLeft
+        ? 'inset(-100vh 0 -100vh -100vw)'
+        : 'inset(-100vh -100vw -100vh 0)'};
+    `;
+
+    // Brushed stainless ladder/barn-door pull — cylindrical bar on two tapered standoffs.
+    const pull = document.createElement('div');
+    pull.style.cssText = `
+      position: absolute; top: 50%; ${isLeft ? 'right' : 'left'}: 60px;
+      width: 18px; height: 280px;
+      transform: translateY(-50%);
+    `;
+
+    // Soft contact shadow behind the whole handle cast onto the door
+    const castShadow = document.createElement('div');
+    castShadow.style.cssText = `
+      position: absolute; top: 4%; left: -4px; right: -4px; height: 92%;
+      border-radius: 14px;
+      background: rgba(10, 8, 4, 0.28);
+      filter: blur(9px);
+    `;
+
+    // Standoff post: a short tapered cylinder from the door face to the bar.
+    // Rendered as a base disc (where it meets the door) + a trapezoidal/flared
+    // neck with its own cylindrical shading.
+    const makePost = (topPct) => {
+      const p = document.createElement('div');
+      p.style.cssText = `
+        position: absolute; top: ${topPct}%; left: 50%;
+        width: 30px; height: 26px;
+        transform: translate(-50%, -50%);
+      `;
+      // Neck — cylindrical with vertical steel shading
+      const neck = document.createElement('div');
+      neck.style.cssText = `
+        position: absolute; top: 2px; left: 50%;
+        width: 18px; height: 22px;
+        border-radius: 4px / 8px;
+        transform: translateX(-50%);
+        background:
+          linear-gradient(90deg,
+            #4e5358 0%,
+            #8b9095 18%,
+            #c8ccd0 40%,
+            #eef0f2 52%,
+            #c8ccd0 64%,
+            #8b9095 84%,
+            #4e5358 100%);
+        box-shadow:
+          0 2px 4px rgba(0, 0, 0, 0.55),
+          inset 0 1px 0 rgba(255, 255, 255, 0.65),
+          inset 0 -1px 2px rgba(0, 0, 0, 0.55);
+      `;
+      // Base flange — wider disc at the door surface
+      const base = document.createElement('div');
+      base.style.cssText = `
+        position: absolute; bottom: 0; left: 50%;
+        width: 26px; height: 10px;
+        border-radius: 50%;
+        transform: translateX(-50%);
+        background:
+          radial-gradient(ellipse 60% 80% at 50% 30%, #e3e6e9 0%, #a8acb1 55%, #565a5f 100%);
+        box-shadow:
+          0 4px 10px rgba(0, 0, 0, 0.55),
+          0 1px 2px rgba(0, 0, 0, 0.7),
+          inset 0 1px 0 rgba(255, 255, 255, 0.7),
+          inset 0 -1px 2px rgba(0, 0, 0, 0.55);
+      `;
+      p.appendChild(neck);
+      p.appendChild(base);
+      return p;
+    };
+    const postTop = makePost(9);
+    const postBot = makePost(91);
+
+    // The bar — stainless cylinder with lengthwise brushed finish
+    const bar = document.createElement('div');
+    bar.style.cssText = `
+      position: absolute; top: 0; left: 50%;
+      width: 16px; height: 100%;
+      border-radius: 8px;
+      transform: translateX(-50%);
+      overflow: hidden;
+      /* Cylindrical shading across the width: dark edges, hot specular stripe just off-center,
+         soft second highlight, and darkening at the very extremes. */
+      background: linear-gradient(90deg,
+        #3b4045 0%,
+        #5d6166 8%,
+        #8a8f94 22%,
+        #b7bbc0 34%,
+        #e6e9ec 44%,
+        #fafbfc 50%,
+        #e6e9ec 56%,
+        #b7bbc0 66%,
+        #8a8f94 78%,
+        #5d6166 92%,
+        #3b4045 100%);
+      box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.5),
+        0 1px 3px rgba(0, 0, 0, 0.6);
+    `;
+
+    // End-cap highlights — rounded top and bottom of the cylinder
+    const capTop = document.createElement('div');
+    capTop.style.cssText = `
+      position: absolute; top: 0; left: 0; right: 0; height: 14px;
+      background:
+        radial-gradient(ellipse 80% 100% at 50% 120%, rgba(255,255,255,0.55), transparent 70%),
+        linear-gradient(180deg, #cfd3d7 0%, transparent 100%);
+      pointer-events: none;
+    `;
+    const capBot = document.createElement('div');
+    capBot.style.cssText = `
+      position: absolute; bottom: 0; left: 0; right: 0; height: 14px;
+      background:
+        radial-gradient(ellipse 80% 100% at 50% -20%, rgba(255,255,255,0.18), transparent 70%),
+        linear-gradient(0deg, #2f3337 0%, transparent 100%);
+      pointer-events: none;
+    `;
+
+    // Lengthwise brushed grain — very fine vertical striations running along the bar
+    const brushed = document.createElement('div');
+    brushed.style.cssText = `
+      position: absolute; inset: 0;
+      background:
+        repeating-linear-gradient(0deg,
+          rgba(0, 0, 0, 0.12) 0px,
+          rgba(255, 255, 255, 0.1) 0.5px,
+          rgba(0, 0, 0, 0.06) 1px,
+          rgba(255, 255, 255, 0.08) 1.5px,
+          rgba(0, 0, 0, 0.12) 2.5px);
+      mix-blend-mode: overlay;
+      pointer-events: none;
+    `;
+    // Specular highlight — thin vertical hotline slightly off-center for that polished-chrome sheen
+    const spec = document.createElement('div');
+    spec.style.cssText = `
+      position: absolute; top: 4%; bottom: 4%; left: 48%;
+      width: 1.5px;
+      background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.7) 15%, rgba(255,255,255,0.8) 50%, rgba(255,255,255,0.7) 85%, rgba(255,255,255,0) 100%);
+      filter: blur(0.5px);
+      pointer-events: none;
+    `;
+
+    bar.appendChild(brushed);
+    bar.appendChild(spec);
+    bar.appendChild(capTop);
+    bar.appendChild(capBot);
+
+    pull.appendChild(castShadow);
+    pull.appendChild(postTop);
+    pull.appendChild(postBot);
+    pull.appendChild(bar);
+
+    d.appendChild(pull);
+    return d;
+  };
+
+  const leftDoor = makeDoor('left');
+  const rightDoor = makeDoor('right');
+
+  // Seam light — bright vertical beam that glows where the doors meet
+  const seam = document.createElement('div');
+  seam.style.cssText = `
+    position: absolute; top: 0; left: 50%; width: 3px; height: 100%;
+    transform: translateX(-50%) scaleY(0.2);
+    background: linear-gradient(180deg, rgba(255,245,215,0) 0%, rgba(255, 230, 160, 0.98) 50%, rgba(255,245,215,0) 100%);
+    box-shadow: 0 0 40px 12px rgba(235, 200, 120, 0.75),
+                0 0 120px 30px rgba(235, 200, 120, 0.35);
+    opacity: 0; transform-origin: center;
+    transition: opacity 300ms ease, transform 420ms cubic-bezier(0.16, 0.8, 0.28, 1);
+  `;
+
+  overlay.appendChild(leftDoor);
+  overlay.appendChild(rightDoor);
+  overlay.appendChild(seam);
+  document.body.appendChild(overlay);
+
+  void overlay.offsetWidth;
+  leftDoor.style.transform  = 'translateX(0)';
+  rightDoor.style.transform = 'translateX(0)';
+
+  // Flash at the moment of contact, then hold a soft glow through the pause
   setTimeout(() => {
-    goPipeline();
-    setTimeout(() => {
-      ripple.style.transition = 'opacity 300ms ease';
-      ripple.style.opacity = '0';
-      setTimeout(() => ripple.remove(), 320);
-    }, 80);
-  }, 580);
+    seam.style.opacity = '1';
+    seam.style.transform = 'translateX(-50%) scaleY(1)';
+  }, 615);
+  setTimeout(() => { seam.style.opacity = '0'; }, 1150);
+
+  // Pipeline starts behind closed doors
+  setTimeout(() => goPipeline(), 1050);
+
+  // Part the doors — same easing and duration as the close
+  setTimeout(() => {
+    leftDoor.style.transition  = 'transform 617ms cubic-bezier(0.58, 0.02, 0.28, 1)';
+    rightDoor.style.transition = 'transform 617ms cubic-bezier(0.58, 0.02, 0.28, 1)';
+    leftDoor.style.transform  = 'translateX(-101%)';
+    rightDoor.style.transform = 'translateX(101%)';
+  }, 1235);
+
+  setTimeout(() => overlay.remove(), 1920);
 }
 
 // ── Side arrow visibility + wiring ──────────────────────────

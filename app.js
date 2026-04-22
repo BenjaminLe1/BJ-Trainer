@@ -148,7 +148,40 @@ const Account = {
     if (!user) return null;
     const accounts = this._load();
     return accounts[user] || null;
-  }
+  },
+  getBankrollConfig() {
+    const user = this.currentUser();
+    if (user) {
+      const accounts = this._load();
+      const cfg = accounts[user]?.bankrollConfig;
+      if (cfg) return cfg;
+    }
+    // fallback to legacy global keys
+    return {
+      bankroll: parseInt(localStorage.getItem('bj_configured_bankroll') || '0') || 5000,
+      risk: localStorage.getItem('bj_configured_risk') || 'moderate',
+      ftBankroll: parseInt(localStorage.getItem('ft_bankroll') || '0') || 0,
+    };
+  },
+  saveBankrollConfig(bankroll, risk) {
+    const user = this.currentUser();
+    if (!user) { localStorage.setItem('bj_configured_bankroll', String(bankroll)); localStorage.setItem('bj_configured_risk', risk); return; }
+    const accounts = this._load();
+    if (!accounts[user]) return;
+    if (!accounts[user].bankrollConfig) accounts[user].bankrollConfig = {};
+    accounts[user].bankrollConfig.bankroll = bankroll;
+    accounts[user].bankrollConfig.risk = risk;
+    this._save(accounts);
+  },
+  saveFtBankroll(amount) {
+    const user = this.currentUser();
+    if (!user) { localStorage.setItem('ft_bankroll', String(amount)); return; }
+    const accounts = this._load();
+    if (!accounts[user]) return;
+    if (!accounts[user].bankrollConfig) accounts[user].bankrollConfig = {};
+    accounts[user].bankrollConfig.ftBankroll = amount;
+    this._save(accounts);
+  },
 };
 
 // ============================================================
@@ -340,8 +373,9 @@ function renderDashboard() {
     <div class="dash-skills-grid">
       ${SKILL_IDS.map(id => {
         if (id === 'bet-spread') {
-          const savedBankroll = localStorage.getItem('bj_configured_bankroll');
-          const savedRisk     = localStorage.getItem('bj_configured_risk');
+          const _dCfg = Account.getBankrollConfig();
+          const savedBankroll = _dCfg.bankroll;
+          const savedRisk     = _dCfg.risk;
           const CFGS = {
             conservative: { divisor:500, spread:[1,1,2,4,8],   label:'1–8x' },
             moderate:     { divisor:300, spread:[1,2,4,8,12],  label:'1–12x' },
@@ -1968,8 +2002,7 @@ const BetSpread = {
       AppState.skillStatus[skillId].done = true;
       Account.markSession();
       // Persist bankroll + risk for full training
-      localStorage.setItem('bj_configured_bankroll', String(bankroll));
-      localStorage.setItem('bj_configured_risk', risk);
+      Account.saveBankrollConfig(bankroll, risk);
       scoreEl.textContent = 'Configured ✓';
       goPipeline();
     });
@@ -1989,8 +2022,9 @@ const FullTraining = {
     const EDGE_PX = 2;
 
     // Load bankroll + bet-spread config
-    const savedBankroll = parseInt(localStorage.getItem('bj_configured_bankroll') || '0') || 5000;
-    const savedRisk     = localStorage.getItem('bj_configured_risk') || 'moderate';
+    const _bCfg = Account.getBankrollConfig();
+    const savedBankroll = _bCfg.bankroll || 5000;
+    const savedRisk     = _bCfg.risk || 'moderate';
     const SPREAD_CONFIGS = {
       conservative: { divisor:500, spread:[1,1,2,4,8]   },
       moderate:     { divisor:300, spread:[1,2,4,8,12]  },
@@ -2007,7 +2041,7 @@ const FullTraining = {
     let runningCount = 0;
     let correct = 0;
     // Load persisted bankroll, fall back to configured starting amount
-    let bankroll = parseInt(localStorage.getItem('ft_bankroll') || '0') || savedBankroll;
+    let bankroll = _bCfg.ftBankroll || savedBankroll;
     let currentBet = 0;
 
     // Hand state
@@ -2231,7 +2265,7 @@ const FullTraining = {
 
     function updateBankrollDisplay() {
       bankrollEl.textContent = fmtMoney(bankroll);
-      localStorage.setItem('ft_bankroll', bankroll.toString());
+      Account.saveFtBankroll(bankroll);
     }
 
     // Render a hand's cards with optional value badge
